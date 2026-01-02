@@ -1,36 +1,27 @@
 using UnityEngine;
-using Unity.Cinemachine; 
+using Unity.Cinemachine;
+using IndieGame.Core.Utilities;
 
 namespace IndieGame.Core.CameraSystem
 {
-    public class CameraManager : MonoBehaviour
+    public class CameraManager : MonoSingleton<CameraManager>
     {
-        public static CameraManager Instance { get; private set; }
-
         [Header("Settings")]
         [SerializeField] private CinemachineCamera _mainGameplayCamera; 
 
         private Transform _currentTarget;
 
-        private void Awake()
-        {
-            if (Instance == null)
-            {
-                Instance = this;
-                DontDestroyOnLoad(gameObject);
-            }
-            else
-            {
-                Destroy(gameObject);
-            }
-        }
-
         public void SetFollowTarget(Transform target)
         {
             if (_mainGameplayCamera == null)
             {
-                Debug.LogError("CameraManager: Main Cinemachine Camera is missing!");
-                return;
+                _mainGameplayCamera = GetComponentInChildren<CinemachineCamera>();
+                
+                if (_mainGameplayCamera == null)
+                {
+                    Debug.LogError("CameraManager: Main Cinemachine Camera is missing!");
+                    return;
+                }
             }
 
             _currentTarget = target;
