@@ -75,7 +75,7 @@ namespace IndieGame.Gameplay.Player
             if (_animator == null) return;
 
             float currentSpeed = _inputVector.magnitude;
-            _animator.SetFloat(speedParamName, currentSpeed, 0.1f, Time.deltaTime); 
+            _animator.SetFloat(speedParamName, currentSpeed); 
         }
     }
 }
