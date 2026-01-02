@@ -9,15 +9,26 @@ namespace IndieGame.Gameplay.Player
     {
         [Header("Configuration")]
         public float moveSpeed = 5f;
+        public float rotateSpeed = 10f;
+
+        [Header("Animation Settings")]
+        public string speedParamName = "Speed"; 
         
         private Vector2 _inputVector;
         private CharacterController _controller;
         private Transform _cameraTransform;
+        
+        private Animator _animator;
 
         private void Start()
         {
             _controller = GetComponent<CharacterController>();
-            _cameraTransform = Camera.main.transform;
+            _animator = GetComponentInChildren<Animator>(); 
+
+            if (Camera.main != null)
+            {
+                _cameraTransform = Camera.main.transform;
+            }
 
             if (CameraManager.Instance != null)
             {
@@ -33,6 +44,7 @@ namespace IndieGame.Gameplay.Player
         private void Update()
         {
             MovePlayer();
+            UpdateAnimation();
         }
 
         private void MovePlayer()
@@ -53,8 +65,17 @@ namespace IndieGame.Gameplay.Player
 
             if (moveDir != Vector3.zero)
             {
-                transform.forward = Vector3.Slerp(transform.forward, moveDir, 15f * Time.deltaTime);
+                Quaternion targetRotation = Quaternion.LookRotation(moveDir);
+                transform.rotation = Quaternion.Slerp(transform.rotation, targetRotation, rotateSpeed * Time.deltaTime);
             }
+        }
+
+        private void UpdateAnimation()
+        {
+            if (_animator == null) return;
+
+            float currentSpeed = _inputVector.magnitude;
+            _animator.SetFloat(speedParamName, currentSpeed, 0.1f, Time.deltaTime); 
         }
     }
 }
