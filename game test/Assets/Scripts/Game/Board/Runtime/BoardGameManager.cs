@@ -1,6 +1,6 @@
 using System.Collections;
 using UnityEngine;
-using IndieGame.Core.Utilities; // 引用你的单例模板
+using IndieGame.Core.Utilities; 
 using IndieGame.Gameplay.Board.Data;
 
 namespace IndieGame.Gameplay.Board.Runtime
@@ -8,31 +8,52 @@ namespace IndieGame.Gameplay.Board.Runtime
     public class BoardGameManager : MonoSingleton<BoardGameManager>
     {
         [Header("References")]
-        public Transform playerToken; // 玩家的棋子模型
-        public MapWaypoint startNode; // 起始点
+        public Transform playerToken;
+        public MapWaypoint startNode; 
 
         [Header("Settings")]
-        public float moveSpeed = 5f;
-        public float jumpHeight = 0.5f; // 类似马里奥跳格子的效果
+        public float moveSpeed = 5f; // 米/秒
+        public float rotateSpeed = 10f;
+
+        [Header("Animation")]
+        public string speedParam = "Speed"; // Animator 参数名
 
         // 运行时状态
         private MapWaypoint _currentNode;
         private bool _isMoving = false;
+        private Animator _playerAnimator;
 
         private void Start()
         {
-            if (startNode != null && playerToken != null)
+            if (playerToken != null)
             {
-                _currentNode = startNode;
-                // 初始化位置，修正Y轴
-                playerToken.position = startNode.transform.position; 
+                _playerAnimator = playerToken.GetComponentInChildren<Animator>();
+                ResetToStart();
             }
         }
 
         /// <summary>
-        /// 核心方法：掷骰子并行动
+        /// 测试功能：重置回起点
         /// </summary>
-        [ContextMenu("Roll Dice and Move")] // 允许在编辑器组件菜单右键调用
+        public void ResetToStart()
+        {
+            StopAllCoroutines();
+            _isMoving = false;
+            
+            if (startNode != null && playerToken != null)
+            {
+                _currentNode = startNode;
+                playerToken.position = startNode.transform.position;
+                playerToken.rotation = startNode.transform.rotation;
+                
+                // 重置动画
+                if (_playerAnimator) _playerAnimator.SetFloat(speedParam, 0);
+                
+                Debug.Log("Game Reset to Start Node.");
+            }
+        }
+
+        [ContextMenu("Roll Dice")] 
         public void RollDice()
         {
             if (_isMoving)
@@ -41,7 +62,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 return;
             }
 
-            int steps = Random.Range(1, 7); // 1 到 6
+            int steps = Random.Range(1, 7); 
             Debug.Log($"<color=cyan>掷骰子结果: {steps}</color>");
             
             StartCoroutine(MoveRoutine(steps));
@@ -53,55 +74,67 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             for (int i = 0; i < steps; i++)
             {
-                // 1. 检查是否有路可走
-                if (_currentNode.nextWaypoints.Count == 0)
+                // 1. 检查连接
+                if (_currentNode.connections.Count == 0)
                 {
                     Debug.Log("走到尽头了！");
                     break;
                 }
 
-                // 简单处理：如果有岔路，默认走第一条 (未来这里可以弹出UI让玩家选路)
-                MapWaypoint targetNode = _currentNode.nextWaypoints[0];
+                // 默认走第一条路 (未来可以在这里加 UI 选择分支)
+                WaypointConnection connection = _currentNode.connections[0];
+                MapWaypoint targetNode = connection.targetNode;
 
-                // 2. 移动动画 (抛物线跳跃)
-                Vector3 startPos = playerToken.position;
-                Vector3 endPos = targetNode.transform.position;
-                float progress = 0f;
+                // 2. 准备曲线数据
+                Vector3 p0 = _currentNode.transform.position;
+                Vector3 p2 = targetNode.transform.position;
+                Vector3 p1 = p0 + connection.controlPointOffset; // 计算控制点
 
-                while (progress < 1f)
+                // 3. 开始移动 (使用匀速估算)
+                // 估算曲线长度来决定时间，保持匀速
+                float estimatedDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
+                float duration = estimatedDist / moveSpeed;
+                float timer = 0f;
+
+                // 播放跑动动画
+                if (_playerAnimator) _playerAnimator.SetFloat(speedParam, 1f);
+
+                while (timer < duration)
                 {
-                    progress += Time.deltaTime * moveSpeed;
-                    
-                    // 线性插值位置
-                    Vector3 currentPos = Vector3.Lerp(startPos, endPos, progress);
-                    
-                    // 加一点跳跃高度 (Sine曲线)
-                    currentPos.y += Mathf.Sin(progress * Mathf.PI) * jumpHeight;
+                    timer += Time.deltaTime;
+                    float t = timer / duration; // 归一化时间 0-1
 
-                    playerToken.position = currentPos;
+                    // 获取当前帧目标位置
+                    Vector3 nextPos = MapWaypoint.GetBezierPoint(t, p0, p1, p2);
                     
-                    // 面向目标
-                    playerToken.LookAt(new Vector3(endPos.x, playerToken.position.y, endPos.z));
+                    // 计算朝向 (看向下一点)
+                    Vector3 moveDir = (nextPos - playerToken.position).normalized;
+                    if (moveDir != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(moveDir);
+                        playerToken.rotation = Quaternion.Slerp(playerToken.rotation, targetRot, rotateSpeed * Time.deltaTime);
+                    }
+
+                    playerToken.position = nextPos;
 
                     yield return null;
                 }
 
-                // 3. 到达该格
-                playerToken.position = endPos;
+                // 4. 到达单个格子
+                playerToken.position = p2;
                 _currentNode = targetNode;
                 
-                // 停顿一小下，更有节奏感
-                yield return new WaitForSeconds(0.1f);
+                // 短暂停顿
+                yield return null;
             }
 
-            // 4. 移动结束，触发格子效果
+            // 5. 停止动画
+            if (_playerAnimator) _playerAnimator.SetFloat(speedParam, 0f);
+
+            // 6. 触发格子效果
             if (_currentNode.tileData != null)
             {
                 _currentNode.tileData.OnPlayerStop(playerToken.gameObject);
-            }
-            else
-            {
-                Debug.LogWarning($"格子 {_currentNode.name} 丢失了 TileData!");
             }
 
             _isMoving = false;

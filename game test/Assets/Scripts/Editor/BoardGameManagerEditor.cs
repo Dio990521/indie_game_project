@@ -14,8 +14,12 @@ namespace IndieGame.Editor.Board
             BoardGameManager manager = (BoardGameManager)target;
 
             GUILayout.Space(20);
+            
+            GUILayout.BeginHorizontal();
+            
+            // 绿色掷骰子按钮
             GUI.backgroundColor = Color.green;
-            if (GUILayout.Button("🎲 Roll Dice (Test)", GUILayout.Height(40)))
+            if (GUILayout.Button("🎲 Roll Dice", GUILayout.Height(40)))
             {
                 if (Application.isPlaying)
                 {
@@ -26,6 +30,18 @@ namespace IndieGame.Editor.Board
                     Debug.LogWarning("请先运行游戏 (Play Mode) 再测试掷骰子。");
                 }
             }
+
+            // 红色重置按钮
+            GUI.backgroundColor = new Color(1f, 0.5f, 0.5f); // 浅红
+            if (GUILayout.Button("🔄 Reset", GUILayout.Height(40)))
+            {
+                if (Application.isPlaying)
+                {
+                    manager.ResetToStart();
+                }
+            }
+            
+            GUILayout.EndHorizontal();
             GUI.backgroundColor = Color.white;
         }
     }
