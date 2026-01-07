@@ -1,6 +1,6 @@
 using UnityEngine;
 using UnityEngine.InputSystem; 
-using IndieGame.Core; // 引用 Core 命名空间
+using IndieGame.Core; 
 using IndieGame.Core.CameraSystem; 
 
 namespace IndieGame.Gameplay.Player
@@ -18,11 +18,23 @@ namespace IndieGame.Gameplay.Player
         private Animator _animator;
         private Transform _cameraTransform;
 
+        // 内部开关，用来替代 enabled
+        private bool _canMove = true;
+
         private void Awake()
         {
             _controller = GetComponent<CharacterController>();
             _animator = GetComponentInChildren<Animator>();
             if (Camera.main != null) _cameraTransform = Camera.main.transform;
+
+            // 【修复重点】在 Awake 中订阅，保证脚本 Disable 时依然能收到消息
+            GameManager.OnStateChanged += HandleStateChanged;
+        }
+
+        private void OnDestroy()
+        {
+            // 【修复重点】在对象彻底销毁时才取消订阅
+            GameManager.OnStateChanged -= HandleStateChanged;
         }
 
         private void Start()
@@ -31,58 +43,51 @@ namespace IndieGame.Gameplay.Player
             {
                 CameraManager.Instance.SetFollowTarget(this.transform);
             }
-        }
-
-        // ==================== 状态管理核心代码 ====================
-        private void OnEnable()
-        {
-            // 订阅事件
-            GameManager.OnStateChanged += HandleStateChanged;
-        }
-
-        private void OnDisable()
-        {
-            // 取消订阅 (防止内存泄漏)
-            GameManager.OnStateChanged -= HandleStateChanged;
+            
+            // 初始化时检查一次状态
+            if(GameManager.Instance != null)
+            {
+                HandleStateChanged(GameManager.Instance.CurrentState);
+            }
         }
 
         private void HandleStateChanged(GameState newState)
         {
             if (newState == GameState.FreeRoam)
             {
-                // 启用输入控制
-                this.enabled = true;
-                _controller.enabled = true; // 启用 CC，允许物理碰撞
+                // 进入自由模式
+                _canMove = true;
+                _controller.enabled = true; // 物理碰撞开启
             }
             else
             {
-                // 禁用输入控制
-                this.enabled = false;
-                _controller.enabled = false; // 必须禁用 CC！否则它会阻止 transform.position 的直接修改
+                // 进入棋盘模式
+                _canMove = false;
+                _controller.enabled = false; // 必须禁用CC，否则会卡住Board移动
                 
-                // 重置所有输入值，防止切换瞬间角色还在跑
+                // 清理状态
                 _inputVector = Vector2.zero;
                 if (_animator) _animator.SetFloat(speedParamName, 0);
             }
         }
-        // ========================================================
 
+        // Input System 的消息依然会被接收，但我们会根据 _canMove 决定是否处理
         public void OnMove(InputValue value)
         {
+            // 即使在 BoardMode，我们也可以接收输入，
+            // 这样切回 FreeRoam 的瞬间如果你按着 W，角色会直接动（手感更好）
             _inputVector = value.Get<Vector2>();
         }
 
         private void Update()
         {
-            // 如果 GameManager 还没初始化或不在自由模式，双重保险
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState != GameState.FreeRoam) return;
+            // 【修复重点】不再禁用脚本，而是通过 flag 拦截逻辑
+            if (!_canMove) return;
 
             MovePlayer();
             UpdateAnimation(); 
         }
 
-        // ... MovePlayer 和 UpdateAnimation 方法保持不变 ...
-        // (省略以节省篇幅，请保留原本逻辑)
         private void MovePlayer()
         {
             if (_inputVector.magnitude < 0.1f) return;
