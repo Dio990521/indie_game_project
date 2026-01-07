@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using IndieGame.Gameplay.Board.Runtime;
+using System.Collections.Generic;
 
 namespace IndieGame.Editor.Board
 {
@@ -8,13 +9,13 @@ namespace IndieGame.Editor.Board
     [CanEditMultipleObjects]
     public class MapWaypointEditor : UnityEditor.Editor
     {
-        // Scene 窗口交互逻辑
         private void OnSceneGUI()
         {
             MapWaypoint waypoint = (MapWaypoint)target;
 
             if (waypoint.connections == null) return;
 
+            // 只绘制曲线和控制点，去掉箭头
             for (int i = 0; i < waypoint.connections.Count; i++)
             {
                 WaypointConnection conn = waypoint.connections[i];
@@ -22,51 +23,33 @@ namespace IndieGame.Editor.Board
 
                 Vector3 startPos = waypoint.transform.position;
                 Vector3 endPos = conn.targetNode.transform.position;
-                // 计算控制点的世界坐标
                 Vector3 controlPointPos = startPos + conn.controlPointOffset;
 
-                // 1. 绘制控制点手柄 (FreeMoveHandle)
+                // 1. 绘制控制点手柄
                 EditorGUI.BeginChangeCheck();
                 Vector3 newControlPos = Handles.PositionHandle(controlPointPos, Quaternion.identity);
-                // 或者用更小的圆点手柄: 
-                // Vector3 newControlPos = Handles.FreeMoveHandle(controlPointPos, Quaternion.identity, 0.5f, Vector3.zero, Handles.SphereHandleCap);
                 
                 if (EditorGUI.EndChangeCheck())
                 {
                     Undo.RecordObject(waypoint, "Move Control Point");
-                    // 转回局部坐标保存
                     conn.controlPointOffset = newControlPos - startPos;
+                    // 实时刷新 LineRenderer
+                    waypoint.GenerateVisualLines();
                 }
 
-                // 2. 绘制粗连接线 (贝塞尔曲线)
-                // 这里的切线计算是为了 DrawBezier 接口，实际上我们是二次贝塞尔，但 Handles.DrawBezier 是三次的。
-                // 我们可以用 Handles.DrawAAPolyLine 来画更精确的二次贝塞尔，或者近似模拟。
-                // 为了简单且好看，我们这里用 DrawBezier 近似，或者手动采样画线。
-                // 既然我们在 Runtime 已经写了采样算法，Editor 里直接画采样线最准确。
-                
+                // 2. 绘制青色连接线 (仅在选中时显示高亮粗线，平时有 LineRenderer)
                 Handles.color = Color.cyan;
-                Vector3[] points = new Vector3[20];
-                for (int j = 0; j < 20; j++)
+                Vector3[] points = new Vector3[30];
+                for (int j = 0; j < 30; j++)
                 {
-                    points[j] = MapWaypoint.GetBezierPoint(j / 19f, startPos, controlPointPos, endPos);
+                    points[j] = MapWaypoint.GetBezierPoint(j / 29f, startPos, controlPointPos, endPos);
                 }
-                Handles.DrawAAPolyLine(5f, points); // 5f 是线宽，很粗！
+                Handles.DrawAAPolyLine(3f, points);
 
-                // 3. 绘制连线中间的辅助虚线（指向控制点）
-                Handles.color = new Color(1, 1, 1, 0.3f);
-                Handles.DrawDottedLine(startPos, controlPointPos, 5f);
-                Handles.DrawDottedLine(controlPointPos, endPos, 5f);
-
-                // 4. 绘制箭头 (画在曲线中点)
-                Vector3 midPoint = MapWaypoint.GetBezierPoint(0.5f, startPos, controlPointPos, endPos);
-                Vector3 nextPoint = MapWaypoint.GetBezierPoint(0.51f, startPos, controlPointPos, endPos);
-                Vector3 direction = (nextPoint - midPoint).normalized;
-                
-                Handles.color = Color.yellow;
-                if (direction != Vector3.zero)
-                {
-                    Handles.ArrowHandleCap(0, midPoint, Quaternion.LookRotation(direction), 1.5f, EventType.Repaint);
-                }
+                // 虚线辅助线
+                Handles.color = new Color(1, 1, 1, 0.2f);
+                Handles.DrawDottedLine(startPos, controlPointPos, 2f);
+                Handles.DrawDottedLine(controlPointPos, endPos, 2f);
             }
         }
 
@@ -77,51 +60,110 @@ namespace IndieGame.Editor.Board
             MapWaypoint current = (MapWaypoint)target;
 
             EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Editor Tools", EditorStyles.boldLabel);
+            EditorGUILayout.LabelField("🔗 Connectivity Tools", EditorStyles.boldLabel);
 
-            if (GUILayout.Button("Link to Nearest Waypoint"))
+            GUILayout.BeginHorizontal();
+            
+            // 工具 1: 自动连接 ID + 1
+            if (GUILayout.Button("Auto Link Next ID (ID+1)"))
             {
-                LinkToNearest(current);
+                AutoLinkNextID(current);
+            }
+
+            // 工具 2: 断开所有连接
+            if (GUILayout.Button("Clear Links"))
+            {
+                Undo.RecordObject(current, "Clear Links");
+                current.connections.Clear();
+                current.GenerateVisualLines();
+            }
+            GUILayout.EndHorizontal();
+
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox("提示: 若要连接岔路(Fork)，请选中两个节点(起点和终点)，然后在下方点击 'Link Selected'.", MessageType.Info);
+
+            // 工具 3: 连接选中的两个物体 (处理岔路的神器)
+            if (GUILayout.Button("Link Selected Objects (From -> To)"))
+            {
+                LinkSelectedNodes();
             }
         }
 
-        private void LinkToNearest(MapWaypoint current)
+        private void AutoLinkNextID(MapWaypoint current)
         {
+            // 查找场景中所有 ID = current.ID + 1 的节点
             MapWaypoint[] allPoints = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-            MapWaypoint nearest = null;
-            float minDst = float.MaxValue;
+            MapWaypoint target = null;
 
             foreach (var p in allPoints)
             {
-                if (p == current) continue;
-                // 检查是否已经连接
-                if (current.connections.Exists(c => c.targetNode == p)) continue;
-
-                float dst = Vector3.Distance(current.transform.position, p.transform.position);
-                if (dst < minDst)
+                if (p.nodeID == current.nodeID + 1)
                 {
-                    minDst = dst;
-                    nearest = p;
+                    target = p;
+                    break;
                 }
             }
 
-            if (nearest != null)
+            if (target != null)
             {
-                Undo.RecordObject(current, "Link Waypoint");
-                // 默认控制点在两点中间稍微抬高
-                Vector3 midPointOffset = (nearest.transform.position - current.transform.position) / 2 + Vector3.up * 2;
-                
-                current.connections.Add(new WaypointConnection 
-                { 
-                    targetNode = nearest,
-                    controlPointOffset = midPointOffset
-                });
-                Debug.Log($"Linked {current.name} to {nearest.name}");
+                ConnectNodes(current, target);
+                Debug.Log($"<color=green>Connected: [{current.nodeID}] -> [{target.nodeID}]</color>");
             }
             else
             {
-                Debug.LogWarning("No suitable waypoint found to link.");
+                Debug.LogWarning($"Could not find Node with ID {current.nodeID + 1}");
             }
+        }
+
+        private void LinkSelectedNodes()
+        {
+            // 获取编辑器中选中的所有物体
+            GameObject[] selectedGOs = Selection.gameObjects;
+            if (selectedGOs.Length != 2)
+            {
+                Debug.LogError("请准确选中 2 个 MapWaypoint 节点来建立连接！");
+                return;
+            }
+
+            MapWaypoint fromNode = selectedGOs[0].GetComponent<MapWaypoint>();
+            MapWaypoint toNode = selectedGOs[1].GetComponent<MapWaypoint>();
+
+            // 简单的逻辑判断：ID小的连向ID大的，或者按选择顺序
+            // 这里我们假设第一个选的是起点，第二个是终点。但Unity的选择顺序有时难判断。
+            // 不如直接对比 ID，ID小的连向大的。
+            if (fromNode.nodeID > toNode.nodeID)
+            {
+                var temp = fromNode;
+                fromNode = toNode;
+                toNode = temp;
+            }
+
+            if (fromNode != null && toNode != null)
+            {
+                ConnectNodes(fromNode, toNode);
+                Debug.Log($"<color=green>Manual Linked: [{fromNode.nodeID}] -> [{toNode.nodeID}]</color>");
+            }
+        }
+
+        private void ConnectNodes(MapWaypoint from, MapWaypoint to)
+        {
+            // 检查重复连接
+            if (from.connections.Exists(c => c.targetNode == to)) return;
+
+            Undo.RecordObject(from, "Link Node");
+            
+            // 设置一个漂亮的默认曲线高度
+            Vector3 midOffset = (to.transform.position - from.transform.position) / 2;
+            midOffset.y = 0; // 水平中点
+            Vector3 controlOffset = midOffset + Vector3.up * 2f; // 抬高2米
+
+            from.connections.Add(new WaypointConnection
+            {
+                targetNode = to,
+                controlPointOffset = controlOffset
+            });
+            
+            from.GenerateVisualLines(); // 立即刷新显示
         }
     }
 }
