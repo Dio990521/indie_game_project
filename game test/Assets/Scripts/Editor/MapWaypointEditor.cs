@@ -147,23 +147,21 @@ namespace IndieGame.Editor.Board
 
         private void ConnectNodes(MapWaypoint from, MapWaypoint to)
         {
-            // 检查重复连接
             if (from.connections.Exists(c => c.targetNode == to)) return;
 
             Undo.RecordObject(from, "Link Node");
             
-            // 设置一个漂亮的默认曲线高度
-            Vector3 midOffset = (to.transform.position - from.transform.position) / 2;
-            midOffset.y = 0; // 水平中点
-            Vector3 controlOffset = midOffset + Vector3.up * 2f; // 抬高2米
-
+            // ✅ 修改点：将偏移量改为两点之间的中点 (不加 Y 轴偏移)
+            // 这样默认就是一条直线。用户如果想弯曲，再去手动拖动 Handle。
+            Vector3 midPoint = (to.transform.position - from.transform.position) * 0.5f;
+            
             from.connections.Add(new WaypointConnection
             {
                 targetNode = to,
-                controlPointOffset = controlOffset
+                controlPointOffset = midPoint // 此时控制点就在连线正中间，即直线
             });
             
-            from.GenerateVisualLines(); // 立即刷新显示
+            from.GenerateVisualLines(); 
         }
     }
 }

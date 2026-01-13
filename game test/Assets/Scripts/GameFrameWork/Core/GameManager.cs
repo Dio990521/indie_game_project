@@ -1,43 +1,50 @@
 using UnityEngine;
 using System;
-using IndieGame.Core.Utilities; // 引用之前的单例模板
+using System.Collections;
+using IndieGame.Core.Utilities;
 
 namespace IndieGame.Core
 {
     public class GameManager : MonoSingleton<GameManager>
     {
-        // 当前状态
-        public GameState CurrentState { get; private set; } = GameState.FreeRoam;
-
-        // 事件：当状态改变时触发 (其他脚本订阅这个事件)
+        public GameState CurrentState { get; private set; } = GameState.Initialization;
         public static event Action<GameState> OnStateChanged;
 
-        protected override void Awake()
-        {
-            base.Awake();
-            // 初始化
-            Application.targetFrameRate = 60;
-        }
+        // 是否已初始化
+        public bool IsInitialized { get; private set; } = false;
 
-        private void Start()
+        /// <summary>
+        /// 游戏唯一的启动入口
+        /// </summary>
+        public void InitGame()
         {
-            // 游戏开始时，广播一次默认状态
+            if (IsInitialized) return;
+
+            Debug.Log("<color=green>[GameManager] Game Initializing...</color>");
+            
+            // 1. 这里可以加载配置表、读取存档、初始化音频系统等
+            // StartCoroutine(LoadAssetsRoutine()); 
+            
+            IsInitialized = true;
+            
+            // 2. 初始化完成后，进入第一个逻辑状态
+            // 如果有主菜单场景，这里应该切到 MainMenu
+            // 对于 Demo，我们直接进 FreeRoam
             ChangeState(GameState.FreeRoam);
         }
 
-        /// <summary>
-        /// 切换游戏状态的统一入口
-        /// </summary>
         public void ChangeState(GameState newState)
         {
             if (CurrentState == newState) return;
+            
+            // 状态退出逻辑 (可选)
+            // if (CurrentState == GameState.BoardMode) { ... }
 
             CurrentState = newState;
-            Debug.Log($"<color=orange>[GameManager] State Changed to: {newState}</color>");
-
-            // 触发事件，通知所有监听者
+            Debug.Log($"[GameManager] State Changed to: {newState}");
             OnStateChanged?.Invoke(newState);
         }
         
+        // 移除原来的 Start() 中的 ChangeState 调用，交给 Bootstrapper
     }
 }
