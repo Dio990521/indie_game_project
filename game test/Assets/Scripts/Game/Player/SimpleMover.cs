@@ -1,24 +1,27 @@
 using UnityEngine;
-using UnityEngine.InputSystem; 
 using IndieGame.Core; 
 using IndieGame.Core.CameraSystem; 
+using IndieGame.Core.Input; // 引用 InputReader
 
 namespace IndieGame.Gameplay.Player
 {
     [RequireComponent(typeof(CharacterController))]
     public class SimpleMover : MonoBehaviour
     {
+        [Header("Architecture Dependencies")]
+        public GameInputReader inputReader;
+
         [Header("Configuration")]
         public float moveSpeed = 5f;
         public float rotateSpeed = 15f; 
         public string speedParamName = "Speed"; 
         
-        private Vector2 _inputVector;
         private CharacterController _controller;
         private Animator _animator;
         private Transform _cameraTransform;
+        private Vector2 _currentInputVector;
+        private int _animIDSpeed;
 
-        // 内部开关，用来替代 enabled
         private bool _canMove = true;
 
         private void Awake()
@@ -26,15 +29,33 @@ namespace IndieGame.Gameplay.Player
             _controller = GetComponent<CharacterController>();
             _animator = GetComponentInChildren<Animator>();
             if (Camera.main != null) _cameraTransform = Camera.main.transform;
+            
+            // 缓存 Animator ID
+            _animIDSpeed = Animator.StringToHash(speedParamName);
 
-            // 【修复重点】在 Awake 中订阅，保证脚本 Disable 时依然能收到消息
             GameManager.OnStateChanged += HandleStateChanged;
         }
 
         private void OnDestroy()
         {
-            // 【修复重点】在对象彻底销毁时才取消订阅
             GameManager.OnStateChanged -= HandleStateChanged;
+        }
+
+        private void OnEnable()
+        {
+            // 订阅输入事件
+            if (inputReader != null)
+            {
+                inputReader.MoveEvent += OnMoveInput;
+            }
+        }
+
+        private void OnDisable()
+        {
+            if (inputReader != null)
+            {
+                inputReader.MoveEvent -= OnMoveInput;
+            }
         }
 
         private void Start()
@@ -44,7 +65,7 @@ namespace IndieGame.Gameplay.Player
                 CameraManager.Instance.SetFollowTarget(this.transform);
             }
             
-            // 初始化时检查一次状态
+            // 初始化状态检查
             if(GameManager.Instance != null)
             {
                 HandleStateChanged(GameManager.Instance.CurrentState);
@@ -55,33 +76,31 @@ namespace IndieGame.Gameplay.Player
         {
             if (newState == GameState.FreeRoam)
             {
-                // 进入自由模式
                 _canMove = true;
-                _controller.enabled = true; // 物理碰撞开启
+                _controller.enabled = true;
             }
             else
             {
-                // 进入棋盘模式
                 _canMove = false;
-                _controller.enabled = false; // 必须禁用CC，否则会卡住Board移动
+                _controller.enabled = false;
                 
-                // 清理状态
-                _inputVector = Vector2.zero;
-                if (_animator) _animator.SetFloat(speedParamName, 0);
+                // 重置输入和动画
+                _currentInputVector = Vector2.zero;
+                if (_animator) _animator.SetFloat(_animIDSpeed, 0);
             }
         }
 
-        // Input System 的消息依然会被接收，但我们会根据 _canMove 决定是否处理
-        public void OnMove(InputValue value)
+        // 事件回调
+        private void OnMoveInput(Vector2 input)
         {
-            // 即使在 BoardMode，我们也可以接收输入，
-            // 这样切回 FreeRoam 的瞬间如果你按着 W，角色会直接动（手感更好）
-            _inputVector = value.Get<Vector2>();
+            // 即使在 BoardMode 下我们也会收到这个事件，
+            // 但 Update 里的 _canMove 锁会阻止移动。
+            // 这样设计保留了输入的连贯性。
+            _currentInputVector = input;
         }
 
         private void Update()
         {
-            // 【修复重点】不再禁用脚本，而是通过 flag 拦截逻辑
             if (!_canMove) return;
 
             MovePlayer();
@@ -90,7 +109,7 @@ namespace IndieGame.Gameplay.Player
 
         private void MovePlayer()
         {
-            if (_inputVector.magnitude < 0.1f) return;
+            if (_currentInputVector.magnitude < 0.1f) return;
 
             Vector3 forward = _cameraTransform.forward;
             Vector3 right = _cameraTransform.right;
@@ -100,7 +119,7 @@ namespace IndieGame.Gameplay.Player
             forward.Normalize();
             right.Normalize();
 
-            Vector3 moveDir = (forward * _inputVector.y + right * _inputVector.x).normalized;
+            Vector3 moveDir = (forward * _currentInputVector.y + right * _currentInputVector.x).normalized;
 
             _controller.Move(moveDir * moveSpeed * Time.deltaTime);
 
@@ -114,8 +133,8 @@ namespace IndieGame.Gameplay.Player
         private void UpdateAnimation()
         {
             if (_animator == null) return;
-            float currentSpeed = _inputVector.magnitude;
-            _animator.SetFloat(speedParamName, currentSpeed, 0.1f, Time.deltaTime); 
+            float currentSpeed = _currentInputVector.magnitude;
+            _animator.SetFloat(_animIDSpeed, currentSpeed, 0.1f, Time.deltaTime); 
         }
     }
 }
