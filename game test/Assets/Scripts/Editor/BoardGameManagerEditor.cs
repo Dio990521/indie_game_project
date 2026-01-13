@@ -41,6 +41,11 @@ namespace IndieGame.Editor.Board
                         GUI.backgroundColor = new Color(0, 0.6f, 1f); // 蓝色背景
                         GUILayout.Box($"CURRENT STATE: {currentState} (Turn Based)", bannerStyle, GUILayout.ExpandWidth(true), GUILayout.Height(25));
                     }
+                    else if (currentState == GameState.TurnDecision)
+                    {
+                        GUI.backgroundColor = new Color(1f, 0.8f, 0.2f); // ⚠️ 黄色：决策中
+                        GUILayout.Box($"CURRENT STATE: {currentState} (Realtime)", bannerStyle, GUILayout.ExpandWidth(true), GUILayout.Height(25));
+                    }
                     else
                     {
                         GUI.backgroundColor = Color.gray; // 灰色背景
