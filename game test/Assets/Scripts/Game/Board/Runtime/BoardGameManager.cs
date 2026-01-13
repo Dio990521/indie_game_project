@@ -233,21 +233,37 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
         private void ClearCursors() { foreach(var c in _spawnedCursors) if(c) Destroy(c); _spawnedCursors.Clear(); }
-        private IEnumerator MoveAlongCurve(WaypointConnection conn) 
+        private IEnumerator MoveAlongCurve(WaypointConnection conn)
         {
-            // (代码略，同上一版，贝塞尔移动逻辑)
-            Vector3 p0 = playerToken.position;
+            Vector3 p0 = playerToken.position; 
             Vector3 p2 = conn.targetNode.transform.position;
-            Vector3 p1 = _currentNode.transform.position + conn.controlPointOffset;
-            float duration = (Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2)) / moveSpeed;
-            for(float t=0; t<duration; t+=Time.deltaTime) {
-                Vector3 pos = MapWaypoint.GetBezierPoint(t/duration, _currentNode.transform.position, p1, p2);
-                playerToken.position = pos;
-                playerToken.LookAt(2*pos - playerToken.position); // 简易朝向
+            // 获取贝塞尔控制点
+            Vector3 curveStartPos = _currentNode.transform.position; 
+            Vector3 p1 = curveStartPos + conn.controlPointOffset;
+
+            float approxDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
+            float duration = approxDist / moveSpeed;
+            float timer = 0f;
+
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+                float t = timer / duration;
+                Vector3 nextPos = MapWaypoint.GetBezierPoint(t, curveStartPos, p1, p2);
+                
+                Vector3 moveDir = (nextPos - playerToken.position).normalized;
+                if (moveDir != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(moveDir);
+                    playerToken.rotation = Quaternion.Slerp(playerToken.rotation, targetRot, rotateSpeed * Time.deltaTime);
+                }
+
+                playerToken.position = nextPos;
                 yield return null;
             }
             playerToken.position = p2;
         }
+        
         public void ResetToStart()
         {
              StopAllCoroutines(); _isMoving = false; ClearCursors();
