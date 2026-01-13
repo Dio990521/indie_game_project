@@ -134,7 +134,7 @@ namespace IndieGame.Gameplay.Player
         {
             if (_animator == null) return;
             float currentSpeed = _currentInputVector.magnitude;
-            _animator.SetFloat(_animIDSpeed, currentSpeed, 0.1f, Time.deltaTime); 
+            _animator.SetFloat(speedParamName, currentSpeed); 
         }
     }
 }

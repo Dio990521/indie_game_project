@@ -3,17 +3,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
-using IndieGame.Core.Input; // 引用 InputReader
-using IndieGame.Gameplay.Board.View; // 引用 ViewHelper
+using IndieGame.Core.Input; 
+using IndieGame.Gameplay.Board.View; 
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
     public class BoardGameManager : MonoSingleton<BoardGameManager>
     {
         [Header("Architecture Dependencies")]
-        [Tooltip("拖入你创建的 GameInputReader 资产")]
         public GameInputReader inputReader;
-        [Tooltip("拖入场景中的 BoardViewHelper 组件")]
         public BoardViewHelper viewHelper;
 
         [Header("Game References")]
@@ -25,19 +23,17 @@ namespace IndieGame.Gameplay.Board.Runtime
         public float rotateSpeed = 15f;
         public string moveSpeedParamName = "Speed"; 
 
-        // 缓存的 Hash ID，性能更高
         private int _animIDSpeed;
         private Animator _playerAnimator;
         private MapWaypoint _currentNode;
         private bool _isMoving = false;
         
-        // 用于岔路选择时的输入状态缓存
+        // 输入信号缓存
         private bool _interactTriggered = false;
 
         protected override void Awake()
         {
             base.Awake();
-            // 缓存 Animator 参数 ID
             _animIDSpeed = Animator.StringToHash(moveSpeedParamName);
         }
 
@@ -50,7 +46,6 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
-        // 使用 C# 事件订阅，而不是直接操作 InputSystem
         private void OnEnable()
         {
             GameManager.OnStateChanged += HandleStateChanged;
@@ -69,18 +64,19 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
+        // --- 核心修复 ---
         private void OnInteractInput()
         {
-            // 只有在需要决策时才响应确认键
-            if (GameManager.Instance.CurrentState == GameState.TurnDecision)
-            {
-                _interactTriggered = true;
-            }
+            // 移除状态判断。只要按了，就记录。
+            // 具体的“是否应该响应”由读取这个布尔值的逻辑决定。
+            _interactTriggered = true;
+            
+            // Debug.Log("Interact Pressed!"); // 用于调试确认按键是否生效
         }
+        // ----------------
 
         private void HandleStateChanged(GameState newState)
         {
-            // 可以在这里根据状态切换 InputReader 的 Map (如果 InputReader 支持切换的话)
         }
 
         [ContextMenu("Roll Dice")]
@@ -105,7 +101,6 @@ namespace IndieGame.Gameplay.Board.Runtime
                 MapWaypoint tempNode = _currentNode;
                 bool encounteredFork = false;
 
-                // 预计算路径
                 for (int i = 0; i < stepsRemaining; i++)
                 {
                     if (tempNode.connections.Count == 0) 
@@ -126,7 +121,6 @@ namespace IndieGame.Gameplay.Board.Runtime
                     }
                 }
 
-                // 1. 执行自动移动
                 if (segmentPath.Count > 0)
                 {
                     if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
@@ -139,20 +133,18 @@ namespace IndieGame.Gameplay.Board.Runtime
                     if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
                 }
 
-                // 2. 处理岔路
                 if (encounteredFork && stepsRemaining > 0)
                 {
                     GameManager.Instance.ChangeState(GameState.TurnDecision);
                     
                     WaypointConnection selectedConnection = null;
-                    // 调用分离出的选择逻辑
                     yield return StartCoroutine(HandleForkSelection(_currentNode, result => selectedConnection = result));
                     
                     GameManager.Instance.ChangeState(GameState.BoardMode);
 
                     if (selectedConnection != null)
                     {
-                        yield return new WaitForSeconds(0.2f);
+                        yield return new WaitForSeconds(0.2f); // 小停顿让镜头感更好
                         if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
                         yield return StartCoroutine(MoveAlongCurve(selectedConnection));
                         _currentNode = selectedConnection.targetNode;
@@ -174,22 +166,24 @@ namespace IndieGame.Gameplay.Board.Runtime
             int currentIndex = 0;
             bool selected = false;
             
-            _interactTriggered = false; // 重置触发器
+            // --- 核心修复 ---
+            // 协程开始时清空之前的任何按键缓存
+            // 确保这里只响应玩家看到 UI 后的操作
+            _interactTriggered = false; 
 
-            // View: 生成光标
             viewHelper.ShowCursors(options, forkNode.transform.position);
             viewHelper.HighlightCursor(currentIndex);
             
-            // 输入防抖设置
             float inputDelay = 0.2f;
             float nextInputTime = 0f;
 
+            // 等待一帧，防止同一个按键事件在极短时间内穿透
+            yield return null; 
+
             while (!selected)
             {
-                // Logic: 使用 InputReader 轮询当前的 Vector2
+                // 处理方向选择
                 Vector2 moveInput = inputReader.CurrentMoveInput;
-                
-                // 处理左右切换
                 if (Time.time > nextInputTime && Mathf.Abs(moveInput.x) > 0.5f)
                 {
                     if (moveInput.x < 0) currentIndex--;
@@ -198,21 +192,20 @@ namespace IndieGame.Gameplay.Board.Runtime
                     if (currentIndex < 0) currentIndex = options.Count - 1;
                     if (currentIndex >= options.Count) currentIndex = 0;
 
-                    // View: 更新高亮
                     viewHelper.HighlightCursor(currentIndex);
                     nextInputTime = Time.time + inputDelay;
                 }
 
-                // 处理确认 (由事件触发 _interactTriggered)
+                // 处理确认
                 if (_interactTriggered)
                 {
                     selected = true;
+                    _interactTriggered = false; // 消费掉这个输入
                 }
 
                 yield return null;
             }
 
-            // View: 清理
             viewHelper.ClearCursors();
             onSelected?.Invoke(options[currentIndex]);
         }
