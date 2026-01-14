@@ -6169,11 +6169,11 @@ MonoBehaviour:
   - targetNode: {fileID: 1957126851}
     controlPointOffset: {x: -0.9200001, y: 0.03192365, z: -1.7950001}
     events:
-    - progressPoint: 0.91
+    - progressPoint: 0.512
       eventAction: {fileID: 11400000, guid: a7f44820c5f044540a20e975a19467e1, type: 2}
       contextTarget: {fileID: 121923779}
       hasTriggered: 0
-    - progressPoint: 0.068
+    - progressPoint: 0.94
       eventAction: {fileID: 11400000, guid: dc6721bacad12460097585212cec6fa9, type: 2}
       contextTarget: {fileID: 121923779}
       hasTriggered: 0
@@ -7675,6 +7675,8 @@ GameObject:
   - component: {fileID: 2129448109}
   - component: {fileID: 2129448108}
   - component: {fileID: 2129448110}
+  - component: {fileID: 2129448112}
+  - component: {fileID: 2129448111}
   m_Layer: 0
   m_Name: BoardGameManager
   m_TagString: Untagged
@@ -7694,13 +7696,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1637153b78ab24020b616891b03b2fa5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardGameManager
-  inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
-  viewHelper: {fileID: 2129448110}
-  playerToken: {fileID: 418226195}
-  startNode: {fileID: 1239286138}
-  moveSpeed: 5
-  rotateSpeed: 10
-  moveSpeedParamName: Speed
+  movementController: {fileID: 2129448112}
 --- !u!4 &2129448109
 Transform:
   m_ObjectHideFlags: 0
@@ -7733,6 +7729,39 @@ MonoBehaviour:
   cursorScale: 0.5
   normalColor: {r: 1, g: 1, b: 1, a: 0.5}
   highlightColor: {r: 0, g: 1, b: 0, a: 1}
+--- !u!114 &2129448111
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2129448107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 945f32a8060264d7fa55a423314715a7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardForkSelector
+  inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
+  viewHelper: {fileID: 2129448110}
+  inputDelay: 0.2
+--- !u!114 &2129448112
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2129448107}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 89b7774278ecc41029e2dd48603ecb55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardMovementController
+  forkSelector: {fileID: 2129448111}
+  playerToken: {fileID: 418226195}
+  startNode: {fileID: 1239286138}
+  moveSpeed: 5
+  rotateSpeed: 15
+  moveSpeedParamName: Speed
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

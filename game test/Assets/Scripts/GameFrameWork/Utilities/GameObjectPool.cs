@@ -6,13 +6,13 @@ namespace IndieGame.Core.Utilities
     /// <summary>
     /// 一个极其轻量级的 GameObject 对象池
     /// </summary>
-    public class SimpleGameObjectPool
+    public class GameObjectPool
     {
         private readonly GameObject _prefab;
         private readonly Transform _parentRoot;
         private readonly Stack<GameObject> _pool = new Stack<GameObject>();
 
-        public SimpleGameObjectPool(GameObject prefab, Transform parentRoot, int initialCapacity = 5)
+        public GameObjectPool(GameObject prefab, Transform parentRoot, int initialCapacity = 5)
         {
             _prefab = prefab;
             _parentRoot = parentRoot;

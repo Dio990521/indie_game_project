@@ -13,7 +13,7 @@ namespace IndieGame.Gameplay.Board.Events
         {
             if (targetContext == null) yield break;
 
-            Transform player = manager.playerToken;
+            Transform player = manager.movementController.playerToken;
             Quaternion targetRot = Quaternion.LookRotation(targetContext.position - player.position);
             
             float timer = 0f;

@@ -87,7 +87,7 @@ namespace IndieGame.Core.Utilities
         {
             if (_instance == this)
             {
-                _applicationIsQuitting = true;
+                _instance = null;
             }
         }
     }

@@ -21,19 +21,21 @@ namespace IndieGame.Gameplay.Board.View
         [Header("Colors")]
         public Color normalColor = new Color(1, 1, 1, 0.5f);
         public Color highlightColor = Color.green;
-        private SimpleGameObjectPool _cursorPool;
+        private GameObjectPool _cursorPool;
         private List<GameObject> _activeCursors = new List<GameObject>();
+        private bool _usePooling = false;
 
         private void Awake()
         {
             if (cursorPrefab != null)
             {
+                _usePooling = true;
                 // 初始化对象池，预生成 3 个备用
                 // 创建一个子物体作为池子的容器，保持 Hierarchy 整洁
                 GameObject poolRoot = new GameObject("CursorPool");
                 poolRoot.transform.SetParent(this.transform);
                 
-                _cursorPool = new SimpleGameObjectPool(cursorPrefab, poolRoot.transform, 3);
+                _cursorPool = new GameObjectPool(cursorPrefab, poolRoot.transform, 3);
             }
         }
 
@@ -97,7 +99,15 @@ namespace IndieGame.Gameplay.Board.View
         {
             foreach (var c in _activeCursors)
             {
-                if (c) Destroy(c);
+                if (!c) continue;
+                if (_usePooling && _cursorPool != null)
+                {
+                    _cursorPool.Release(c);
+                }
+                else
+                {
+                    Destroy(c);
+                }
             }
             _activeCursors.Clear();
         }
