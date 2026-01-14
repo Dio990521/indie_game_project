@@ -21,8 +21,21 @@ namespace IndieGame.Gameplay.Board.View
         [Header("Colors")]
         public Color normalColor = new Color(1, 1, 1, 0.5f);
         public Color highlightColor = Color.green;
+        private SimpleGameObjectPool _cursorPool;
+        private List<GameObject> _activeCursors = new List<GameObject>();
 
-        private List<GameObject> _spawnedCursors = new List<GameObject>();
+        private void Awake()
+        {
+            if (cursorPrefab != null)
+            {
+                // 初始化对象池，预生成 3 个备用
+                // 创建一个子物体作为池子的容器，保持 Hierarchy 整洁
+                GameObject poolRoot = new GameObject("CursorPool");
+                poolRoot.transform.SetParent(this.transform);
+                
+                _cursorPool = new SimpleGameObjectPool(cursorPrefab, poolRoot.transform, 3);
+            }
+        }
 
         /// <summary>
         /// 在所有可选路径上生成光标
@@ -38,7 +51,7 @@ namespace IndieGame.Gameplay.Board.View
                 GameObject cursor;
                 if (cursorPrefab != null)
                 {
-                    cursor = Instantiate(cursorPrefab);
+                    cursor = _cursorPool.Get();
                 }
                 else
                 {
@@ -59,7 +72,7 @@ namespace IndieGame.Gameplay.Board.View
                 if(cursor.GetComponent<Renderer>() == null)
                     cursor.AddComponent<MeshRenderer>();
 
-                _spawnedCursors.Add(cursor);
+                _activeCursors.Add(cursor);
             }
         }
 
@@ -68,11 +81,11 @@ namespace IndieGame.Gameplay.Board.View
         /// </summary>
         public void HighlightCursor(int activeIndex)
         {
-            for (int i = 0; i < _spawnedCursors.Count; i++)
+            for (int i = 0; i < _activeCursors.Count; i++)
             {
-                if (_spawnedCursors[i] == null) continue;
+                if (_activeCursors[i] == null) continue;
 
-                var r = _spawnedCursors[i].GetComponent<Renderer>();
+                var r = _activeCursors[i].GetComponent<Renderer>();
                 if (r != null)
                 {
                     r.material.color = (i == activeIndex) ? highlightColor : normalColor;
@@ -82,11 +95,11 @@ namespace IndieGame.Gameplay.Board.View
 
         public void ClearCursors()
         {
-            foreach (var c in _spawnedCursors)
+            foreach (var c in _activeCursors)
             {
                 if (c) Destroy(c);
             }
-            _spawnedCursors.Clear();
+            _activeCursors.Clear();
         }
     }
 }

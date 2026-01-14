@@ -55,6 +55,19 @@ namespace IndieGame.Gameplay.Board.Runtime
         public float lineWidth = 0.3f; // 线稍微细一点
         public int lineSegments = 20;
 
+        private void Awake()
+        {
+            // [优化] 预处理：在游戏开始时就将所有连接上的事件按进度排序
+            // 这样运行时就不需要用 LinQ 的 OrderBy 了，极大节省性能
+            foreach (var conn in connections)
+            {
+                if (conn.events != null && conn.events.Count > 1)
+                {
+                    conn.events.Sort((a, b) => a.progressPoint.CompareTo(b.progressPoint));
+                }
+            }
+        }
+
         private void Start()
         {
             GenerateVisualLines();

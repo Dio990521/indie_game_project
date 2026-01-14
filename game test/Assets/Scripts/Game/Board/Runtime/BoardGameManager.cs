@@ -147,11 +147,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             float approxDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
             float duration = approxDist / moveSpeed;
             
-            // 准备事件队列：按进度从小到大排序，重置触发状态
-            foreach(var evt in conn.events) evt.hasTriggered = false;
-            Queue<ConnectionEvent> eventQueue = new Queue<ConnectionEvent>(
-                conn.events.OrderBy(e => e.progressPoint)
-            );
+            int nextEventIndex = 0;
+            int totalEvents = conn.events.Count;
 
             float timer = 0f;
 
@@ -164,24 +161,19 @@ namespace IndieGame.Gameplay.Board.Runtime
                 float nextT = nextTimer / duration;
 
                 // 检测：这一帧的移动是否“跨越”了下一个事件点
-                if (eventQueue.Count > 0 && eventQueue.Peek().progressPoint <= nextT)
+                if (nextEventIndex < totalEvents && conn.events[nextEventIndex].progressPoint <= nextT)
                 {
-                    // 取出事件
-                    ConnectionEvent evt = eventQueue.Dequeue();
+                    ConnectionEvent evt = conn.events[nextEventIndex];
                     
-                    // 1. 强制移动到精确的触发点位置（防止一帧跳过）
                     float triggerT = evt.progressPoint;
                     Vector3 triggerPos = BezierUtils.GetQuadraticBezierPoint(triggerT, curveStartPos, p1, p2);
                     playerToken.position = triggerPos;
-                    
-                    // 同步时间变量
                     timer = triggerT * duration;
 
-                    // 2. 暂停移动，执行事件逻辑
                     yield return StartCoroutine(HandleConnectionEvent(evt));
-
-                    // 3. 事件结束后，本帧结束，下一帧继续移动
-                    // 注意：这里不增加 timer，相当于在这一帧停住了
+                    
+                    // 事件触发完，索引+1，指向下一个
+                    nextEventIndex++; 
                     continue; 
                 }
 
