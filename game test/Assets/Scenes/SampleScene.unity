@@ -364,6 +364,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 916751895}
     controlPointOffset: {x: -1.626748, y: -0.027593791, z: 3.6082745}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!120 &102969763
@@ -504,6 +505,118 @@ LineRenderer:
   m_UseWorldSpace: 1
   m_Loop: 0
   m_ApplyActiveColorSpace: 1
+--- !u!1 &121923778
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 121923779}
+  - component: {fileID: 121923782}
+  - component: {fileID: 121923781}
+  - component: {fileID: 121923780}
+  m_Layer: 0
+  m_Name: Event Cube
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &121923779
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121923778}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.2142406, y: 0.010146475, z: 0.093565404, w: 0.9722364}
+  m_LocalPosition: {x: -0.983, y: 0, z: 0.334}
+  m_LocalScale: {x: 0.06, y: 1, z: 0.12}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1793533023}
+  m_LocalEulerAnglesHint: {x: 24.5, y: 3.769, z: 11.813}
+--- !u!65 &121923780
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121923778}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 1, y: 1, z: 1}
+  m_Center: {x: 0, y: 0, z: 0}
+--- !u!23 &121923781
+MeshRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121923778}
+  m_Enabled: 1
+  m_CastShadows: 1
+  m_ReceiveShadows: 1
+  m_DynamicOccludee: 1
+  m_StaticShadowCaster: 0
+  m_MotionVectors: 1
+  m_LightProbeUsage: 1
+  m_ReflectionProbeUsage: 1
+  m_RayTracingMode: 2
+  m_RayTraceProcedural: 0
+  m_RayTracingAccelStructBuildFlagsOverride: 0
+  m_RayTracingAccelStructBuildFlags: 1
+  m_SmallMeshCulling: 1
+  m_ForceMeshLod: -1
+  m_MeshLodSelectionBias: 0
+  m_RenderingLayerMask: 1
+  m_RendererPriority: 0
+  m_Materials:
+  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
+  m_StaticBatchInfo:
+    firstSubMesh: 0
+    subMeshCount: 0
+  m_StaticBatchRoot: {fileID: 0}
+  m_ProbeAnchor: {fileID: 0}
+  m_LightProbeVolumeOverride: {fileID: 0}
+  m_ScaleInLightmap: 1
+  m_ReceiveGI: 1
+  m_PreserveUVs: 0
+  m_IgnoreNormalsForChartDetection: 0
+  m_ImportantGI: 0
+  m_StitchLightmapSeams: 1
+  m_SelectedEditorRenderState: 3
+  m_MinimumChartSize: 4
+  m_AutoUVMaxDistance: 0.5
+  m_AutoUVMaxAngle: 89
+  m_LightmapParameters: {fileID: 0}
+  m_GlobalIlluminationMeshLod: 0
+  m_SortingLayerID: 0
+  m_SortingLayer: 0
+  m_SortingOrder: 0
+  m_MaskInteraction: 0
+  m_AdditionalVertexStreams: {fileID: 0}
+--- !u!33 &121923782
+MeshFilter:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121923778}
+  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &185903979
 GameObject:
   m_ObjectHideFlags: 0
@@ -629,6 +742,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 518899725}
     controlPointOffset: {x: -0.9950001, y: 2, z: -1.4650002}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &301926483
@@ -1072,6 +1186,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 401567712}
     controlPointOffset: {x: -2.4099998, y: 2, z: -1.4099998}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &360996486
@@ -1345,6 +1460,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1226654723}
     controlPointOffset: {x: -2.6749992, y: 2, z: -1.3649998}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &401567713
@@ -1861,6 +1977,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 514307293}
     controlPointOffset: {x: -2.4300003, y: 2, z: -0.31500053}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &441774574
@@ -2230,8 +2347,10 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1968468774}
     controlPointOffset: {x: -1.5499997, y: 2, z: -1.695}
+    events: []
   - targetNode: {fileID: 803951497}
     controlPointOffset: {x: 1.4350002, y: 2, z: -1.695}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!120 &457539155
@@ -2563,6 +2682,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1267361226}
     controlPointOffset: {x: -0.895, y: 2, z: -1.8600001}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!136 &502857924
@@ -2683,6 +2803,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 360996485}
     controlPointOffset: {x: -3.12, y: 2, z: 0}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &514307294
@@ -2956,6 +3077,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 441774573}
     controlPointOffset: {x: -1.1199999, y: 2, z: -1.7549996}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &518899726
@@ -3229,6 +3351,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 301926482}
     controlPointOffset: {x: 0, y: 2, z: -1.3399997}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &553511171
@@ -3670,6 +3793,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 553511170}
     controlPointOffset: {x: -0.29500008, y: 2, z: -1.8700001}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!4 &803951498
@@ -4087,6 +4211,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1464109575}
     controlPointOffset: {x: -1.7400002, y: -0.00064760447, z: -0.5250001}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!120 &916751896
@@ -4632,6 +4757,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 360996485}
     controlPointOffset: {x: -1.5650005, y: 2, z: -1.9899998}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!136 &1033441318
@@ -5246,6 +5372,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 102969762}
     controlPointOffset: {x: -0.715, y: -0.012785375, z: 1.04}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!120 &1239286139
@@ -5577,6 +5704,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1033441317}
     controlPointOffset: {x: -1.7899995, y: 2, z: -1.4600005}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!136 &1267361227
@@ -6040,6 +6168,11 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1957126851}
     controlPointOffset: {x: -0.9200001, y: 0.03192365, z: -1.7950001}
+    events:
+    - progressPoint: 0.504
+      lookAtTarget: {fileID: 121923779}
+      eventMessage: Fuck!
+      hasTriggered: 0
   lineWidth: 0.5
   lineSegments: 20
 --- !u!120 &1464109576
@@ -6547,6 +6680,7 @@ Transform:
   - {fileID: 1820840240}
   - {fileID: 1390950631}
   - {fileID: 1930707822}
+  - {fileID: 121923779}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1820840239
@@ -6988,6 +7122,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 457539154}
     controlPointOffset: {x: 0, y: 0.0404523, z: -2.135}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!120 &1957126852
@@ -7399,6 +7534,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 502857923}
     controlPointOffset: {x: -0.7250004, y: 2, z: -1.4349997}
+    events: []
   lineWidth: 0.5
   lineSegments: 20
 --- !u!21 &2005270707

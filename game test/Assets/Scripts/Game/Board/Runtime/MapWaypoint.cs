@@ -11,7 +11,28 @@ namespace IndieGame.Gameplay.Board.Runtime
     public class WaypointConnection
     {
         public MapWaypoint targetNode;
-        public Vector3 controlPointOffset = new Vector3(0, 0, 0); 
+        public Vector3 controlPointOffset;
+
+        [Header("Connection Events")]
+        [Tooltip("在这条连线上触发的事件列表")]
+        public List<ConnectionEvent> events = new List<ConnectionEvent>();
+    }
+
+    [System.Serializable]
+    public class ConnectionEvent
+    {
+        [Tooltip("触发点在路径上的比例 (0 = 起点, 1 = 终点)")]
+        [Range(0.01f, 0.99f)] 
+        public float progressPoint = 0.5f;
+
+        [Tooltip("角色触发事件时看向的目标物体")]
+        public Transform lookAtTarget;
+
+        [Tooltip("事件日志内容（暂时用Log代替）")]
+        public string eventMessage = "Event Triggered!";
+        
+        // 运行时标记，防止重复触发
+        [HideInInspector] public bool hasTriggered = false; 
     }
 
     [RequireComponent(typeof(LineRenderer))]
