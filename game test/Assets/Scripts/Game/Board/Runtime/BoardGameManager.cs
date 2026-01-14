@@ -4,6 +4,7 @@ using UnityEngine;
 using System.Linq; // 需要引用 Linq 进行排序
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
+using IndieGame.Gameplay.Board.Events;
 using IndieGame.Core.Input;
 using IndieGame.Gameplay.Board.View;
 
@@ -170,7 +171,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                     
                     // 1. 强制移动到精确的触发点位置（防止一帧跳过）
                     float triggerT = evt.progressPoint;
-                    Vector3 triggerPos = MapWaypoint.GetBezierPoint(triggerT, curveStartPos, p1, p2);
+                    Vector3 triggerPos = BezierUtils.GetQuadraticBezierPoint(triggerT, curveStartPos, p1, p2);
                     playerToken.position = triggerPos;
                     
                     // 同步时间变量
@@ -186,7 +187,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
                 // 正常移动逻辑
                 timer = nextTimer;
-                Vector3 nextPos = MapWaypoint.GetBezierPoint(nextT, curveStartPos, p1, p2);
+                Vector3 nextPos = BezierUtils.GetQuadraticBezierPoint(nextT, curveStartPos, p1, p2);
                 
                 Vector3 moveDir = (nextPos - playerToken.position).normalized;
                 if (moveDir != Vector3.zero)
@@ -208,28 +209,16 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 停止跑步动画
             if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
 
-            // 1. 转向看向目标点
-            if (evt.lookAtTarget != null)
+            if (evt.eventAction != null)
             {
-                Quaternion targetRot = Quaternion.LookRotation(evt.lookAtTarget.position - playerToken.position);
-                float rotateTimer = 0f;
-                while (rotateTimer < 0.5f) // 0.5秒转过去
-                {
-                    rotateTimer += Time.deltaTime;
-                    playerToken.rotation = Quaternion.Slerp(playerToken.rotation, targetRot, rotateTimer * 5f);
-                    yield return null;
-                }
+                yield return StartCoroutine(evt.eventAction.Execute(this, evt.contextTarget));
+            }
+            else
+            {
+                Debug.LogWarning("Connection Event triggered but no Action SO assigned!");
             }
 
-            // 2. 触发逻辑 (Log)
-            Debug.Log($"<color=yellow>⚡ [Path Event] Triggered: {evt.eventMessage}</color>");
-            
-            // 3. 模拟事件持续时间（比如播放一个特效，或者等待对话框关闭）
-            // 未来这里可以改成 yield return DialogueManager.Show(evt.message);
-            yield return new WaitForSeconds(1.0f);
-
-            // 4. 准备恢复移动
-            // 如果需要，可以加一点延迟再起跑
+            // 准备恢复移动
             if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
         }
 

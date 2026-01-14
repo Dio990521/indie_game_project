@@ -1,7 +1,8 @@
 using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Gameplay.Board.Data; // 引用 TileBase 等数据
-using IndieGame.Gameplay.Board.Runtime; // 引用 WaypointConnection
+using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Core.Utilities; // 引用 WaypointConnection
 
 namespace IndieGame.Gameplay.Board.View
 {
@@ -51,7 +52,7 @@ namespace IndieGame.Gameplay.Board.View
                 Vector3 p2 = conn.targetNode.transform.position;
                 Vector3 p1 = p0 + conn.controlPointOffset;
 
-                cursor.transform.position = MapWaypoint.GetBezierPoint(cursorOffsetDistance, p0, p1, p2);
+                cursor.transform.position = BezierUtils.GetQuadraticBezierPoint(cursorOffsetDistance, p0, p1, p2);
                 cursor.transform.localScale = Vector3.one * cursorScale;
                 
                 // 确保有渲染器以便染色

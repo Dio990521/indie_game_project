@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEditor;
 using IndieGame.Gameplay.Board.Runtime;
 using System.Collections.Generic;
+using IndieGame.Core.Utilities;
 
 namespace IndieGame.Editor.Board
 {
@@ -42,7 +43,7 @@ namespace IndieGame.Editor.Board
                 Vector3[] points = new Vector3[30];
                 for (int j = 0; j < 30; j++)
                 {
-                    points[j] = MapWaypoint.GetBezierPoint(j / 29f, startPos, controlPointPos, endPos);
+                    points[j] = BezierUtils.GetQuadraticBezierPoint(j / 29f, startPos, controlPointPos, endPos);
                 }
                 Handles.DrawAAPolyLine(3f, points);
 

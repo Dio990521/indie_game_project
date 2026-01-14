@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using IndieGame.Core.Utilities; // 引用新的数学库
+using IndieGame.Gameplay.Board.Events;
 using IndieGame.Gameplay.Board.Data;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -25,11 +27,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Range(0.01f, 0.99f)] 
         public float progressPoint = 0.5f;
 
-        [Tooltip("角色触发事件时看向的目标物体")]
-        public Transform lookAtTarget;
+        [Header("Architecture: Command Pattern")]
+        [Tooltip("拖入一个具体的事件配置文件 (ScriptableObject)")]
+        public BoardEventSO eventAction;
 
-        [Tooltip("事件日志内容（暂时用Log代替）")]
-        public string eventMessage = "Event Triggered!";
+        [Tooltip("事件执行时的参考目标（可选，比如看向的物体，或者特效生成的位置）")]
+        public Transform contextTarget;
         
         // 运行时标记，防止重复触发
         [HideInInspector] public bool hasTriggered = false; 
@@ -103,16 +106,9 @@ namespace IndieGame.Gameplay.Board.Runtime
             for (int j = 0; j <= lineSegments; j++)
             {
                 float t = j / (float)lineSegments;
-                Vector3 pixel = GetBezierPoint(t, p0, p1, p2);
+                Vector3 pixel = BezierUtils.GetQuadraticBezierPoint(t, p0, p1, p2);
                 lr.SetPosition(j, pixel + Vector3.up * 0.1f);
             }
-        }
-
-        public static Vector3 GetBezierPoint(float t, Vector3 p0, Vector3 p1, Vector3 p2)
-        {
-            t = Mathf.Clamp01(t);
-            float u = 1 - t;
-            return u * u * p0 + 2 * u * t * p1 + t * t * p2;
         }
 
         private void OnDrawGizmos()

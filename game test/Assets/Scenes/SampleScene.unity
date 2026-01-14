@@ -6169,9 +6169,13 @@ MonoBehaviour:
   - targetNode: {fileID: 1957126851}
     controlPointOffset: {x: -0.9200001, y: 0.03192365, z: -1.7950001}
     events:
-    - progressPoint: 0.504
-      lookAtTarget: {fileID: 121923779}
-      eventMessage: Fuck!
+    - progressPoint: 0.91
+      eventAction: {fileID: 11400000, guid: a7f44820c5f044540a20e975a19467e1, type: 2}
+      contextTarget: {fileID: 121923779}
+      hasTriggered: 0
+    - progressPoint: 0.068
+      eventAction: {fileID: 11400000, guid: dc6721bacad12460097585212cec6fa9, type: 2}
+      contextTarget: {fileID: 121923779}
       hasTriggered: 0
   lineWidth: 0.5
   lineSegments: 20
