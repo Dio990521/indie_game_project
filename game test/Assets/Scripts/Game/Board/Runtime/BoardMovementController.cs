@@ -4,6 +4,7 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Board.Events;
+using System;
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
@@ -22,6 +23,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         public string moveSpeedParamName = "Speed";
 
         public bool IsMoving => _isMoving;
+        public event Action MoveStarted;
+        public event Action MoveEnded;
 
         private int _animIDSpeed;
         private Animator _playerAnimator;
@@ -45,6 +48,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void BeginMove(int totalSteps)
         {
             if (_isMoving) return;
+            _isMoving = true;
+            MoveStarted?.Invoke();
             StartCoroutine(MoveRoutine(totalSteps));
         }
 
@@ -62,7 +67,6 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private IEnumerator MoveRoutine(int totalSteps)
         {
-            _isMoving = true;
             int stepsRemaining = totalSteps;
 
             while (stepsRemaining > 0)
@@ -132,6 +136,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             _isMoving = false;
+            MoveEnded?.Invoke();
         }
 
         // --- 核心修改：支持事件中断的移动逻辑 ---

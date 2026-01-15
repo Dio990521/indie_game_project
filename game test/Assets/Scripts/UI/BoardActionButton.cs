@@ -1,26 +1,29 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using TMPro;
 using UnityEngine.UI;
 using DG.Tweening;
 
 namespace IndieGame.UI
 {
-    public class BoardActionButton : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler
+    public class BoardActionButton : MonoBehaviour, IPointerEnterHandler, IPointerClickHandler, IPointerExitHandler
     {
         [Header("UI")]
         public Image iconImage;
-        public Text label;
+        public TMP_Text label;
 
         private int _index;
         private Action<int> _onHover;
         private Action<int> _onClick;
+        private Action<int> _onExit;
 
-        public void Setup(MenuOption option, int index, Action<int> onHover, Action<int> onClick)
+        public void Setup(MenuOption option, int index, Action<int> onHover, Action<int> onClick, Action<int> onExit)
         {
             _index = index;
             _onHover = onHover;
             _onClick = onClick;
+            _onExit = onExit;
 
             if (label != null) label.text = option.Name;
             if (iconImage != null) iconImage.sprite = option.Icon;
@@ -40,6 +43,11 @@ namespace IndieGame.UI
         public void OnPointerClick(PointerEventData eventData)
         {
             _onClick?.Invoke(_index);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            _onExit?.Invoke(_index);
         }
     }
 }
