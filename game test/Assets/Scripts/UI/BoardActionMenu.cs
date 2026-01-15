@@ -29,7 +29,8 @@ namespace IndieGame.UI
         public GameInputReader inputReader;
         public BoardActionButton buttonPrefab;
         public Transform target;
-        public BoardMovementController movementController;
+
+        public event Action OnRollDiceRequested;
 
         [Header("Layout")]
         public float radius = 120f;
@@ -88,11 +89,6 @@ namespace IndieGame.UI
             GameManager.OnStateChanged += HandleStateChanged;
             if (inputReader != null) inputReader.MoveEvent += OnMoveInput;
             if (inputReader != null) inputReader.InteractEvent += OnInteractInput;
-            if (movementController != null)
-            {
-                movementController.MoveStarted += HandleMoveStarted;
-                movementController.MoveEnded += HandleMoveEnded;
-            }
         }
 
         private void OnDisable()
@@ -100,11 +96,6 @@ namespace IndieGame.UI
             GameManager.OnStateChanged -= HandleStateChanged;
             if (inputReader != null) inputReader.MoveEvent -= OnMoveInput;
             if (inputReader != null) inputReader.InteractEvent -= OnInteractInput;
-            if (movementController != null)
-            {
-                movementController.MoveStarted -= HandleMoveStarted;
-                movementController.MoveEnded -= HandleMoveEnded;
-            }
         }
 
         private void LateUpdate()
@@ -121,29 +112,12 @@ namespace IndieGame.UI
         {
             if (newState == GameState.BoardMode)
             {
-                TryShow();
+                Show();
             }
             else
             {
                 Hide();
             }
-        }
-
-        private void HandleMoveStarted()
-        {
-            Hide();
-        }
-
-        private void HandleMoveEnded()
-        {
-            TryShow();
-        }
-
-        private void TryShow()
-        {
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
-            if (movementController != null && movementController.IsMoving) return;
-            Show();
         }
 
         public void Show()
@@ -174,7 +148,7 @@ namespace IndieGame.UI
                 Icon = null,
                 Callback = done =>
                 {
-                    BoardGameManager.Instance.RollDice();
+                    OnRollDiceRequested?.Invoke();
                     Hide();
                     done?.Invoke();
                 }
