@@ -1,4 +1,5 @@
 using UnityEngine;
+using IndieGame.Gameplay.Inventory;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 
@@ -18,6 +19,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 movementController.MoveStarted += HandleMoveStarted;
                 movementController.MoveEnded += HandleMoveEnded;
             }
+            InventoryManager.OnInventoryClosed += HandleInventoryClosed;
         }
 
         private void OnDisable()
@@ -28,6 +30,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 movementController.MoveStarted -= HandleMoveStarted;
                 movementController.MoveEnded -= HandleMoveEnded;
             }
+            InventoryManager.OnInventoryClosed -= HandleInventoryClosed;
         }
 
         [ContextMenu("Roll Dice")]
@@ -48,12 +51,26 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void HandleMoveStarted()
         {
-            if (actionMenu != null) actionMenu.Hide();
+            if (actionMenu != null)
+            {
+                actionMenu.SetAllowShow(false);
+            }
         }
 
         private void HandleMoveEnded()
         {
-            if (actionMenu != null) actionMenu.Show();
+            if (actionMenu != null)
+            {
+                actionMenu.SetAllowShow(true);
+            }
+        }
+
+        private void HandleInventoryClosed()
+        {
+            if (actionMenu != null && (movementController == null || !movementController.IsMoving))
+            {
+                actionMenu.SetAllowShow(true);
+            }
         }
         public void ResetToStart()
         {

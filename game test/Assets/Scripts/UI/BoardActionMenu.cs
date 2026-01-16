@@ -31,6 +31,7 @@ namespace IndieGame.UI
         public Transform target;
 
         public event Action OnRollDiceRequested;
+        public static event Action OnRequestOpenInventory;
 
         [Header("Layout")]
         public float radius = 120f;
@@ -62,6 +63,7 @@ namespace IndieGame.UI
         private CanvasGroup _canvasGroup;
         private bool _isVisible = false;
         private SelectionSource _selectionSource = SelectionSource.None;
+        private bool _allowShow = true;
 
         private void Awake()
         {
@@ -112,7 +114,7 @@ namespace IndieGame.UI
         {
             if (newState == GameState.BoardMode)
             {
-                Show();
+                if (_allowShow) Show();
             }
             else
             {
@@ -123,6 +125,7 @@ namespace IndieGame.UI
         public void Show()
         {
             if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
+            if (!_allowShow) return;
             if (_isVisible) return;
 
             BuildDefaultOptions();
@@ -137,6 +140,21 @@ namespace IndieGame.UI
         {
             if (!_isVisible) return;
             PlayHideAnimation();
+        }
+
+        public void SetAllowShow(bool allow)
+        {
+            _allowShow = allow;
+            if (!allow)
+            {
+                Hide();
+                return;
+            }
+
+            if (GameManager.Instance.CurrentState == GameState.BoardMode)
+            {
+                Show();
+            }
         }
 
         private void BuildDefaultOptions()
@@ -155,11 +173,12 @@ namespace IndieGame.UI
             });
             _options.Add(new MenuOption
             {
-                Name = "Item",
+                Name = "Backpack",
                 Icon = null,
                 Callback = done =>
                 {
-                    Debug.Log("[BoardActionMenu] Item clicked.");
+                    OnRequestOpenInventory?.Invoke();
+                    Hide();
                     done?.Invoke();
                 }
             });
