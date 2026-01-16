@@ -1,18 +1,15 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using IndieGame.Gameplay.Inventory;
 
 namespace IndieGame.UI.Inventory
 {
-    public class InventoryUI : MonoBehaviour
+    public class InventoryUIView : MonoBehaviour
     {
-        [Header("UI")]
-        public GameObject rootPanel;
-        public Transform contentRoot;
-        public InventorySlotUI slotPrefab;
-        public Button closeButton;
+        [Header("Binder")]
+        [SerializeField] private InventoryUIBinder binder;
+        [SerializeField] private UILayerPriority layer = UILayerPriority.Top75;
 
         public event Action OnCloseRequested;
         public event Action<ItemSO> OnSlotClicked;
@@ -21,21 +18,35 @@ namespace IndieGame.UI.Inventory
 
         private void Awake()
         {
-            if (closeButton != null)
+            if (binder == null)
             {
-                closeButton.onClick.AddListener(HandleCloseClicked);
+                Debug.LogError("[InventoryUIView] Missing binder reference.");
+                return;
+            }
+            if (binder.CloseButton != null)
+            {
+                binder.CloseButton.onClick.AddListener(HandleCloseClicked);
+            }
+        }
+
+        private void Start()
+        {
+            if (binder != null)
+            {
+                Transform root = binder.RootPanel != null ? binder.RootPanel.transform : transform;
+                UIManager.Instance.AttachToLayer(root, layer);
             }
         }
 
         public void Show(List<ItemSO> items)
         {
-            if (rootPanel != null) rootPanel.SetActive(true);
+            if (binder.RootPanel != null) binder.RootPanel.SetActive(true);
             Rebuild(items);
         }
 
         public void Hide()
         {
-            if (rootPanel != null) rootPanel.SetActive(false);
+            if (binder.RootPanel != null) binder.RootPanel.SetActive(false);
         }
 
         private void HandleCloseClicked()
@@ -46,11 +57,11 @@ namespace IndieGame.UI.Inventory
         private void Rebuild(List<ItemSO> items)
         {
             ClearSlots();
-            if (items == null || slotPrefab == null || contentRoot == null) return;
+            if (items == null || binder.SlotPrefab == null || binder.ContentRoot == null) return;
 
             for (int i = 0; i < items.Count; i++)
             {
-                InventorySlotUI slot = Instantiate(slotPrefab, contentRoot);
+                InventorySlotUI slot = Instantiate(binder.SlotPrefab, binder.ContentRoot);
                 slot.Setup(items[i], HandleSlotClicked);
                 _slots.Add(slot);
             }

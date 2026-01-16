@@ -242,30 +242,15 @@ GameObject:
   - component: {fileID: 57513212}
   - component: {fileID: 57513214}
   - component: {fileID: 57513213}
-  - component: {fileID: 57513211}
+  - component: {fileID: 57513216}
+  - component: {fileID: 57513215}
   m_Layer: 5
   m_Name: Panel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &57513211
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 57513210}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 544f855222bc745d99da13d246efeade, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Inventory.InventoryUI
-  rootPanel: {fileID: 57513210}
-  contentRoot: {fileID: 1978468512}
-  slotPrefab: {fileID: 5443788498254101433, guid: fcc10b01c591c44f58d6d3abf5924c9c, type: 3}
-  closeButton: {fileID: 675110150}
+  m_IsActive: 0
 --- !u!224 &57513212
 RectTransform:
   m_ObjectHideFlags: 0
@@ -325,6 +310,36 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 57513210}
   m_CullTransparentMesh: 1
+--- !u!114 &57513215
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 57513210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bf93b48b2745349bdb97007f061911ef, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Inventory.InventoryUIView
+  binder: {fileID: 57513216}
+  layer: 1
+--- !u!114 &57513216
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 57513210}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: aa6537731f79f464196ffc2e7bf5b539, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Inventory.InventoryUIBinder
+  rootPanel: {fileID: 57513210}
+  contentRoot: {fileID: 1978468512}
+  slotPrefab: {fileID: 5443788498254101433, guid: fcc10b01c591c44f58d6d3abf5924c9c, type: 3}
+  closeButton: {fileID: 675110150}
 --- !u!1 &102969757
 GameObject:
   m_ObjectHideFlags: 0
@@ -788,7 +803,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.InventoryManager
   items:
   - {fileID: 11400000, guid: 6301c8d2a414f4fb6a116c993cb5e6f7, type: 2}
-  inventoryUI: {fileID: 57513211}
+  inventoryUI: {fileID: 57513215}
 --- !u!4 &236996775
 Transform:
   m_ObjectHideFlags: 0
@@ -1128,6 +1143,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 304022575}
+  - component: {fileID: 304022578}
+  - component: {fileID: 304022577}
   - component: {fileID: 304022576}
   m_Layer: 5
   m_Name: BoardActionMenu
@@ -1155,7 +1172,19 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 100, y: 100}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &304022576
+--- !u!225 &304022576
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 304022574}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &304022577
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1164,11 +1193,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 304022574}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 892982b5199144f25925916bbd89b677, type: 3}
+  m_Script: {fileID: 11500000, guid: b9acd96fcbcdd407fb4571ffaa368020, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.BoardActionMenu
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.BoardActionMenuView
+  binder: {fileID: 304022578}
+  layer: 1
   inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
-  buttonPrefab: {fileID: 7675780097965897358, guid: f8509c0b1c5964a8c97ca37d297f8afe, type: 3}
   target: {fileID: 418226195}
   radius: 120
   arcAngle: 90
@@ -1182,6 +1212,22 @@ MonoBehaviour:
   showStagger: 0.06
   showEase: 27
   hideEase: 26
+--- !u!114 &304022578
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 304022574}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 21f72fc7072c1414dbfee3e19316ffd6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.BoardActionMenuBinder
+  rootRect: {fileID: 1780520813}
+  buttonContainer: {fileID: 304022575}
+  buttonPrefab: {fileID: 7675780097965897358, guid: f8509c0b1c5964a8c97ca37d297f8afe, type: 3}
+  canvasGroup: {fileID: 304022576}
 --- !u!1 &308475681
 GameObject:
   m_ObjectHideFlags: 0
@@ -3676,7 +3722,7 @@ RectTransform:
   m_Father: {fileID: 1561070035}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
   m_Pivot: {x: 0.5, y: 0.5}
@@ -7420,6 +7466,52 @@ Material:
     - _RendererColor: {r: 1, g: 1, b: 1, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!1 &1777103872
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1777103874}
+  - component: {fileID: 1777103873}
+  m_Layer: 0
+  m_Name: UIManager
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &1777103873
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1777103872}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 72b312fb9521442ee886077057950f53, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.UIManager
+  screenOverlayTop75: {fileID: 0}
+  screenCameraBottom25: {fileID: 0}
+--- !u!4 &1777103874
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1777103872}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1780520809
 GameObject:
   m_ObjectHideFlags: 0
@@ -7828,9 +7920,9 @@ RectTransform:
   m_Father: {fileID: 920459994}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 0, y: 0}
+  m_SizeDelta: {x: -37, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1850938542
 MonoBehaviour:
@@ -8617,7 +8709,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0}
+  m_AnchoredPosition: {x: 0, y: 0.0005955038}
   m_SizeDelta: {x: 0, y: 300}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &1978468513
@@ -8937,7 +9029,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardGameManager
   movementController: {fileID: 2129448112}
-  actionMenu: {fileID: 304022576}
+  actionMenu: {fileID: 304022577}
 --- !u!4 &2129448109
 Transform:
   m_ObjectHideFlags: 0
@@ -9021,3 +9113,4 @@ SceneRoots:
   - {fileID: 1780520813}
   - {fileID: 1572363677}
   - {fileID: 236996775}
+  - {fileID: 1777103874}

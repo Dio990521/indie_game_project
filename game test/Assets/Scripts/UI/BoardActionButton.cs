@@ -18,15 +18,15 @@ namespace IndieGame.UI
         private Action<int> _onClick;
         private Action<int> _onExit;
 
-        public void Setup(MenuOption option, int index, Action<int> onHover, Action<int> onClick, Action<int> onExit)
+        public void Setup(string name, Sprite icon, int index, Action<int> onHover, Action<int> onClick, Action<int> onExit)
         {
             _index = index;
             _onHover = onHover;
             _onClick = onClick;
             _onExit = onExit;
 
-            if (label != null) label.text = option.Name;
-            if (iconImage != null) iconImage.sprite = option.Icon;
+            if (label != null) label.text = name;
+            if (iconImage != null) iconImage.sprite = icon;
         }
 
         public void SetSelected(bool selected, float scale, float duration)

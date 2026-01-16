@@ -13,13 +13,13 @@ namespace IndieGame.Gameplay.Inventory
         public List<ItemSO> items = new List<ItemSO>();
 
         [Header("View")]
-        public InventoryUI inventoryUI;
+        public InventoryUIView inventoryUI;
 
         public static event Action OnInventoryClosed;
 
         private void OnEnable()
         {
-            BoardActionMenu.OnRequestOpenInventory += OpenInventory;
+            BoardActionMenuView.OnRequestOpenInventory += OpenInventory;
             if (inventoryUI != null)
             {
                 inventoryUI.OnCloseRequested += CloseInventory;
@@ -29,7 +29,7 @@ namespace IndieGame.Gameplay.Inventory
 
         private void OnDisable()
         {
-            BoardActionMenu.OnRequestOpenInventory -= OpenInventory;
+            BoardActionMenuView.OnRequestOpenInventory -= OpenInventory;
             if (inventoryUI != null)
             {
                 inventoryUI.OnCloseRequested -= CloseInventory;

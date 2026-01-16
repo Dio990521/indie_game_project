@@ -10,7 +10,7 @@ namespace IndieGame.Gameplay.Board.Runtime
     {
         [Header("Dependencies")]
         public BoardMovementController movementController;
-        public IndieGame.UI.BoardActionMenu actionMenu;
+        public IndieGame.UI.BoardActionMenuView actionMenu;
 
         public BoardState CurrentState { get; private set; }
 

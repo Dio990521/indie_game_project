@@ -4,19 +4,10 @@ using UnityEngine;
 using DG.Tweening;
 using IndieGame.Core;
 using IndieGame.Core.Input;
-using IndieGame.Gameplay.Board.Runtime;
 
 namespace IndieGame.UI
 {
-    [Serializable]
-    public class MenuOption
-    {
-        public string Name;
-        public Sprite Icon;
-        public Action<Action> Callback;
-    }
-
-    public class BoardActionMenu : MonoBehaviour
+    public class BoardActionMenuView : MonoBehaviour
     {
         private enum SelectionSource
         {
@@ -25,13 +16,13 @@ namespace IndieGame.UI
             Mouse
         }
 
+        [Header("Binder")]
+        [SerializeField] private BoardActionMenuBinder binder;
+        [SerializeField] private UILayerPriority layer = UILayerPriority.Top75;
+
         [Header("Dependencies")]
         public GameInputReader inputReader;
-        public BoardActionButton buttonPrefab;
         public Transform target;
-
-        public event Action OnRollDiceRequested;
-        public static event Action OnRequestOpenInventory;
 
         [Header("Layout")]
         public float radius = 120f;
@@ -51,35 +42,49 @@ namespace IndieGame.UI
         public Ease showEase = Ease.OutBack;
         public Ease hideEase = Ease.InBack;
 
-        private readonly List<MenuOption> _options = new List<MenuOption>();
+        public event Action OnRollDiceRequested;
+        public static event Action OnRequestOpenInventory;
+
+        private readonly List<BoardActionOptionData> _options = new List<BoardActionOptionData>();
         private readonly List<BoardActionButton> _buttons = new List<BoardActionButton>();
         private int _selectedIndex = 0;
         private float _nextInputTime = 0f;
         private Sequence _showSequence;
         private Sequence _hideSequence;
-        private Transform _cameraTransform;
         private RectTransform _selfRect;
         private RectTransform _canvasRect;
         private CanvasGroup _canvasGroup;
         private bool _isVisible = false;
-        private SelectionSource _selectionSource = SelectionSource.None;
         private bool _allowShow = true;
+        private SelectionSource _selectionSource = SelectionSource.None;
 
         private void Awake()
         {
-            if (Camera.main != null) _cameraTransform = Camera.main.transform;
-            _selfRect = GetComponent<RectTransform>();
-            Canvas canvas = GetComponentInParent<Canvas>();
-            if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
-            _canvasGroup = GetComponent<CanvasGroup>();
-            if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            _canvasGroup.alpha = 0f;
-            _canvasGroup.blocksRaycasts = false;
-            _canvasGroup.interactable = false;
+            if (binder == null)
+            {
+                Debug.LogError("[BoardActionMenuView] Missing binder reference.");
+                return;
+            }
+            _selfRect = binder.RootRect;
+            _canvasGroup = binder.CanvasGroup;
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = 0f;
+                _canvasGroup.blocksRaycasts = false;
+                _canvasGroup.interactable = false;
+            }
         }
 
         private void Start()
         {
+            if (binder != null)
+            {
+                Transform root = binder.RootRect != null ? binder.RootRect : transform;
+                UIManager.Instance.AttachToLayer(root, layer);
+                Canvas canvas = root.GetComponentInParent<Canvas>();
+                if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
+            }
+
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode)
             {
                 Show();
@@ -102,44 +107,10 @@ namespace IndieGame.UI
 
         private void LateUpdate()
         {
-            if (_cameraTransform == null && Camera.main != null) _cameraTransform = Camera.main.transform;
-            if (_cameraTransform == null || _selfRect == null || _canvasRect == null || target == null) return;
-
+            if (_selfRect == null || _canvasRect == null || target == null) return;
             Vector3 screenPos = Camera.main.WorldToScreenPoint(target.position);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPos, null, out Vector2 localPoint);
             _selfRect.anchoredPosition = localPoint;
-        }
-
-        private void HandleStateChanged(GameState newState)
-        {
-            if (newState == GameState.BoardMode)
-            {
-                if (_allowShow) Show();
-            }
-            else
-            {
-                Hide();
-            }
-        }
-
-        public void Show()
-        {
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
-            if (!_allowShow) return;
-            if (_isVisible) return;
-
-            BuildDefaultOptions();
-            RebuildButtons();
-            LayoutButtons();
-            SelectIndex(0, instant: true);
-            PlayShowAnimation();
-            _isVisible = true;
-        }
-
-        public void Hide()
-        {
-            if (!_isVisible) return;
-            PlayHideAnimation();
         }
 
         public void SetAllowShow(bool allow)
@@ -157,41 +128,43 @@ namespace IndieGame.UI
             }
         }
 
-        private void BuildDefaultOptions()
+        public void Show()
+        {
+            if (!_allowShow || _isVisible) return;
+            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
+
+            BuildDefaultData();
+            RebuildButtons();
+            LayoutButtons();
+            SelectIndex(0, instant: true);
+            PlayShowAnimation();
+            _isVisible = true;
+        }
+
+        public void Hide()
+        {
+            if (!_isVisible) return;
+            PlayHideAnimation();
+        }
+
+        private void HandleStateChanged(GameState newState)
+        {
+            if (newState == GameState.BoardMode)
+            {
+                if (_allowShow) Show();
+            }
+            else
+            {
+                Hide();
+            }
+        }
+
+        private void BuildDefaultData()
         {
             _options.Clear();
-            _options.Add(new MenuOption
-            {
-                Name = "Roll Dice",
-                Icon = null,
-                Callback = done =>
-                {
-                    OnRollDiceRequested?.Invoke();
-                    Hide();
-                    done?.Invoke();
-                }
-            });
-            _options.Add(new MenuOption
-            {
-                Name = "Backpack",
-                Icon = null,
-                Callback = done =>
-                {
-                    OnRequestOpenInventory?.Invoke();
-                    Hide();
-                    done?.Invoke();
-                }
-            });
-            _options.Add(new MenuOption
-            {
-                Name = "Camp",
-                Icon = null,
-                Callback = done =>
-                {
-                    Debug.Log("[BoardActionMenu] Camp clicked.");
-                    done?.Invoke();
-                }
-            });
+            _options.Add(new BoardActionOptionData { Id = BoardActionId.RollDice, Name = "Roll Dice" });
+            _options.Add(new BoardActionOptionData { Id = BoardActionId.Item, Name = "Item" });
+            _options.Add(new BoardActionOptionData { Id = BoardActionId.Camp, Name = "Camp" });
         }
 
         private void RebuildButtons()
@@ -202,10 +175,13 @@ namespace IndieGame.UI
             }
             _buttons.Clear();
 
+            if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return;
+
             for (int i = 0; i < _options.Count; i++)
             {
-                BoardActionButton button = Instantiate(buttonPrefab, transform);
-                button.Setup(_options[i], i, OnButtonHover, OnButtonClick, OnButtonExit);
+                BoardActionOptionData option = _options[i];
+                BoardActionButton button = Instantiate(binder.ButtonPrefab, binder.ButtonContainer);
+                button.Setup(option.Name, option.Icon, i, OnButtonHover, OnButtonClick, OnButtonExit);
                 _buttons.Add(button);
             }
         }
@@ -271,8 +247,21 @@ namespace IndieGame.UI
         private void OnButtonClick(int index)
         {
             if (index < 0 || index >= _options.Count) return;
-            MenuOption option = _options[index];
-            option.Callback?.Invoke(() => { });
+            BoardActionOptionData option = _options[index];
+            switch (option.Id)
+            {
+                case BoardActionId.RollDice:
+                    OnRollDiceRequested?.Invoke();
+                    Hide();
+                    break;
+                case BoardActionId.Item:
+                    OnRequestOpenInventory?.Invoke();
+                    Hide();
+                    break;
+                case BoardActionId.Camp:
+                    Debug.Log("[BoardActionMenuView] Camp clicked.");
+                    break;
+            }
         }
 
         private void SelectIndex(int index, bool instant = false)
@@ -303,9 +292,12 @@ namespace IndieGame.UI
             _showSequence?.Kill();
             _hideSequence?.Kill();
 
-            _canvasGroup.alpha = 1f;
-            _canvasGroup.blocksRaycasts = true;
-            _canvasGroup.interactable = true;
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha = 1f;
+                _canvasGroup.blocksRaycasts = true;
+                _canvasGroup.interactable = true;
+            }
 
             _showSequence = DOTween.Sequence();
             for (int i = 0; i < _buttons.Count; i++)
@@ -330,9 +322,12 @@ namespace IndieGame.UI
             }
             _hideSequence.OnComplete(() =>
             {
-                _canvasGroup.alpha = 0f;
-                _canvasGroup.blocksRaycasts = false;
-                _canvasGroup.interactable = false;
+                if (_canvasGroup != null)
+                {
+                    _canvasGroup.alpha = 0f;
+                    _canvasGroup.blocksRaycasts = false;
+                    _canvasGroup.interactable = false;
+                }
                 _isVisible = false;
             });
         }
