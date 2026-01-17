@@ -9,6 +9,7 @@ namespace IndieGame.Gameplay.Inventory
 {
     public class InventoryManager : MonoSingleton<InventoryManager>
     {
+        protected override bool DestroyOnLoad => true;
         [Header("Data")]
         public List<ItemSO> items = new List<ItemSO>();
 

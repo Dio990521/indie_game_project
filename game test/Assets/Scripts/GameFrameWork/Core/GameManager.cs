@@ -9,6 +9,7 @@ namespace IndieGame.Core
 {
     public class GameManager : MonoSingleton<GameManager>
     {
+        protected override bool DestroyOnLoad => true;
         public GameState CurrentState { get; private set; } = GameState.Initialization;
         public static event Action<GameState> OnStateChanged;
 

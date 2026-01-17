@@ -21,6 +21,7 @@ namespace IndieGame.Gameplay.Exploration
                 {
                     var gm = GameManager.Instance;
                     if (gm == null) return;
+                    gm.ChangeState(GameState.BoardMode);
                     gm.LoadScene(BoardSceneName, GameState.BoardMode);
                 },
                 OnCancel = null

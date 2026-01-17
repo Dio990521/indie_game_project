@@ -3,6 +3,7 @@ using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Board.Runtime.States;
+using UnityEngine.SceneManagement;
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
@@ -37,6 +38,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             InventoryManager.OnInventoryClosed += HandleInventoryClosed;
             GameManager.OnStateChanged += HandleGlobalStateChanged;
             IndieGame.UI.UIManager.OnUIReady += HandleUIReady;
+            SceneManager.sceneLoaded += HandleSceneLoaded;
         }
 
         private void OnDisable()
@@ -45,6 +47,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             InventoryManager.OnInventoryClosed -= HandleInventoryClosed;
             GameManager.OnStateChanged -= HandleGlobalStateChanged;
             IndieGame.UI.UIManager.OnUIReady -= HandleUIReady;
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 
         [ContextMenu("Roll Dice")]
@@ -109,6 +112,22 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             EnsureActionMenu();
             BindActionMenu();
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (GameManager.Instance == null) return;
+            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
+
+            if (movementController == null || movementController.Equals(null))
+            {
+                movementController = FindAnyObjectByType<BoardMovementController>();
+            }
+
+            if (movementController != null)
+            {
+                movementController.ResolveReferences(GameManager.Instance.LastBoardIndex);
+            }
         }
 
         private void BindActionMenu()

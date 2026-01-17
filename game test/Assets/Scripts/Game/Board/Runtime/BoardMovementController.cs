@@ -49,6 +49,10 @@ namespace IndieGame.Gameplay.Board.Runtime
                     ResetToStart();
                 }
             }
+            else
+            {
+                ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+            }
         }
 
         private void OnDisable()
@@ -89,6 +93,41 @@ namespace IndieGame.Gameplay.Board.Runtime
                     playerToken.position = nodes[i].transform.position;
                 }
                 return;
+            }
+        }
+
+        public void ResolveReferences(int preferredNodeId)
+        {
+            if (playerToken == null)
+            {
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null) playerToken = player.transform;
+            }
+
+            if (playerToken != null && _playerAnimator == null)
+            {
+                _playerAnimator = playerToken.GetComponentInChildren<Animator>();
+            }
+
+            if (preferredNodeId >= 0)
+            {
+                SetCurrentNodeById(preferredNodeId);
+                return;
+            }
+
+            if (startNode == null)
+            {
+                MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
+                if (nodes.Length > 0) startNode = nodes[0];
+            }
+
+            if (_currentNode == null && startNode != null)
+            {
+                _currentNode = startNode;
+                if (playerToken != null)
+                {
+                    playerToken.position = startNode.transform.position;
+                }
             }
         }
 

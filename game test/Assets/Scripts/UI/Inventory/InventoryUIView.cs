@@ -26,6 +26,8 @@ namespace IndieGame.UI.Inventory
             {
                 binder.CloseButton.onClick.AddListener(HandleCloseClicked);
             }
+
+            Hide();
         }
 
         private void Start()
