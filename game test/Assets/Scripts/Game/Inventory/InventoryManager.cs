@@ -54,7 +54,7 @@ namespace IndieGame.Gameplay.Inventory
 
         private void TryBindUI()
         {
-            if (inventoryUI == null && IndieGame.UI.UIManager.Instance != null)
+            if ((inventoryUI == null || inventoryUI.Equals(null)) && IndieGame.UI.UIManager.Instance != null)
             {
                 inventoryUI = IndieGame.UI.UIManager.Instance.InventoryInstance;
             }

@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using UnityEngine.UI;
 using IndieGame.Core.Utilities;
+using UnityEngine.SceneManagement;
 
 namespace IndieGame.UI
 {
@@ -32,7 +33,18 @@ namespace IndieGame.UI
         {
             base.Awake();
             EnsureRoots();
+            EnsureEventSystem();
             SpawnUI();
+        }
+
+        private void OnEnable()
+        {
+            SceneManager.sceneLoaded += HandleSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 
         public Transform GetRoot(UILayerPriority priority)
@@ -113,9 +125,25 @@ namespace IndieGame.UI
         private Transform FindOrCreateUICanvasRoot()
         {
             GameObject existing = GameObject.Find("UICanvas");
-            if (existing != null) return existing.transform;
+            if (existing != null)
+            {
+                existing.transform.SetParent(transform, false);
+                return existing.transform;
+            }
             GameObject root = new GameObject("UICanvas");
+            root.transform.SetParent(transform, false);
             return root.transform;
+        }
+
+        private void EnsureEventSystem()
+        {
+            if (FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() != null) return;
+            GameObject es = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem));
+#if ENABLE_INPUT_SYSTEM
+            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#else
+            es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
+#endif
         }
 
         private void SpawnUI()
@@ -123,19 +151,43 @@ namespace IndieGame.UI
             if (boardActionMenuPrefab != null && BoardActionMenuInstance == null)
             {
                 BoardActionMenuInstance = SpawnOnLayer(boardActionMenuPrefab, UILayerPriority.Top75);
+                if (BoardActionMenuInstance != null) BoardActionMenuInstance.gameObject.SetActive(true);
             }
 
             if (inventoryPrefab != null && InventoryInstance == null)
             {
                 InventoryInstance = SpawnOnLayer(inventoryPrefab, UILayerPriority.Top75);
+                if (InventoryInstance != null) InventoryInstance.gameObject.SetActive(true);
             }
 
             if (confirmationPrefab != null && ConfirmationInstance == null)
             {
                 ConfirmationInstance = SpawnOnLayer(confirmationPrefab, UILayerPriority.Top75);
+                if (ConfirmationInstance != null) ConfirmationInstance.gameObject.SetActive(true);
             }
 
             OnUIReady?.Invoke();
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            CleanupUIReferences();
+            EnsureRoots();
+            EnsureEventSystem();
+            SpawnUI();
+        }
+
+        private void CleanupUIReferences()
+        {
+            if (BoardActionMenuInstance != null) Destroy(BoardActionMenuInstance.gameObject);
+            if (InventoryInstance != null) Destroy(InventoryInstance.gameObject);
+            if (ConfirmationInstance != null) Destroy(ConfirmationInstance.gameObject);
+
+            BoardActionMenuInstance = null;
+            InventoryInstance = null;
+            ConfirmationInstance = null;
+            screenOverlayTop75 = null;
+            screenCameraBottom25 = null;
         }
     }
 }
