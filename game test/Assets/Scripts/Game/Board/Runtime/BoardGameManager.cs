@@ -14,6 +14,9 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public BoardState CurrentState { get; private set; }
         private bool _isBoardActive = false;
+        private bool _menuBound = false;
+
+        protected override bool DestroyOnLoad => true;
 
         private void Start()
         {
@@ -30,16 +33,18 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void OnEnable()
         {
             EnsureActionMenu();
-            if (actionMenu != null) actionMenu.OnRollDiceRequested += HandleRollDiceRequested;
+            BindActionMenu();
             InventoryManager.OnInventoryClosed += HandleInventoryClosed;
             GameManager.OnStateChanged += HandleGlobalStateChanged;
+            IndieGame.UI.UIManager.OnUIReady += HandleUIReady;
         }
 
         private void OnDisable()
         {
-            if (actionMenu != null) actionMenu.OnRollDiceRequested -= HandleRollDiceRequested;
+            UnbindActionMenu();
             InventoryManager.OnInventoryClosed -= HandleInventoryClosed;
             GameManager.OnStateChanged -= HandleGlobalStateChanged;
+            IndieGame.UI.UIManager.OnUIReady -= HandleUIReady;
         }
 
         [ContextMenu("Roll Dice")]
@@ -97,6 +102,36 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (IndieGame.UI.UIManager.Instance != null)
             {
                 actionMenu = IndieGame.UI.UIManager.Instance.BoardActionMenuInstance;
+            }
+        }
+
+        private void HandleUIReady()
+        {
+            EnsureActionMenu();
+            BindActionMenu();
+        }
+
+        private void BindActionMenu()
+        {
+            if (_menuBound) return;
+            if (actionMenu == null) return;
+            actionMenu.OnRollDiceRequested += HandleRollDiceRequested;
+            _menuBound = true;
+        }
+
+        private void UnbindActionMenu()
+        {
+            if (!_menuBound) return;
+            if (actionMenu != null) actionMenu.OnRollDiceRequested -= HandleRollDiceRequested;
+            _menuBound = false;
+        }
+
+        private void LateUpdate()
+        {
+            if (actionMenu == null)
+            {
+                EnsureActionMenu();
+                BindActionMenu();
             }
         }
     }

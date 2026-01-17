@@ -11,6 +11,13 @@ namespace IndieGame.Core.Input
     [CreateAssetMenu(fileName = "GameInputReader", menuName = "IndieGame/Core/Input Reader")]
     public class GameInputReader : ScriptableObject, InputSystem_Actions.IPlayerActions
     {
+        public enum InputMode
+        {
+            Gameplay,
+            UIOnly,
+            Disabled
+        }
+
         // === 游戏逻辑事件 ===
         public event Action<Vector2> MoveEvent;
         public event Action InteractEvent;
@@ -21,6 +28,7 @@ namespace IndieGame.Core.Input
         public Vector2 CurrentMoveInput { get; private set; }
 
         private InputSystem_Actions _gameInput;
+        private InputMode _currentMode = InputMode.Gameplay;
 
         private void OnEnable()
         {
@@ -44,16 +52,39 @@ namespace IndieGame.Core.Input
         public void EnableGameplayInput() => _gameInput.Player.Enable();
         public void DisableAllInput() => _gameInput.Player.Disable();
 
+        public void SetInputMode(InputMode mode)
+        {
+            _currentMode = mode;
+            switch (mode)
+            {
+                case InputMode.Gameplay:
+                    _gameInput.Player.Enable();
+                    break;
+                case InputMode.UIOnly:
+                    _gameInput.Player.Disable();
+                    CurrentMoveInput = Vector2.zero;
+                    MoveEvent?.Invoke(Vector2.zero);
+                    break;
+                case InputMode.Disabled:
+                    _gameInput.Player.Disable();
+                    CurrentMoveInput = Vector2.zero;
+                    MoveEvent?.Invoke(Vector2.zero);
+                    break;
+            }
+        }
+
         #region InputSystem Callbacks
 
         public void OnMove(InputAction.CallbackContext context)
         {
+            if (_currentMode != InputMode.Gameplay) return;
             CurrentMoveInput = context.ReadValue<Vector2>();
             MoveEvent?.Invoke(CurrentMoveInput);
         }
 
         public void OnInteract(InputAction.CallbackContext context)
         {
+            if (_currentMode != InputMode.Gameplay) return;
             if (context.phase == InputActionPhase.Performed)
                 InteractEvent?.Invoke();
             else if (context.phase == InputActionPhase.Canceled)
@@ -62,6 +93,7 @@ namespace IndieGame.Core.Input
 
         public void OnJump(InputAction.CallbackContext context)
         {
+            if (_currentMode != InputMode.Gameplay) return;
             if (context.phase == InputActionPhase.Performed)
                 JumpEvent?.Invoke();
         }

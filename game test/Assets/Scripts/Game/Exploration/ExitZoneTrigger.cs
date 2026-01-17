@@ -7,13 +7,13 @@ namespace IndieGame.Gameplay.Exploration
     public class ExitZoneTrigger : MonoBehaviour
     {
         public string BoardSceneName;
-        public string ZoneName = "棋盘";
+        public string ZoneName = "Board";
 
         private void OnTriggerEnter(Collider other)
         {
             if (!other.CompareTag("Player")) return;
 
-            string message = $"是否离开 {ZoneName}？";
+            string message = $"Leave {ZoneName}?";
             ConfirmationEvent.Request(new ConfirmationRequest
             {
                 Message = message,

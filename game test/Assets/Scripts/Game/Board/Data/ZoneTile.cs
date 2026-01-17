@@ -22,8 +22,8 @@ namespace IndieGame.Gameplay.Board.Data
 
         public override void OnEnter(GameObject player)
         {
-            string label = string.IsNullOrEmpty(ZoneName) ? "该区域" : ZoneName;
-            string message = $"是否进入 {label}？";
+            string label = string.IsNullOrEmpty(ZoneName) ? "this zone?" : ZoneName;
+            string message = $"Enter {label}?";
             ConfirmationEvent.Request(new ConfirmationRequest
             {
                 Message = message,

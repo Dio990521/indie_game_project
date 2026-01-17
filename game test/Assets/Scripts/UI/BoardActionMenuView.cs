@@ -83,6 +83,12 @@ namespace IndieGame.UI
                 if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
             }
 
+            if (target == null)
+            {
+                GameObject player = GameObject.FindGameObjectWithTag("Player");
+                if (player != null) target = player.transform;
+            }
+
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode)
             {
                 Show();
@@ -101,6 +107,8 @@ namespace IndieGame.UI
             GameManager.OnStateChanged -= HandleStateChanged;
             if (inputReader != null) inputReader.MoveEvent -= OnMoveInput;
             if (inputReader != null) inputReader.InteractEvent -= OnInteractInput;
+            _showSequence?.Kill();
+            _hideSequence?.Kill();
         }
 
         private void LateUpdate()
@@ -167,9 +175,15 @@ namespace IndieGame.UI
 
         private void RebuildButtons()
         {
+            _showSequence?.Kill();
+            _hideSequence?.Kill();
             for (int i = 0; i < _buttons.Count; i++)
             {
-                if (_buttons[i] != null) Destroy(_buttons[i].gameObject);
+                if (_buttons[i] != null)
+                {
+                    _buttons[i].transform.DOKill(true);
+                    Destroy(_buttons[i].gameObject);
+                }
             }
             _buttons.Clear();
 

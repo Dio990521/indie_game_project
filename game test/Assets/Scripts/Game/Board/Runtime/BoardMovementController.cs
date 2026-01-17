@@ -44,7 +44,10 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (playerToken != null)
             {
                 _playerAnimator = playerToken.GetComponentInChildren<Animator>();
-                ResetToStart();
+                if (_currentNode == null)
+                {
+                    ResetToStart();
+                }
             }
         }
 

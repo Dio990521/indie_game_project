@@ -21,12 +21,14 @@ namespace IndieGame.Gameplay.Inventory
         private void OnEnable()
         {
             BoardActionMenuView.OnRequestOpenInventory += OpenInventory;
+            IndieGame.UI.UIManager.OnUIReady += HandleUIReady;
             TryBindUI();
         }
 
         private void OnDisable()
         {
             BoardActionMenuView.OnRequestOpenInventory -= OpenInventory;
+            IndieGame.UI.UIManager.OnUIReady -= HandleUIReady;
             UnbindUI();
         }
 
@@ -61,6 +63,11 @@ namespace IndieGame.Gameplay.Inventory
             inventoryUI.OnCloseRequested += CloseInventory;
             inventoryUI.OnSlotClicked += HandleSlotClicked;
             _uiBound = true;
+        }
+
+        private void HandleUIReady()
+        {
+            TryBindUI();
         }
 
         private void UnbindUI()

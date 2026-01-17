@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.UI;
 using IndieGame.Core.Utilities;
@@ -24,6 +25,8 @@ namespace IndieGame.UI
         public BoardActionMenuView BoardActionMenuInstance { get; private set; }
         public Inventory.InventoryUIView InventoryInstance { get; private set; }
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
+
+        public static event Action OnUIReady;
 
         protected override void Awake()
         {
@@ -131,6 +134,8 @@ namespace IndieGame.UI
             {
                 ConfirmationInstance = SpawnOnLayer(confirmationPrefab, UILayerPriority.Top75);
             }
+
+            OnUIReady?.Invoke();
         }
     }
 }

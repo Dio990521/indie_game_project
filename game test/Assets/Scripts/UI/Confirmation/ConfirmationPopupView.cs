@@ -6,6 +6,7 @@ namespace IndieGame.UI.Confirmation
     {
         [Header("Binder")]
         [SerializeField] private ConfirmationPopupBinder binder;
+        [SerializeField] private IndieGame.Core.Input.GameInputReader inputReader;
 
         private ConfirmationPopupData _data = new ConfirmationPopupData();
         private CanvasGroup _canvasGroup;
@@ -55,7 +56,7 @@ namespace IndieGame.UI.Confirmation
         {
             _data.Message = request.Message;
             ApplyData();
-            SetVisible(true);
+            Show();
         }
 
         private void ApplyData()
@@ -68,12 +69,14 @@ namespace IndieGame.UI.Confirmation
 
         private void HandleConfirm()
         {
+            if (inputReader != null) inputReader.SetInputMode(IndieGame.Core.Input.GameInputReader.InputMode.Gameplay);
             ConfirmationEvent.Respond(true);
             SetVisible(false);
         }
 
         private void HandleCancel()
         {
+            if (inputReader != null) inputReader.SetInputMode(IndieGame.Core.Input.GameInputReader.InputMode.Gameplay);
             ConfirmationEvent.Respond(false);
             SetVisible(false);
         }
@@ -101,6 +104,12 @@ namespace IndieGame.UI.Confirmation
             }
 
             binder.RootPanel.SetActive(visible);
+        }
+
+        private void Show()
+        {
+            if (inputReader != null) inputReader.SetInputMode(IndieGame.Core.Input.GameInputReader.InputMode.UIOnly);
+            SetVisible(true);
         }
     }
 }
