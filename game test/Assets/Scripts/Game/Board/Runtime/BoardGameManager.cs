@@ -97,6 +97,14 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 actionMenu.SetAllowShow(false);
             }
+            if (_isBoardActive)
+            {
+                if (movementController != null)
+                {
+                    movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                }
+                ChangeState(new InitState(this));
+            }
         }
 
         private void EnsureActionMenu()
@@ -127,6 +135,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (movementController != null)
             {
                 movementController.ResolveReferences(GameManager.Instance.LastBoardIndex);
+                ChangeState(new InitState(this));
             }
         }
 

@@ -83,10 +83,9 @@ namespace IndieGame.UI
                 if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
             }
 
-            if (target == null)
+            if (target == null && GameManager.Instance != null)
             {
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null) target = player.transform;
+                target = GameManager.Instance.GetCurrentPlayerTransform();
             }
 
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode)
@@ -188,11 +187,21 @@ namespace IndieGame.UI
             _buttons.Clear();
 
             if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return;
+            if (binder.ButtonPrefab.gameObject.scene.IsValid())
+            {
+                Debug.LogError("[BoardActionMenuView] ButtonPrefab must be a prefab asset, not a scene object.");
+                return;
+            }
+            for (int i = binder.ButtonContainer.childCount - 1; i >= 0; i--)
+            {
+                Destroy(binder.ButtonContainer.GetChild(i).gameObject);
+            }
 
             for (int i = 0; i < _options.Count; i++)
             {
                 BoardActionOptionData option = _options[i];
-                BoardActionButton button = Instantiate(binder.ButtonPrefab, binder.ButtonContainer);
+                BoardActionButton button = Instantiate(binder.ButtonPrefab);
+                button.transform.SetParent(binder.ButtonContainer, false);
                 button.Setup(option.Name, option.Icon, i, OnButtonHover, OnButtonClick, OnButtonExit);
                 _buttons.Add(button);
             }

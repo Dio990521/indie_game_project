@@ -17,7 +17,6 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         [Header("Game References")]
         public Transform playerToken;
-        public MapWaypoint startNode;
 
         [Header("Settings")]
         public float moveSpeed = 5f;
@@ -32,11 +31,14 @@ namespace IndieGame.Gameplay.Board.Runtime
         private int _animIDSpeed;
         private Animator _playerAnimator;
         private MapWaypoint _currentNode;
+        private MapWaypoint _startNode;
         private bool _isMoving = false;
 
         private void Awake()
         {
             _animIDSpeed = Animator.StringToHash(moveSpeedParamName);
+            _startNode = FindStartNode();
+            Debug.Log("[BoardMovementController] Start Node ID: " + (_startNode != null ? _startNode.nodeID.ToString() : "null"));
         }
 
         private void Start()
@@ -64,6 +66,11 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void BeginMove(int totalSteps)
         {
             if (_isMoving) return;
+            if (playerToken == null)
+            {
+                ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                if (playerToken == null) return;
+            }
             _isMoving = true;
             MoveStarted?.Invoke();
             StartCoroutine(MoveRoutine(totalSteps));
@@ -74,10 +81,10 @@ namespace IndieGame.Gameplay.Board.Runtime
             StopAllCoroutines();
             _isMoving = false;
             if (forkSelector != null) forkSelector.ClearSelection();
-            if (startNode && playerToken)
+            if (_startNode != null && playerToken != null)
             {
-                _currentNode = startNode;
-                playerToken.position = startNode.transform.position;
+                _currentNode = _startNode;
+                playerToken.position = _startNode.transform.position;
             }
         }
 
@@ -98,10 +105,13 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public void ResolveReferences(int preferredNodeId)
         {
+            _startNode = FindStartNode();
             if (playerToken == null)
             {
-                GameObject player = GameObject.FindGameObjectWithTag("Player");
-                if (player != null) playerToken = player.transform;
+                if (GameManager.Instance != null)
+                {
+                    playerToken = GameManager.Instance.GetCurrentPlayerTransform();
+                }
             }
 
             if (playerToken != null && _playerAnimator == null)
@@ -115,20 +125,24 @@ namespace IndieGame.Gameplay.Board.Runtime
                 return;
             }
 
-            if (startNode == null)
+            if (_currentNode == null && _startNode != null)
             {
-                MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-                if (nodes.Length > 0) startNode = nodes[0];
-            }
-
-            if (_currentNode == null && startNode != null)
-            {
-                _currentNode = startNode;
+                _currentNode = _startNode;
                 if (playerToken != null)
                 {
-                    playerToken.position = startNode.transform.position;
+                    playerToken.position = _startNode.transform.position;
                 }
             }
+        }
+
+        private MapWaypoint FindStartNode()
+        {
+            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                if (nodes[i].nodeID == 0) return nodes[i];
+            }
+            return null;
         }
 
         private IEnumerator MoveRoutine(int totalSteps)

@@ -1,0 +1,53 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &121932690252624597
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3470542840621083206}
+  - component: {fileID: 6939693370621390300}
+  m_Layer: 0
+  m_Name: GameBootstrapper
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3470542840621083206
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121932690252624597}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6939693370621390300
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 121932690252624597}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3d894148c824446928df839d8edd7884, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.GameBootstrapper
+  autoInitOnStart: 1
+  isTestScene: 1
+  gameManagerPrefab: {fileID: 8054680310224825614, guid: 74b1e683aa7564c028ed340ac929624e, type: 3}
+  uiManagerPrefab: {fileID: 7063492343718296212, guid: 125cf831d6c8244279279788cafc681a, type: 3}
+  inventoryManagerPrefab: {fileID: 1706707719091005244, guid: d056c621c009e415eb847c6c9d2f7199, type: 3}
+  boardGameManagerPrefab: {fileID: 4701626481749714120, guid: 2b86555b901994817bdbce9f0d88a220, type: 3}
+  cameraManagerPrefab: {fileID: 8903109993617494670, guid: 953af9d22f83d4d80a49e6e81564f2a8, type: 3}

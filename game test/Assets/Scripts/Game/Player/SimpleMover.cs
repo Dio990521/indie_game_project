@@ -111,6 +111,12 @@ namespace IndieGame.Gameplay.Player
         {
             if (_currentInputVector.magnitude < 0.1f) return;
 
+            if (_cameraTransform == null)
+            {
+                if (Camera.main != null) _cameraTransform = Camera.main.transform;
+                if (_cameraTransform == null) return;
+            }
+
             Vector3 forward = _cameraTransform.forward;
             Vector3 right = _cameraTransform.right;
 

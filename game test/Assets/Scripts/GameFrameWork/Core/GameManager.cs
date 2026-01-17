@@ -18,8 +18,17 @@ namespace IndieGame.Core
         public int LastBoardIndex { get; set; } = -1;
 
         [Header("Player Spawn")]
-        [SerializeField] private GameObject explorationPlayerPrefab;
-        [SerializeField] private string explorationPlayerTag = "Player";
+        [SerializeField] private GameObject playerPrefab;
+        [SerializeField] private string playerTag = "Player";
+        private const string PlayerResourcePath = "Prefabs/Player";
+
+        public GameObject CurrentPlayer { get; private set; }
+
+        public Transform GetCurrentPlayerTransform()
+        {
+            GameObject player = GetOrFindCurrentPlayer();
+            return player != null ? player.transform : null;
+        }
 
         /// <summary>
         /// 游戏唯一的启动入口
@@ -39,6 +48,7 @@ namespace IndieGame.Core
             // 如果有主菜单场景，这里应该切到 MainMenu
             // 对于 Demo，我们直接进 FreeRoam
             ChangeState(GameState.FreeRoam);
+            EnsurePlayer();
         }
 
         public void ChangeState(GameState newState)
@@ -51,6 +61,7 @@ namespace IndieGame.Core
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
             OnStateChanged?.Invoke(newState);
+            EnsurePlayer();
         }
 
         public void LoadScene(string sceneName, GameState newState)
@@ -64,21 +75,56 @@ namespace IndieGame.Core
             AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
             while (!op.isDone) yield return null;
             ChangeState(newState);
-            TrySpawnExplorationPlayer(newState);
+            EnsurePlayer();
         }
 
-        private void TrySpawnExplorationPlayer(GameState newState)
+        private void EnsurePlayer()
         {
-            if (newState != GameState.FreeRoam) return;
-            if (explorationPlayerPrefab == null) return;
-            if (GameObject.FindGameObjectWithTag(explorationPlayerTag) != null) return;
+            if (CurrentPlayer != null && !CurrentPlayer.Equals(null)) return;
 
-            GameObject player = Instantiate(explorationPlayerPrefab, Vector3.zero, Quaternion.identity);
+            GameObject existing = FindPlayerInScene();
+            if (existing != null)
+            {
+                CurrentPlayer = existing;
+                DontDestroyOnLoad(existing);
+                return;
+            }
+
+            GameObject prefab = playerPrefab != null
+                ? playerPrefab
+                : Resources.Load<GameObject>(PlayerResourcePath);
+            if (prefab == null) return;
+
+            GameObject player = Instantiate(prefab, Vector3.zero, Quaternion.identity);
+            CurrentPlayer = player;
+            DontDestroyOnLoad(player);
             if (CameraManager.Instance != null)
             {
                 CameraManager.Instance.SetFollowTarget(player.transform);
                 CameraManager.Instance.WarpCameraToTarget();
             }
+        }
+
+        private GameObject FindPlayerInScene()
+        {
+            GameObject player = GameObject.FindGameObjectWithTag(playerTag);
+            if (player == null && CurrentPlayer != null && !CurrentPlayer.Equals(null))
+            {
+                player = CurrentPlayer;
+            }
+            return player;
+        }
+
+        private GameObject GetOrFindCurrentPlayer()
+        {
+            if (CurrentPlayer != null && !CurrentPlayer.Equals(null)) return CurrentPlayer;
+            GameObject player = FindPlayerInScene();
+            if (player != null)
+            {
+                CurrentPlayer = player;
+                DontDestroyOnLoad(player);
+            }
+            return CurrentPlayer;
         }
         
         // 移除原来的 Start() 中的 ChangeState 调用，交给 Bootstrapper

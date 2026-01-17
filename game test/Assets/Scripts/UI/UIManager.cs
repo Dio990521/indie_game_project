@@ -35,9 +35,7 @@ namespace IndieGame.UI
         {
             base.Awake();
             if (Instance != this) return;
-            EnsureRoots();
-            EnsureEventSystem();
-            SpawnUI();
+            InitUI();
         }
 
         private void OnEnable()
@@ -91,25 +89,21 @@ namespace IndieGame.UI
             return root != null ? root.transform : null;
         }
 
-        private void EnsureRoots()
+        private void InitUI()
         {
             Transform uiCanvasRoot = FindOrCreateUICanvasRoot();
-            screenOverlayTop75 = FindAndCleanupRoot("UIScreenOverlay_TOP75", uiCanvasRoot, screenOverlayTop75);
             if (screenOverlayTop75 == null)
             {
-                screenOverlayTop75 = CreateRootCanvas("UIScreenOverlay_TOP75", RenderMode.ScreenSpaceOverlay, uiCanvasRoot);
+                screenOverlayTop75 = FindRootByName("UIScreenOverlay_TOP75") ?? CreateRootCanvas("UIScreenOverlay_TOP75", RenderMode.ScreenSpaceOverlay, uiCanvasRoot);
             }
 
-            screenCameraBottom25 = FindAndCleanupRoot("UIScreenCamera_Bottom25", uiCanvasRoot, screenCameraBottom25);
             if (screenCameraBottom25 == null)
             {
-                screenCameraBottom25 = CreateRootCanvas("UIScreenCamera_Bottom25", RenderMode.ScreenSpaceCamera, uiCanvasRoot);
-                var canvas = screenCameraBottom25.GetComponent<Canvas>();
-                if (canvas != null && canvas.worldCamera == null)
-                {
-                    canvas.worldCamera = Camera.main;
-                }
+                screenCameraBottom25 = FindRootByName("UIScreenCamera_Bottom25") ?? CreateRootCanvas("UIScreenCamera_Bottom25", RenderMode.ScreenSpaceCamera, uiCanvasRoot);
             }
+            EnsureEventSystem();
+            SpawnUI();
+            RefreshWorldCamera();
         }
 
         private Transform CreateRootCanvas(string name, RenderMode mode, Transform parent)
@@ -132,7 +126,7 @@ namespace IndieGame.UI
             GameObject existing = GameObject.Find("UICanvas");
             if (existing != null)
             {
-                Transform gameRoot = FindGameRoot();
+                Transform gameRoot = FindGameSystemRoot();
                 if (gameRoot != null)
                 {
                     existing.transform.SetParent(gameRoot, false);
@@ -140,36 +134,11 @@ namespace IndieGame.UI
                 return existing.transform;
             }
             GameObject root = new GameObject("UICanvas");
-            Transform parent = FindGameRoot();
+            Transform parent = FindGameSystemRoot();
             root.transform.SetParent(parent != null ? parent : transform, false);
             return root.transform;
         }
 
-        private Transform FindAndCleanupRoot(string name, Transform parent, Transform current)
-        {
-            if (current != null && !current.Equals(null))
-            {
-                if (current.parent != parent) current.SetParent(parent, false);
-                return current;
-            }
-
-            Transform found = null;
-            Transform[] all = Resources.FindObjectsOfTypeAll<Transform>();
-            for (int i = 0; i < all.Length; i++)
-            {
-                if (all[i].name != name) continue;
-                if (found == null)
-                {
-                    found = all[i];
-                    found.SetParent(parent, false);
-                }
-                else
-                {
-                    Destroy(all[i].gameObject);
-                }
-            }
-            return found;
-        }
 
         private void EnsureEventSystem()
         {
@@ -221,9 +190,9 @@ namespace IndieGame.UI
             }
         }
 
-        private Transform FindGameRoot()
+        private Transform FindGameSystemRoot()
         {
-            GameObject root = GameObject.Find("GameRoot");
+            GameObject root = GameObject.Find("[GameSystem]");
             return root != null ? root.transform : null;
         }
     }

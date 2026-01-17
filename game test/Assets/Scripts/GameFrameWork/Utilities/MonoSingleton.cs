@@ -42,11 +42,7 @@ namespace IndieGame.Core.Utilities
 
                         if (_instance == null)
                         {
-                            GameObject singletonObject = new GameObject();
-                            _instance = singletonObject.AddComponent<T>();
-                            singletonObject.name = $"(Singleton) {typeof(T)}";
-
-                            Debug.Log($"[MonoSingleton] An instance of {typeof(T)} is needed in the scene, so '{singletonObject.name}' was created.");
+                            Debug.LogWarning($"[MonoSingleton] Instance of {typeof(T)} not found. Ensure GameBootstrapper created it.");
                         }
                     }
 

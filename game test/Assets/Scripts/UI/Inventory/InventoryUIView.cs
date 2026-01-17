@@ -37,6 +37,16 @@ namespace IndieGame.UI.Inventory
                 Transform root = binder.RootPanel != null ? binder.RootPanel.transform : transform;
                 Canvas canvas = root.GetComponentInParent<Canvas>();
             }
+            InventoryManager.OnInventoryUpdated += HandleRefresh;
+            InventoryManager.OnInventoryOpened += HandleOpen;
+            InventoryManager.OnInventoryClosed += HandleClose;
+        }
+
+        private void OnDestroy()
+        {
+            InventoryManager.OnInventoryUpdated -= HandleRefresh;
+            InventoryManager.OnInventoryOpened -= HandleOpen;
+            InventoryManager.OnInventoryClosed -= HandleClose;
         }
 
         public void Show(List<ItemSO> items)
@@ -53,6 +63,8 @@ namespace IndieGame.UI.Inventory
         private void HandleCloseClicked()
         {
             OnCloseRequested?.Invoke();
+            InventoryManager inv = InventoryManager.Instance;
+            if (inv != null) inv.CloseInventory();
         }
 
         private void Rebuild(List<ItemSO> items)
@@ -71,6 +83,23 @@ namespace IndieGame.UI.Inventory
         private void HandleSlotClicked(ItemSO item)
         {
             OnSlotClicked?.Invoke(item);
+            InventoryManager inv = InventoryManager.Instance;
+            if (inv != null) inv.UseItem(item);
+        }
+
+        private void HandleRefresh(List<ItemSO> items)
+        {
+            Rebuild(items);
+        }
+
+        private void HandleOpen()
+        {
+            if (binder.RootPanel != null) binder.RootPanel.SetActive(true);
+        }
+
+        private void HandleClose()
+        {
+            if (binder.RootPanel != null) binder.RootPanel.SetActive(false);
         }
 
         private void ClearSlots()
