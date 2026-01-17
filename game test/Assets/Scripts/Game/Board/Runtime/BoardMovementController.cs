@@ -4,6 +4,8 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Board.Events;
+using IndieGame.Gameplay.Board.Data;
+using IndieGame.UI.Confirmation;
 using System;
 
 namespace IndieGame.Gameplay.Board.Runtime
@@ -23,6 +25,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public string moveSpeedParamName = "Speed";
 
         public bool IsMoving => _isMoving;
+        public int CurrentNodeId => _currentNode != null ? _currentNode.nodeID : -1;
         public event Action MoveStarted;
         public event Action MoveEnded;
 
@@ -45,6 +48,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
+        private void OnDisable()
+        {
+            StopAllCoroutines();
+            _isMoving = false;
+        }
+
         public void BeginMove(int totalSteps)
         {
             if (_isMoving) return;
@@ -62,6 +71,21 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 _currentNode = startNode;
                 playerToken.position = startNode.transform.position;
+            }
+        }
+
+        public void SetCurrentNodeById(int nodeId)
+        {
+            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
+            for (int i = 0; i < nodes.Length; i++)
+            {
+                if (nodes[i].nodeID != nodeId) continue;
+                _currentNode = nodes[i];
+                if (playerToken != null)
+                {
+                    playerToken.position = nodes[i].transform.position;
+                }
+                return;
             }
         }
 
@@ -98,6 +122,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                         yield return StartCoroutine(MoveAlongCurve(conn));
                         _currentNode = conn.targetNode;
                         stepsRemaining--;
+                        yield return StartCoroutine(HandleNodeArrival(_currentNode, stepsRemaining == 0));
                     }
                     if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
                 }
@@ -124,17 +149,14 @@ namespace IndieGame.Gameplay.Board.Runtime
                         yield return StartCoroutine(MoveAlongCurve(selectedConnection));
                         _currentNode = selectedConnection.targetNode;
                         stepsRemaining--;
+                        yield return StartCoroutine(HandleNodeArrival(_currentNode, stepsRemaining == 0));
                     }
                     else break;
                 }
             }
-
+            
             if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
-            if (_currentNode != null && _currentNode.tileData != null)
-            {
-                _currentNode.tileData.OnPlayerStop(playerToken.gameObject);
-            }
-
+            
             _isMoving = false;
             MoveEnded?.Invoke();
         }
@@ -142,6 +164,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         // --- 核心修改：支持事件中断的移动逻辑 ---
         private IEnumerator MoveAlongCurve(WaypointConnection conn)
         {
+            if (playerToken == null || _currentNode == null || conn == null || conn.targetNode == null) yield break;
             Vector3 p0 = playerToken.position;
             Vector3 p2 = conn.targetNode.transform.position;
             Vector3 curveStartPos = _currentNode.transform.position;
@@ -157,6 +180,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             while (timer < duration)
             {
+                if (playerToken == null) yield break;
                 float dt = Time.deltaTime;
                 float nextTimer = timer + dt;
 
@@ -183,6 +207,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 timer = nextTimer;
                 Vector3 nextPos = BezierUtils.GetQuadraticBezierPoint(nextT, curveStartPos, p1, p2);
 
+                if (playerToken == null) yield break;
                 Vector3 moveDir = (nextPos - playerToken.position).normalized;
                 if (moveDir != Vector3.zero)
                 {
@@ -193,8 +218,8 @@ namespace IndieGame.Gameplay.Board.Runtime
                 playerToken.position = nextPos;
                 yield return null;
             }
-
-            playerToken.position = p2;
+            
+            if (playerToken != null) playerToken.position = p2;
         }
 
         // --- 处理事件的表现 ---
@@ -214,6 +239,41 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             // 准备恢复移动
             if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
+        }
+
+        private IEnumerator HandleNodeArrival(MapWaypoint node, bool isFinalStep)
+        {
+            if (node == null || node.tileData == null) yield break;
+            if (playerToken == null) yield break;
+
+            bool shouldTrigger = isFinalStep || node.tileData.TriggerOnPass;
+
+            if (shouldTrigger && _playerAnimator)
+            {
+                _playerAnimator.SetFloat(_animIDSpeed, 0f);
+            }
+
+            if (shouldTrigger)
+            {
+                node.tileData.OnEnter(playerToken.gameObject);
+            }
+
+            if (ConfirmationEvent.HasPending)
+            {
+                bool responded = false;
+                void OnResponded(bool _) => responded = true;
+                ConfirmationEvent.OnResponded += OnResponded;
+                while (!responded)
+                {
+                    yield return null;
+                }
+                ConfirmationEvent.OnResponded -= OnResponded;
+            }
+
+            if (!isFinalStep && _playerAnimator)
+            {
+                _playerAnimator.SetFloat(_animIDSpeed, 1f);
+            }
         }
     }
 }

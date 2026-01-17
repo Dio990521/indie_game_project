@@ -18,7 +18,6 @@ namespace IndieGame.UI
 
         [Header("Binder")]
         [SerializeField] private BoardActionMenuBinder binder;
-        [SerializeField] private UILayerPriority layer = UILayerPriority.Top75;
 
         [Header("Dependencies")]
         public GameInputReader inputReader;
@@ -80,7 +79,6 @@ namespace IndieGame.UI
             if (binder != null)
             {
                 Transform root = binder.RootRect != null ? binder.RootRect : transform;
-                UIManager.Instance.AttachToLayer(root, layer);
                 Canvas canvas = root.GetComponentInParent<Canvas>();
                 if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
             }

@@ -6,7 +6,22 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         public override void Enter()
         {
-            // 事件已在移动结束时触发（TileBase.OnPlayerStop）
+            if (!IndieGame.UI.Confirmation.ConfirmationEvent.HasPending)
+            {
+                Context.ChangeState(new PlayerTurnState(Context));
+                return;
+            }
+
+            IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded += HandleResponse;
+        }
+
+        public override void Exit()
+        {
+            IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded -= HandleResponse;
+        }
+
+        private void HandleResponse(bool confirmed)
+        {
             Context.ChangeState(new PlayerTurnState(Context));
         }
     }

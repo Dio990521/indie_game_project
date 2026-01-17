@@ -2,6 +2,8 @@ using UnityEngine;
 using System;
 using System.Collections;
 using IndieGame.Core.Utilities;
+using UnityEngine.SceneManagement;
+using IndieGame.Core.CameraSystem;
 
 namespace IndieGame.Core
 {
@@ -12,6 +14,11 @@ namespace IndieGame.Core
 
         // 是否已初始化
         public bool IsInitialized { get; private set; } = false;
+        public int LastBoardIndex { get; set; } = -1;
+
+        [Header("Player Spawn")]
+        [SerializeField] private GameObject explorationPlayerPrefab;
+        [SerializeField] private string explorationPlayerTag = "Player";
 
         /// <summary>
         /// 游戏唯一的启动入口
@@ -43,6 +50,34 @@ namespace IndieGame.Core
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
             OnStateChanged?.Invoke(newState);
+        }
+
+        public void LoadScene(string sceneName, GameState newState)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return;
+            StartCoroutine(LoadSceneRoutine(sceneName, newState));
+        }
+
+        private IEnumerator LoadSceneRoutine(string sceneName, GameState newState)
+        {
+            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
+            while (!op.isDone) yield return null;
+            ChangeState(newState);
+            TrySpawnExplorationPlayer(newState);
+        }
+
+        private void TrySpawnExplorationPlayer(GameState newState)
+        {
+            if (newState != GameState.FreeRoam) return;
+            if (explorationPlayerPrefab == null) return;
+            if (GameObject.FindGameObjectWithTag(explorationPlayerTag) != null) return;
+
+            GameObject player = Instantiate(explorationPlayerPrefab, Vector3.zero, Quaternion.identity);
+            if (CameraManager.Instance != null)
+            {
+                CameraManager.Instance.SetFollowTarget(player.transform);
+                CameraManager.Instance.WarpCameraToTarget();
+            }
         }
         
         // 移除原来的 Start() 中的 ChangeState 调用，交给 Bootstrapper

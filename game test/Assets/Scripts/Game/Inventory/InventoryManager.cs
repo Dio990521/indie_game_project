@@ -14,31 +14,25 @@ namespace IndieGame.Gameplay.Inventory
 
         [Header("View")]
         public InventoryUIView inventoryUI;
+        private bool _uiBound = false;
 
         public static event Action OnInventoryClosed;
 
         private void OnEnable()
         {
             BoardActionMenuView.OnRequestOpenInventory += OpenInventory;
-            if (inventoryUI != null)
-            {
-                inventoryUI.OnCloseRequested += CloseInventory;
-                inventoryUI.OnSlotClicked += HandleSlotClicked;
-            }
+            TryBindUI();
         }
 
         private void OnDisable()
         {
             BoardActionMenuView.OnRequestOpenInventory -= OpenInventory;
-            if (inventoryUI != null)
-            {
-                inventoryUI.OnCloseRequested -= CloseInventory;
-                inventoryUI.OnSlotClicked -= HandleSlotClicked;
-            }
+            UnbindUI();
         }
 
         public void OpenInventory()
         {
+            TryBindUI();
             if (inventoryUI == null) return;
             inventoryUI.Show(items);
         }
@@ -54,6 +48,27 @@ namespace IndieGame.Gameplay.Inventory
         {
             if (item == null) return;
             item.Use();
+        }
+
+        private void TryBindUI()
+        {
+            if (inventoryUI == null && IndieGame.UI.UIManager.Instance != null)
+            {
+                inventoryUI = IndieGame.UI.UIManager.Instance.InventoryInstance;
+            }
+
+            if (inventoryUI == null || _uiBound) return;
+            inventoryUI.OnCloseRequested += CloseInventory;
+            inventoryUI.OnSlotClicked += HandleSlotClicked;
+            _uiBound = true;
+        }
+
+        private void UnbindUI()
+        {
+            if (inventoryUI == null || !_uiBound) return;
+            inventoryUI.OnCloseRequested -= CloseInventory;
+            inventoryUI.OnSlotClicked -= HandleSlotClicked;
+            _uiBound = false;
         }
     }
 }

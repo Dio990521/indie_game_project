@@ -16,10 +16,14 @@ namespace IndieGame.Core.CameraSystem
             if (_mainGameplayCamera == null)
             {
                 _mainGameplayCamera = GetComponentInChildren<CinemachineCamera>();
+                if (_mainGameplayCamera == null)
+                {
+                    _mainGameplayCamera = FindAnyObjectByType<CinemachineCamera>();
+                }
                 
                 if (_mainGameplayCamera == null)
                 {
-                    Debug.LogError("CameraManager: Main Cinemachine Camera is missing!");
+                    Debug.LogWarning("CameraManager: Main Cinemachine Camera is missing.");
                     return;
                 }
             }

@@ -9,7 +9,6 @@ namespace IndieGame.UI.Inventory
     {
         [Header("Binder")]
         [SerializeField] private InventoryUIBinder binder;
-        [SerializeField] private UILayerPriority layer = UILayerPriority.Top75;
 
         public event Action OnCloseRequested;
         public event Action<ItemSO> OnSlotClicked;
@@ -34,7 +33,7 @@ namespace IndieGame.UI.Inventory
             if (binder != null)
             {
                 Transform root = binder.RootPanel != null ? binder.RootPanel.transform : transform;
-                UIManager.Instance.AttachToLayer(root, layer);
+                Canvas canvas = root.GetComponentInParent<Canvas>();
             }
         }
 

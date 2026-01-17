@@ -8,7 +8,15 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         public override void Enter()
         {
-            Context.ResetToStart();
+            var gm = GameManager.Instance;
+            if (gm != null && gm.LastBoardIndex >= 0 && Context.movementController != null)
+            {
+                Context.movementController.SetCurrentNodeById(gm.LastBoardIndex);
+            }
+            else
+            {
+                Context.ResetToStart();
+            }
             if (Context.actionMenu != null)
             {
                 Context.actionMenu.SetAllowShow(false);

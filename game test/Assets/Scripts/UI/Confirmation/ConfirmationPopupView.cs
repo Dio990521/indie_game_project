@@ -1,0 +1,106 @@
+using UnityEngine;
+
+namespace IndieGame.UI.Confirmation
+{
+    public class ConfirmationPopupView : MonoBehaviour
+    {
+        [Header("Binder")]
+        [SerializeField] private ConfirmationPopupBinder binder;
+
+        private ConfirmationPopupData _data = new ConfirmationPopupData();
+        private CanvasGroup _canvasGroup;
+        private bool _useCanvasGroup = false;
+
+        private void Awake()
+        {
+            if (binder == null)
+            {
+                Debug.LogError("[ConfirmationPopupView] Missing binder reference.");
+                return;
+            }
+
+            if (binder.ConfirmButton != null)
+            {
+                binder.ConfirmButton.onClick.AddListener(HandleConfirm);
+            }
+
+            if (binder.CancelButton != null)
+            {
+                binder.CancelButton.onClick.AddListener(HandleCancel);
+            }
+
+            SetupVisibility();
+            SetVisible(false);
+        }
+
+        private void Start()
+        {
+            if (binder != null)
+            {
+                Transform root = binder.RootPanel != null ? binder.RootPanel.transform : transform;
+            }
+        }
+
+        private void OnEnable()
+        {
+            ConfirmationEvent.OnRequested += HandleRequest;
+        }
+
+        private void OnDisable()
+        {
+            ConfirmationEvent.OnRequested -= HandleRequest;
+        }
+
+        private void HandleRequest(ConfirmationRequest request)
+        {
+            _data.Message = request.Message;
+            ApplyData();
+            SetVisible(true);
+        }
+
+        private void ApplyData()
+        {
+            if (binder.MessageLabel != null)
+            {
+                binder.MessageLabel.text = _data.Message;
+            }
+        }
+
+        private void HandleConfirm()
+        {
+            ConfirmationEvent.Respond(true);
+            SetVisible(false);
+        }
+
+        private void HandleCancel()
+        {
+            ConfirmationEvent.Respond(false);
+            SetVisible(false);
+        }
+
+        private void SetupVisibility()
+        {
+            if (binder.RootPanel == null) return;
+            if (binder.RootPanel == gameObject)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                _useCanvasGroup = true;
+            }
+        }
+
+        private void SetVisible(bool visible)
+        {
+            if (binder.RootPanel == null) return;
+            if (_useCanvasGroup && _canvasGroup != null)
+            {
+                _canvasGroup.alpha = visible ? 1f : 0f;
+                _canvasGroup.blocksRaycasts = visible;
+                _canvasGroup.interactable = visible;
+                return;
+            }
+
+            binder.RootPanel.SetActive(visible);
+        }
+    }
+}
