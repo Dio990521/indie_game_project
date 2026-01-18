@@ -27,6 +27,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public int CurrentNodeId => _currentNode != null ? _currentNode.nodeID : -1;
         public event Action MoveStarted;
         public event Action MoveEnded;
+        public event Action<MapWaypoint, Action<WaypointConnection>> ForkSelectionRequested;
 
         private int _animIDSpeed;
         private Animator _playerAnimator;
@@ -218,15 +219,25 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private IEnumerator HandleFork(StepContext ctx)
         {
-            GameManager.Instance.ChangeState(GameState.TurnDecision);
             WaypointConnection selectedConnection = null;
-            if (forkSelector != null)
-            {
-                yield return StartCoroutine(forkSelector.SelectConnection(_currentNode, result => selectedConnection = result));
-            }
-            GameManager.Instance.ChangeState(GameState.BoardMode);
+            bool selectionResolved = false;
 
-            if (selectedConnection == null) yield break;
+            if (ForkSelectionRequested != null)
+            {
+                ForkSelectionRequested.Invoke(_currentNode, result =>
+                {
+                    selectedConnection = result;
+                    selectionResolved = true;
+                });
+                yield return new WaitUntil(() => selectionResolved || !isActiveAndEnabled);
+            }
+            else
+            {
+                Debug.LogWarning("[BoardMovementController] ForkSelectionRequested has no listeners.");
+                yield break;
+            }
+
+            if (!isActiveAndEnabled || selectedConnection == null) yield break;
 
             yield return new WaitForSeconds(0.2f);
             SetAnimSpeed(1f);

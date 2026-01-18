@@ -6,7 +6,6 @@ namespace IndieGame.Core
         MainMenu,       // ⚡ 新增：主菜单
         FreeRoam,       
         BoardMode,      
-        TurnDecision,   
         Dialogue,       
         Paused          
     }

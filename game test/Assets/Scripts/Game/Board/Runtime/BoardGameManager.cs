@@ -12,6 +12,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public BoardMovementController movementController;
 
         public BoardState CurrentState { get; private set; }
+        public BoardState OverlayState { get; private set; }
         private bool _isBoardActive = false;
 
         protected override bool DestroyOnLoad => true;
@@ -29,6 +30,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void Update()
         {
             if (!_isBoardActive) return;
+            OverlayState?.Update();
             CurrentState?.Update();
         }
 
@@ -54,6 +56,11 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public void RequestRollDice()
         {
+            if (OverlayState != null)
+            {
+                OverlayState.OnInteract();
+                return;
+            }
             CurrentState?.OnInteract();
         }
 
@@ -67,7 +74,6 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void HandleGlobalStateChanged(GameState newState)
         {
-            if (newState == GameState.TurnDecision) return;
             _isBoardActive = newState == GameState.BoardMode;
             SetBoardComponentsActive(_isBoardActive);
             if (_isBoardActive)
@@ -82,6 +88,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
                 return;
             }
+            ClearOverlayState();
             CurrentState?.Exit();
             CurrentState = null;
         }
@@ -120,6 +127,26 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void InitializeBoard()
         {
             ChangeState(new InitState(this));
+        }
+
+        public void PushOverlayState(BoardState newState)
+        {
+            if (newState == null) return;
+            ClearOverlayState();
+            OverlayState = newState;
+            OverlayState.Enter();
+        }
+
+        public void PopOverlayState()
+        {
+            ClearOverlayState();
+        }
+
+        private void ClearOverlayState()
+        {
+            if (OverlayState == null) return;
+            OverlayState.Exit();
+            OverlayState = null;
         }
     }
 }
