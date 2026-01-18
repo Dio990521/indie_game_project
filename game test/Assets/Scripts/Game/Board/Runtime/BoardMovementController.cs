@@ -43,18 +43,15 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void Start()
         {
+            if (!IsBoardModeActive()) return;
+
             if (playerToken != null)
             {
-                _playerAnimator = playerToken.GetComponentInChildren<Animator>();
-                if (_currentNode == null)
-                {
-                    ResetToStart();
-                }
+                CacheAnimator();
+                return;
             }
-            else
-            {
-                ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
-            }
+
+            ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
         }
 
         private void OnDisable()
@@ -106,11 +103,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void ResolveReferences(int preferredNodeId)
         {
             _startNode = FindStartNode();
-            playerToken = GameManager.Instance != null ? GameManager.Instance.GetCurrentPlayerTransform() : null;
-            if (playerToken != null && _playerAnimator == null)
-            {
-                _playerAnimator = playerToken.GetComponentInChildren<Animator>();
-            }
+            playerToken = GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null
+                ? GameManager.Instance.CurrentPlayer.transform
+                : null;
+            CacheAnimator();
 
             if (preferredNodeId >= 0)
             {
@@ -138,6 +134,20 @@ namespace IndieGame.Gameplay.Board.Runtime
             return null;
         }
 
+        private void CacheAnimator()
+        {
+            _playerAnimator = null;
+            if (playerToken == null) return;
+
+            Animator[] animators = playerToken.GetComponentsInChildren<Animator>(true);
+            for (int i = 0; i < animators.Length; i++)
+            {
+                if (animators[i].runtimeAnimatorController == null) continue;
+                _playerAnimator = animators[i];
+                return;
+            }
+        }
+
         private class StepContext
         {
             public int StepsRemaining;
@@ -151,7 +161,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 yield return StartCoroutine(ProcessStep(ctx));
             }
 
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
+            SetAnimSpeed(0f);
             _isMoving = false;
             MoveEnded?.Invoke();
         }
@@ -195,7 +205,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private IEnumerator MoveSegmentPath(List<WaypointConnection> path, StepContext ctx)
         {
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
+            SetAnimSpeed(1f);
             foreach (var conn in path)
             {
                 yield return StartCoroutine(MoveAlongConnection(conn));
@@ -203,7 +213,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 ctx.StepsRemaining--;
                 yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
             }
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
+            SetAnimSpeed(0f);
         }
 
         private IEnumerator HandleFork(StepContext ctx)
@@ -219,12 +229,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (selectedConnection == null) yield break;
 
             yield return new WaitForSeconds(0.2f);
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
+            SetAnimSpeed(1f);
             yield return StartCoroutine(MoveAlongConnection(selectedConnection));
             _currentNode = selectedConnection.targetNode;
             ctx.StepsRemaining--;
             yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
+            SetAnimSpeed(0f);
         }
 
         // --- 核心修改：支持事件中断的移动逻辑 ---
@@ -291,7 +301,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private IEnumerator HandleConnectionEvent(ConnectionEvent evt)
         {
             // 停止跑步动画
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
+            SetAnimSpeed(0f);
 
             if (evt.eventAction != null)
             {
@@ -303,7 +313,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             // 准备恢复移动
-            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
+            SetAnimSpeed(1f);
         }
 
         private IEnumerator HandleNodeArrival(MapWaypoint node, bool isFinalStep)
@@ -313,10 +323,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             bool shouldTrigger = isFinalStep || node.tileData.TriggerOnPass;
 
-            if (shouldTrigger && _playerAnimator)
-            {
-                _playerAnimator.SetFloat(_animIDSpeed, 0f);
-            }
+            if (shouldTrigger) SetAnimSpeed(0f);
 
             if (shouldTrigger)
             {
@@ -335,10 +342,19 @@ namespace IndieGame.Gameplay.Board.Runtime
                 ConfirmationEvent.OnResponded -= OnResponded;
             }
 
-            if (!isFinalStep && _playerAnimator)
-            {
-                _playerAnimator.SetFloat(_animIDSpeed, 1f);
-            }
+            if (!isFinalStep) SetAnimSpeed(1f);
+        }
+
+        private void SetAnimSpeed(float value)
+        {
+            if (_playerAnimator == null) return;
+            if (_playerAnimator.runtimeAnimatorController == null) return;
+            _playerAnimator.SetFloat(_animIDSpeed, value);
+        }
+
+        private bool IsBoardModeActive()
+        {
+            return GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode;
         }
     }
 }

@@ -17,23 +17,13 @@ namespace IndieGame.Core
         public bool IsInitialized { get; private set; } = false;
         public int LastBoardIndex { get; set; } = -1;
 
-        [Header("Player Spawn")]
-        [SerializeField] private GameObject playerPrefab;
-        [SerializeField] private string playerTag = "Player";
-        private const string PlayerResourcePath = "Prefabs/Player";
+        private GameObject playerPrefab;
 
         public GameObject CurrentPlayer { get; private set; }
 
         public void SetPlayerPrefab(GameObject prefab)
         {
-            if (prefab == null) return;
             playerPrefab = prefab;
-        }
-
-        public Transform GetCurrentPlayerTransform()
-        {
-            GameObject player = GetOrFindCurrentPlayer();
-            return player != null ? player.transform : null;
         }
 
         /// <summary>
@@ -53,8 +43,8 @@ namespace IndieGame.Core
             // 2. 初始化完成后，进入第一个逻辑状态
             // 如果有主菜单场景，这里应该切到 MainMenu
             // 对于 Demo，我们直接进 FreeRoam
-            ChangeState(GameState.FreeRoam);
             EnsurePlayer();
+            ChangeState(GameState.FreeRoam);
         }
 
         public void ChangeState(GameState newState)
@@ -67,7 +57,6 @@ namespace IndieGame.Core
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
             OnStateChanged?.Invoke(newState);
-            EnsurePlayer();
         }
 
         public void LoadScene(string sceneName, GameState newState)
@@ -81,27 +70,18 @@ namespace IndieGame.Core
             AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
             while (!op.isDone) yield return null;
             ChangeState(newState);
-            EnsurePlayer();
         }
 
         private void EnsurePlayer()
         {
-            if (CurrentPlayer != null && !CurrentPlayer.Equals(null)) return;
-
-            GameObject existing = FindPlayerInScene();
-            if (existing != null)
+            if (CurrentPlayer != null) return;
+            if (playerPrefab == null)
             {
-                CurrentPlayer = existing;
-                DontDestroyOnLoad(existing);
+                Debug.LogError("[GameManager] playerPrefab is not assigned.");
                 return;
             }
 
-            GameObject prefab = playerPrefab != null
-                ? playerPrefab
-                : Resources.Load<GameObject>(PlayerResourcePath);
-            if (prefab == null) return;
-
-            GameObject player = Instantiate(prefab, Vector3.zero, Quaternion.identity);
+            GameObject player = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
             CurrentPlayer = player;
             DontDestroyOnLoad(player);
             if (CameraManager.Instance != null)
@@ -110,29 +90,6 @@ namespace IndieGame.Core
                 CameraManager.Instance.WarpCameraToTarget();
             }
         }
-
-        private GameObject FindPlayerInScene()
-        {
-            GameObject player = GameObject.FindGameObjectWithTag(playerTag);
-            if (player == null && CurrentPlayer != null && !CurrentPlayer.Equals(null))
-            {
-                player = CurrentPlayer;
-            }
-            return player;
-        }
-
-        public GameObject GetOrFindCurrentPlayer()
-        {
-            if (CurrentPlayer != null && !CurrentPlayer.Equals(null)) return CurrentPlayer;
-            GameObject player = FindPlayerInScene();
-            if (player != null)
-            {
-                CurrentPlayer = player;
-                DontDestroyOnLoad(player);
-            }
-            return CurrentPlayer;
-        }
         
-        // 移除原来的 Start() 中的 ChangeState 调用，交给 Bootstrapper
     }
 }

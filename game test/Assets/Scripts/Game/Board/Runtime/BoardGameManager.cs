@@ -19,7 +19,11 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void Start()
         {
             _isBoardActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode;
-            ChangeState(new InitState(this));
+            SetBoardComponentsActive(_isBoardActive);
+            if (_isBoardActive)
+            {
+                ChangeState(new InitState(this));
+            }
         }
 
         private void Update()
@@ -63,21 +67,28 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void HandleGlobalStateChanged(GameState newState)
         {
+            if (newState == GameState.TurnDecision) return;
             _isBoardActive = newState == GameState.BoardMode;
+            SetBoardComponentsActive(_isBoardActive);
             if (_isBoardActive)
             {
                 if (movementController != null)
                 {
                     movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
                 }
-                ChangeState(new InitState(this));
+                if (CurrentState == null)
+                {
+                    InitializeBoard();
+                }
+                return;
             }
+            CurrentState?.Exit();
+            CurrentState = null;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (GameManager.Instance == null) return;
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
 
             if (movementController == null || movementController.Equals(null))
             {
@@ -86,9 +97,29 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (movementController != null)
             {
+                bool isBoardMode = GameManager.Instance.CurrentState == GameState.BoardMode;
+                SetBoardComponentsActive(isBoardMode);
+                if (!isBoardMode) return;
                 movementController.ResolveReferences(GameManager.Instance.LastBoardIndex);
                 ChangeState(new InitState(this));
             }
+        }
+
+        private void SetBoardComponentsActive(bool isActive)
+        {
+            if (movementController != null)
+            {
+                movementController.enabled = isActive;
+                if (movementController.forkSelector != null)
+                {
+                    movementController.forkSelector.enabled = isActive;
+                }
+            }
+        }
+
+        private void InitializeBoard()
+        {
+            ChangeState(new InitState(this));
         }
     }
 }

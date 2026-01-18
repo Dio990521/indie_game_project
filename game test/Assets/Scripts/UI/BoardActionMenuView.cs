@@ -86,7 +86,7 @@ namespace IndieGame.UI
 
             if (target == null && GameManager.Instance != null)
             {
-                target = GameManager.Instance.GetCurrentPlayerTransform();
+                target = GameManager.Instance.CurrentPlayer != null ? GameManager.Instance.CurrentPlayer.transform : null;
             }
 
             if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode)
