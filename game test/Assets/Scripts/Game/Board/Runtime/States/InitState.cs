@@ -17,10 +17,6 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             {
                 Context.ResetToStart();
             }
-            if (Context.actionMenu != null)
-            {
-                Context.actionMenu.SetAllowShow(false);
-            }
             Context.ChangeState(new PlayerTurnState(Context));
         }
     }

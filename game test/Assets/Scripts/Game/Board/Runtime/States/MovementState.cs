@@ -14,11 +14,6 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         public override void Enter()
         {
-            if (Context.actionMenu != null)
-            {
-                Context.actionMenu.SetAllowShow(false);
-            }
-
             if (Context.movementController == null)
             {
                 Debug.LogWarning("[MovementState] Missing movementController.");

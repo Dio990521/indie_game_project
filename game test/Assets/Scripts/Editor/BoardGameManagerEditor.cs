@@ -101,7 +101,7 @@ namespace IndieGame.Editor.Board
             
             if (GUILayout.Button("🎲 Roll Dice", GUILayout.Height(40)))
             {
-                manager.RollDice();
+                manager.RequestRollDice();
             }
             
             GUI.enabled = true; // 恢复全局启用状态

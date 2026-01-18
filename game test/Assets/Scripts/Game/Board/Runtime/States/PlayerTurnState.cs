@@ -1,25 +1,36 @@
 using UnityEngine;
 using IndieGame.Core;
+using IndieGame.UI;
+using IndieGame.Gameplay.Inventory;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
 {
     public class PlayerTurnState : BoardState
     {
+        private BoardActionMenuView _menu;
+
         public PlayerTurnState(BoardGameManager context) : base(context) { }
 
         public override void Enter()
         {
-            if (Context.actionMenu != null)
+            _menu = UIManager.Instance != null ? UIManager.Instance.BoardActionMenuInstance : null;
+            if (_menu != null)
             {
-                Context.actionMenu.SetAllowShow(true);
+                _menu.SetAllowShow(true);
+                _menu.OnRollDiceRequested += HandleRollDiceRequested;
             }
+            InventoryManager.OnInventoryOpened += HandleInventoryOpened;
+            InventoryManager.OnInventoryClosed += HandleInventoryClosed;
         }
 
         public override void Exit()
         {
-            if (Context.actionMenu != null)
+            InventoryManager.OnInventoryOpened -= HandleInventoryOpened;
+            InventoryManager.OnInventoryClosed -= HandleInventoryClosed;
+            if (_menu != null)
             {
-                Context.actionMenu.SetAllowShow(false);
+                _menu.OnRollDiceRequested -= HandleRollDiceRequested;
+                _menu.SetAllowShow(false);
             }
         }
 
@@ -31,6 +42,27 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             int steps = Random.Range(1, 7);
             Debug.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
             Context.ChangeState(new MovementState(Context, steps));
+        }
+
+        private void HandleRollDiceRequested()
+        {
+            OnInteract();
+        }
+
+        private void HandleInventoryOpened()
+        {
+            if (_menu != null)
+            {
+                _menu.SetAllowShow(false);
+            }
+        }
+
+        private void HandleInventoryClosed()
+        {
+            if (_menu != null)
+            {
+                _menu.SetAllowShow(true);
+            }
         }
     }
 }

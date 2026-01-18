@@ -106,14 +106,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void ResolveReferences(int preferredNodeId)
         {
             _startNode = FindStartNode();
-            if (playerToken == null)
-            {
-                if (GameManager.Instance != null)
-                {
-                    playerToken = GameManager.Instance.GetCurrentPlayerTransform();
-                }
-            }
-
+            playerToken = GameManager.Instance != null ? GameManager.Instance.GetCurrentPlayerTransform() : null;
             if (playerToken != null && _playerAnimator == null)
             {
                 _playerAnimator = playerToken.GetComponentInChildren<Animator>();
@@ -145,82 +138,98 @@ namespace IndieGame.Gameplay.Board.Runtime
             return null;
         }
 
+        private class StepContext
+        {
+            public int StepsRemaining;
+        }
+
         private IEnumerator MoveRoutine(int totalSteps)
         {
-            int stepsRemaining = totalSteps;
-
-            while (stepsRemaining > 0)
+            StepContext ctx = new StepContext { StepsRemaining = totalSteps };
+            while (ctx.StepsRemaining > 0)
             {
-                List<WaypointConnection> segmentPath = new List<WaypointConnection>();
-                MapWaypoint tempNode = _currentNode;
-                bool encounteredFork = false;
-
-                // 预计算路径（保持原有逻辑）
-                for (int i = 0; i < stepsRemaining; i++)
-                {
-                    if (tempNode.connections.Count == 0) { stepsRemaining = 0; break; }
-                    else if (tempNode.connections.Count == 1)
-                    {
-                        var conn = tempNode.connections[0];
-                        segmentPath.Add(conn);
-                        tempNode = conn.targetNode;
-                    }
-                    else { encounteredFork = true; break; }
-                }
-
-                // 1. 执行自动移动
-                if (segmentPath.Count > 0)
-                {
-                    if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
-                    foreach (var conn in segmentPath)
-                    {
-                        // 这里可能会触发“连线事件”，所以移动可能会暂停
-                        yield return StartCoroutine(MoveAlongCurve(conn));
-                        _currentNode = conn.targetNode;
-                        stepsRemaining--;
-                        yield return StartCoroutine(HandleNodeArrival(_currentNode, stepsRemaining == 0));
-                    }
-                    if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
-                }
-
-                // 2. 处理岔路（保持原有逻辑）
-                if (encounteredFork && stepsRemaining > 0)
-                {
-                    GameManager.Instance.ChangeState(GameState.TurnDecision);
-                    WaypointConnection selectedConnection = null;
-                    if (forkSelector != null)
-                    {
-                        yield return StartCoroutine(forkSelector.SelectConnection(_currentNode, result => selectedConnection = result));
-                    }
-                    else
-                    {
-                        Debug.LogWarning("[BoardMovementController] Fork selection requested but no selector is assigned.");
-                    }
-                    GameManager.Instance.ChangeState(GameState.BoardMode);
-
-                    if (selectedConnection != null)
-                    {
-                        yield return new WaitForSeconds(0.2f);
-                        if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
-                        yield return StartCoroutine(MoveAlongCurve(selectedConnection));
-                        _currentNode = selectedConnection.targetNode;
-                        stepsRemaining--;
-                        yield return StartCoroutine(HandleNodeArrival(_currentNode, stepsRemaining == 0));
-                    }
-                    else break;
-                }
+                yield return StartCoroutine(ProcessStep(ctx));
             }
-            
+
             if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
-            
             _isMoving = false;
             MoveEnded?.Invoke();
         }
 
-        // --- 核心修改：支持事件中断的移动逻辑 ---
-        private IEnumerator MoveAlongCurve(WaypointConnection conn)
+        private IEnumerator ProcessStep(StepContext ctx)
         {
-            if (playerToken == null || _currentNode == null || conn == null || conn.targetNode == null) yield break;
+            List<WaypointConnection> path = new List<WaypointConnection>();
+            bool encounteredFork = false;
+            MapWaypoint tempNode = _currentNode;
+
+            for (int i = 0; i < ctx.StepsRemaining; i++)
+            {
+                if (tempNode.connections.Count == 0)
+                {
+                    ctx.StepsRemaining = 0;
+                    yield break;
+                }
+                if (tempNode.connections.Count == 1)
+                {
+                    var conn = tempNode.connections[0];
+                    path.Add(conn);
+                    tempNode = conn.targetNode;
+                }
+                else
+                {
+                    encounteredFork = true;
+                    break;
+                }
+            }
+
+            if (path.Count > 0)
+            {
+                yield return StartCoroutine(MoveSegmentPath(path, ctx));
+            }
+
+            if (encounteredFork && ctx.StepsRemaining > 0)
+            {
+                yield return StartCoroutine(HandleFork(ctx));
+            }
+        }
+
+        private IEnumerator MoveSegmentPath(List<WaypointConnection> path, StepContext ctx)
+        {
+            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
+            foreach (var conn in path)
+            {
+                yield return StartCoroutine(MoveAlongConnection(conn));
+                _currentNode = conn.targetNode;
+                ctx.StepsRemaining--;
+                yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
+            }
+            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
+        }
+
+        private IEnumerator HandleFork(StepContext ctx)
+        {
+            GameManager.Instance.ChangeState(GameState.TurnDecision);
+            WaypointConnection selectedConnection = null;
+            if (forkSelector != null)
+            {
+                yield return StartCoroutine(forkSelector.SelectConnection(_currentNode, result => selectedConnection = result));
+            }
+            GameManager.Instance.ChangeState(GameState.BoardMode);
+
+            if (selectedConnection == null) yield break;
+
+            yield return new WaitForSeconds(0.2f);
+            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 1f);
+            yield return StartCoroutine(MoveAlongConnection(selectedConnection));
+            _currentNode = selectedConnection.targetNode;
+            ctx.StepsRemaining--;
+            yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
+            if (_playerAnimator) _playerAnimator.SetFloat(_animIDSpeed, 0f);
+        }
+
+        // --- 核心修改：支持事件中断的移动逻辑 ---
+        private IEnumerator MoveAlongConnection(WaypointConnection conn)
+        {
             Vector3 p0 = playerToken.position;
             Vector3 p2 = conn.targetNode.transform.position;
             Vector3 curveStartPos = _currentNode.transform.position;

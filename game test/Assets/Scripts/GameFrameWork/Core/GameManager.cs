@@ -121,7 +121,7 @@ namespace IndieGame.Core
             return player;
         }
 
-        private GameObject GetOrFindCurrentPlayer()
+        public GameObject GetOrFindCurrentPlayer()
         {
             if (CurrentPlayer != null && !CurrentPlayer.Equals(null)) return CurrentPlayer;
             GameObject player = FindPlayerInScene();
