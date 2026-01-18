@@ -51,3 +51,5 @@ MonoBehaviour:
   inventoryManagerPrefab: {fileID: 1706707719091005244, guid: d056c621c009e415eb847c6c9d2f7199, type: 3}
   boardGameManagerPrefab: {fileID: 4701626481749714120, guid: 2b86555b901994817bdbce9f0d88a220, type: 3}
   cameraManagerPrefab: {fileID: 8903109993617494670, guid: 953af9d22f83d4d80a49e6e81564f2a8, type: 3}
+  playerPrefab: {fileID: 9170140433642860262, guid: 3fdf0eb77ea2e4bf69465f1396181008, type: 3}
+  uiCanvasPrefab: {fileID: 5226487021940693249, guid: bd05f62beefa24ddebd78299d036c39f, type: 3}

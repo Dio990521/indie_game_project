@@ -24,6 +24,12 @@ namespace IndieGame.Core
 
         public GameObject CurrentPlayer { get; private set; }
 
+        public void SetPlayerPrefab(GameObject prefab)
+        {
+            if (prefab == null) return;
+            playerPrefab = prefab;
+        }
+
         public Transform GetCurrentPlayerTransform()
         {
             GameObject player = GetOrFindCurrentPlayer();

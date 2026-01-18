@@ -1,6 +1,5 @@
 using System;
 using UnityEngine;
-using UnityEngine.UI;
 using IndieGame.Core.Utilities;
 using UnityEngine.SceneManagement;
 
@@ -14,9 +13,8 @@ namespace IndieGame.UI
 
     public class UIManager : MonoSingleton<UIManager>
     {
-        [Header("UI Roots")]
-        [SerializeField] private Transform screenOverlayTop75;
-        [SerializeField] private Transform screenCameraBottom25;
+        private Transform screenOverlayTop75;
+        private Transform screenCameraBottom25;
 
         [Header("UI Prefabs")]
         [SerializeField] private BoardActionMenuView boardActionMenuPrefab;
@@ -50,18 +48,8 @@ namespace IndieGame.UI
 
         public Transform GetRoot(UILayerPriority priority)
         {
-            switch (priority)
-            {
-                case UILayerPriority.Top75:
-                    return screenOverlayTop75 != null
-                        ? screenOverlayTop75
-                        : FindRootByName("UIScreenOverlay_TOP75");
-                case UILayerPriority.Bottom25:
-                default:
-                    return screenCameraBottom25 != null
-                        ? screenCameraBottom25
-                        : FindRootByName("UIScreenCamera_Bottom25");
-            }
+            ResolveRoots();
+            return priority == UILayerPriority.Top75 ? screenOverlayTop75 : screenCameraBottom25;
         }
 
         public T SpawnOnLayer<T>(T prefab, UILayerPriority priority) where T : Component
@@ -83,73 +71,13 @@ namespace IndieGame.UI
             uiRoot.SetParent(root, false);
         }
 
-        private Transform FindRootByName(string rootName)
-        {
-            GameObject root = GameObject.Find(rootName);
-            return root != null ? root.transform : null;
-        }
-
         private void InitUI()
         {
-            Transform uiCanvasRoot = FindOrCreateUICanvasRoot();
-            if (screenOverlayTop75 == null)
-            {
-                screenOverlayTop75 = FindRootByName("UIScreenOverlay_TOP75") ?? CreateRootCanvas("UIScreenOverlay_TOP75", RenderMode.ScreenSpaceOverlay, uiCanvasRoot);
-            }
-
-            if (screenCameraBottom25 == null)
-            {
-                screenCameraBottom25 = FindRootByName("UIScreenCamera_Bottom25") ?? CreateRootCanvas("UIScreenCamera_Bottom25", RenderMode.ScreenSpaceCamera, uiCanvasRoot);
-            }
-            EnsureEventSystem();
+            ResolveRoots();
             SpawnUI();
             RefreshWorldCamera();
         }
 
-        private Transform CreateRootCanvas(string name, RenderMode mode, Transform parent)
-        {
-            GameObject go = new GameObject(name, typeof(Canvas), typeof(CanvasScaler), typeof(GraphicRaycaster));
-            Canvas canvas = go.GetComponent<Canvas>();
-            canvas.renderMode = mode;
-            var scaler = go.GetComponent<CanvasScaler>();
-            scaler.uiScaleMode = CanvasScaler.ScaleMode.ScaleWithScreenSize;
-            scaler.referenceResolution = new Vector2(1920, 1080);
-            if (parent != null)
-            {
-                go.transform.SetParent(parent, false);
-            }
-            return go.transform;
-        }
-
-        private Transform FindOrCreateUICanvasRoot()
-        {
-            GameObject existing = GameObject.Find("UICanvas");
-            if (existing != null)
-            {
-                Transform gameRoot = FindGameSystemRoot();
-                if (gameRoot != null)
-                {
-                    existing.transform.SetParent(gameRoot, false);
-                }
-                return existing.transform;
-            }
-            GameObject root = new GameObject("UICanvas");
-            Transform parent = FindGameSystemRoot();
-            root.transform.SetParent(parent != null ? parent : transform, false);
-            return root.transform;
-        }
-
-
-        private void EnsureEventSystem()
-        {
-            if (FindAnyObjectByType<UnityEngine.EventSystems.EventSystem>() != null) return;
-            GameObject es = new GameObject("EventSystem", typeof(UnityEngine.EventSystems.EventSystem));
-#if ENABLE_INPUT_SYSTEM
-            es.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-            es.AddComponent<UnityEngine.EventSystems.StandaloneInputModule>();
-#endif
-        }
 
         private void SpawnUI()
         {
@@ -176,12 +104,12 @@ namespace IndieGame.UI
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
-            EnsureEventSystem();
             RefreshWorldCamera();
         }
 
         private void RefreshWorldCamera()
         {
+            ResolveRoots();
             if (screenCameraBottom25 == null) return;
             var canvas = screenCameraBottom25.GetComponent<Canvas>();
             if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
@@ -190,10 +118,17 @@ namespace IndieGame.UI
             }
         }
 
-        private Transform FindGameSystemRoot()
+        private void ResolveRoots()
         {
-            GameObject root = GameObject.Find("[GameSystem]");
-            return root != null ? root.transform : null;
+            if (screenOverlayTop75 != null && screenCameraBottom25 != null) return;
+
+            GameObject uiCanvas = GameObject.Find("UICanvas");
+            if (uiCanvas == null) return;
+            Transform overlay = uiCanvas.transform.Find("UIScreenOverlay_TOP75");
+            Transform cameraRoot = uiCanvas.transform.Find("UIScreenCamera_Bottom25");
+            if (overlay != null) screenOverlayTop75 = overlay;
+            if (cameraRoot != null) screenCameraBottom25 = cameraRoot;
         }
+
     }
 }

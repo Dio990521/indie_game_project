@@ -24,6 +24,9 @@ namespace IndieGame.Core
         [SerializeField] private GameObject inventoryManagerPrefab;
         [SerializeField] private GameObject boardGameManagerPrefab;
         [SerializeField] private GameObject cameraManagerPrefab;
+        [SerializeField] private GameObject playerPrefab;
+        [Header("UI Prefabs")]
+        [SerializeField] private GameObject uiCanvasPrefab;
 
         private void Awake()
         {
@@ -44,6 +47,7 @@ namespace IndieGame.Core
 
             GameObject root = EnsureGameSystemRoot();
             var gm = EnsureManagerFromPrefab<GameManager>(root, gameManagerPrefab, "GameManager");
+            EnsureUICanvasRoot();
             EnsureManagerFromPrefab<UIManager>(root, uiManagerPrefab, "UIManager");
             EnsureManagerFromPrefab<BoardGameManager>(root, boardGameManagerPrefab, "BoardGameManager");
             EnsureManagerFromPrefab<InventoryManager>(root, inventoryManagerPrefab, "InventoryManager");
@@ -56,6 +60,10 @@ namespace IndieGame.Core
             // 3. 正式启动游戏逻辑
             if (gm != null)
             {
+                if (playerPrefab != null)
+                {
+                    gm.SetPlayerPrefab(playerPrefab);
+                }
                 gm.InitGame();
                 
                 // 如果是测试场景，可能会强制覆盖状态
@@ -66,6 +74,22 @@ namespace IndieGame.Core
                         gm.ChangeState(GameState.FreeRoam);
                 }
             }
+        }
+
+        private void EnsureUICanvasRoot()
+        {
+            GameObject existing = GameObject.Find("UICanvas");
+            if (existing != null) return;
+
+            if (uiCanvasPrefab == null)
+            {
+                Debug.LogWarning("[GameBootstrapper] Missing UICanvas prefab.");
+                return;
+            }
+
+            GameObject canvasRoot = Instantiate(uiCanvasPrefab);
+            canvasRoot.name = "UICanvas";
+            canvasRoot.AddComponent<DontDestroyRoot>();
         }
 
         private GameObject EnsureGameSystemRoot()

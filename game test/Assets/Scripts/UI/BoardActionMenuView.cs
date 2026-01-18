@@ -46,6 +46,7 @@ namespace IndieGame.UI
 
         private readonly List<BoardActionOptionData> _options = new List<BoardActionOptionData>();
         private readonly List<BoardActionButton> _buttons = new List<BoardActionButton>();
+        private bool _isBuilt = false;
         private int _selectedIndex = 0;
         private float _nextInputTime = 0f;
         private Sequence _showSequence;
@@ -138,9 +139,13 @@ namespace IndieGame.UI
             if (!_allowShow || _isVisible) return;
             if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
 
-            BuildDefaultData();
-            RebuildButtons();
-            LayoutButtons();
+            if (!_isBuilt)
+            {
+                BuildDefaultData();
+                RebuildButtons();
+                LayoutButtons();
+                _isBuilt = true;
+            }
             SelectIndex(0, instant: true);
             PlayShowAnimation();
             _isVisible = true;
@@ -185,11 +190,18 @@ namespace IndieGame.UI
                 }
             }
             _buttons.Clear();
+            _isBuilt = false;
 
             if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return;
             if (binder.ButtonPrefab.gameObject.scene.IsValid())
             {
                 Debug.LogError("[BoardActionMenuView] ButtonPrefab must be a prefab asset, not a scene object.");
+                return;
+            }
+            bool parentValid = binder.ButtonContainer.gameObject.scene.IsValid();
+            if (!parentValid)
+            {
+                Debug.LogWarning("[BoardActionMenuView] ButtonContainer is not a scene object, skipping button rebuild.");
                 return;
             }
             for (int i = binder.ButtonContainer.childCount - 1; i >= 0; i--)
@@ -201,6 +213,7 @@ namespace IndieGame.UI
             {
                 BoardActionOptionData option = _options[i];
                 BoardActionButton button = Instantiate(binder.ButtonPrefab);
+                if (binder.ButtonContainer == null) break;
                 button.transform.SetParent(binder.ButtonContainer, false);
                 button.Setup(option.Name, option.Icon, i, OnButtonHover, OnButtonClick, OnButtonExit);
                 _buttons.Add(button);

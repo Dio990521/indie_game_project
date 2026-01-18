@@ -39,6 +39,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             GameManager.OnStateChanged += HandleGlobalStateChanged;
             IndieGame.UI.UIManager.OnUIReady += HandleUIReady;
             SceneManager.sceneLoaded += HandleSceneLoaded;
+            InventoryManager.OnInventoryOpened += HandleInventoryOpened;
         }
 
         private void OnDisable()
@@ -48,6 +49,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             GameManager.OnStateChanged -= HandleGlobalStateChanged;
             IndieGame.UI.UIManager.OnUIReady -= HandleUIReady;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            InventoryManager.OnInventoryOpened -= HandleInventoryOpened;
         }
 
         [ContextMenu("Roll Dice")]
@@ -87,6 +89,14 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (CurrentState is PlayerTurnState && actionMenu != null)
             {
                 actionMenu.SetAllowShow(true);
+            }
+        }
+
+        private void HandleInventoryOpened()
+        {
+            if (actionMenu != null)
+            {
+                actionMenu.SetAllowShow(false);
             }
         }
 

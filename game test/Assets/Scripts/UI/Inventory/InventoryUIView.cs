@@ -14,6 +14,8 @@ namespace IndieGame.UI.Inventory
         public event Action<ItemSO> OnSlotClicked;
 
         private readonly List<InventorySlotUI> _slots = new List<InventorySlotUI>();
+        private CanvasGroup _canvasGroup;
+        private bool _useCanvasGroup = false;
 
         private void Awake()
         {
@@ -26,8 +28,8 @@ namespace IndieGame.UI.Inventory
             {
                 binder.CloseButton.onClick.AddListener(HandleCloseClicked);
             }
-
-            Hide();
+            SetupVisibility();
+            SetVisible(false);
         }
 
         private void Start()
@@ -37,12 +39,16 @@ namespace IndieGame.UI.Inventory
                 Transform root = binder.RootPanel != null ? binder.RootPanel.transform : transform;
                 Canvas canvas = root.GetComponentInParent<Canvas>();
             }
+        }
+
+        private void OnEnable()
+        {
             InventoryManager.OnInventoryUpdated += HandleRefresh;
             InventoryManager.OnInventoryOpened += HandleOpen;
             InventoryManager.OnInventoryClosed += HandleClose;
         }
 
-        private void OnDestroy()
+        private void OnDisable()
         {
             InventoryManager.OnInventoryUpdated -= HandleRefresh;
             InventoryManager.OnInventoryOpened -= HandleOpen;
@@ -51,13 +57,13 @@ namespace IndieGame.UI.Inventory
 
         public void Show(List<ItemSO> items)
         {
-            if (binder.RootPanel != null) binder.RootPanel.SetActive(true);
+            SetVisible(true);
             Rebuild(items);
         }
 
         public void Hide()
         {
-            if (binder.RootPanel != null) binder.RootPanel.SetActive(false);
+            SetVisible(false);
         }
 
         private void HandleCloseClicked()
@@ -94,12 +100,36 @@ namespace IndieGame.UI.Inventory
 
         private void HandleOpen()
         {
-            if (binder.RootPanel != null) binder.RootPanel.SetActive(true);
+            SetVisible(true);
         }
 
         private void HandleClose()
         {
-            if (binder.RootPanel != null) binder.RootPanel.SetActive(false);
+            SetVisible(false);
+        }
+
+        private void SetupVisibility()
+        {
+            if (binder.RootPanel == null) return;
+            if (binder.RootPanel == gameObject)
+            {
+                _canvasGroup = GetComponent<CanvasGroup>();
+                if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+                _useCanvasGroup = true;
+            }
+        }
+
+        private void SetVisible(bool visible)
+        {
+            if (binder.RootPanel == null) return;
+            if (_useCanvasGroup && _canvasGroup != null)
+            {
+                _canvasGroup.alpha = visible ? 1f : 0f;
+                _canvasGroup.blocksRaycasts = visible;
+                _canvasGroup.interactable = visible;
+                return;
+            }
+            binder.RootPanel.SetActive(visible);
         }
 
         private void ClearSlots()
