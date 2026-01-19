@@ -17,10 +17,12 @@ namespace IndieGame.UI
         private Transform screenCameraBottom25;
 
         [Header("UI Prefabs")]
+        [SerializeField] private GameObject uiCanvasPrefab;
         [SerializeField] private BoardActionMenuView boardActionMenuPrefab;
         [SerializeField] private Inventory.InventoryUIView inventoryPrefab;
         [SerializeField] private Confirmation.ConfirmationPopupView confirmationPrefab;
 
+        public GameObject CanvasInstance { get; private set; }
         public BoardActionMenuView BoardActionMenuInstance { get; private set; }
         public Inventory.InventoryUIView InventoryInstance { get; private set; }
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
@@ -33,6 +35,8 @@ namespace IndieGame.UI
         {
             base.Awake();
             if (Instance != this) return;
+            EnsureCanvasInstance();
+            CacheRoots();
             InitUI();
         }
 
@@ -48,7 +52,10 @@ namespace IndieGame.UI
 
         public Transform GetRoot(UILayerPriority priority)
         {
-            ResolveRoots();
+            if (screenOverlayTop75 == null || screenCameraBottom25 == null)
+            {
+                CacheRoots();
+            }
             return priority == UILayerPriority.Top75 ? screenOverlayTop75 : screenCameraBottom25;
         }
 
@@ -73,7 +80,6 @@ namespace IndieGame.UI
 
         private void InitUI()
         {
-            ResolveRoots();
             SpawnUI();
             RefreshWorldCamera();
         }
@@ -109,7 +115,10 @@ namespace IndieGame.UI
 
         private void RefreshWorldCamera()
         {
-            ResolveRoots();
+            if (screenCameraBottom25 == null)
+            {
+                CacheRoots();
+            }
             if (screenCameraBottom25 == null) return;
             var canvas = screenCameraBottom25.GetComponent<Canvas>();
             if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
@@ -118,17 +127,37 @@ namespace IndieGame.UI
             }
         }
 
-        private void ResolveRoots()
+        private void CacheRoots()
         {
-            if (screenOverlayTop75 != null && screenCameraBottom25 != null) return;
-
-            GameObject uiCanvas = GameObject.Find("UICanvas");
-            if (uiCanvas == null) return;
-            Transform overlay = uiCanvas.transform.Find("UIScreenOverlay_TOP75");
-            Transform cameraRoot = uiCanvas.transform.Find("UIScreenCamera_Bottom25");
+            if (CanvasInstance == null) return;
+            Transform overlay = CanvasInstance.transform.Find("UIScreenOverlay_TOP75");
+            Transform cameraRoot = CanvasInstance.transform.Find("UIScreenCamera_Bottom25");
             if (overlay != null) screenOverlayTop75 = overlay;
             if (cameraRoot != null) screenCameraBottom25 = cameraRoot;
         }
 
+        private void EnsureCanvasInstance()
+        {
+            if (CanvasInstance != null) return;
+
+            if (uiCanvasPrefab == null)
+            {
+                Debug.LogWarning("[UIManager] Missing UICanvas prefab.");
+                return;
+            }
+
+            CanvasInstance = Instantiate(uiCanvasPrefab);
+            CanvasInstance.name = "UICanvas";
+            EnsureDontDestroyRoot(CanvasInstance);
+        }
+
+        private void EnsureDontDestroyRoot(GameObject target)
+        {
+            if (target == null) return;
+            if (target.GetComponent<DontDestroyRoot>() == null)
+            {
+                target.AddComponent<DontDestroyRoot>();
+            }
+        }
     }
 }

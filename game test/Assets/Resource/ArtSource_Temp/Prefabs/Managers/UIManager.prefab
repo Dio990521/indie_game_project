@@ -44,8 +44,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 72b312fb9521442ee886077057950f53, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.UIManager
-  screenOverlayTop75: {fileID: 0}
-  screenCameraBottom25: {fileID: 0}
+  uiCanvasPrefab: {fileID: 5226487021940693249, guid: bd05f62beefa24ddebd78299d036c39f, type: 3}
   boardActionMenuPrefab: {fileID: 8998479574143937990, guid: 6ccb00c195d5d407b993a443fffe1b14, type: 3}
   inventoryPrefab: {fileID: 6143728634985472209, guid: 7473fbcee6e4f43f9a9d263b95a6a7e1, type: 3}
   confirmationPrefab: {fileID: 8835836302094458256, guid: 9be6ab39f0a74491a87c7bcc2e9a9d2a, type: 3}
