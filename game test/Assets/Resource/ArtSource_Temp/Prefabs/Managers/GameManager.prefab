@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1515936092003523506}
   - component: {fileID: 6543488986930004506}
+  - component: {fileID: 6814360126113393166}
   m_Layer: 0
   m_Name: GameManager
   m_TagString: Untagged
@@ -44,5 +45,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d4fb7e57a529945a3b78373727c36945, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.GameManager
-  playerPrefab: {fileID: 9170140433642860262, guid: 3fdf0eb77ea2e4bf69465f1396181008, type: 3}
-  playerTag: Player
+--- !u!114 &6814360126113393166
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8054680310224825614}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 600988ffd4bf74a86b80eaa367a2f7b6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Debugging.StateDebugOverlay

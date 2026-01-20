@@ -110,7 +110,7 @@ namespace IndieGame.UI
 
             _options.Clear();
             _options.AddRange(data);
-            RebuildButtons();
+            RefreshButtons(data);
             LayoutButtons();
             SelectIndex(0, instant: true);
             PlayShowAnimation();
@@ -125,19 +125,10 @@ namespace IndieGame.UI
             PlayHideAnimation();
         }
 
-        private void RebuildButtons()
+        private void RefreshButtons(List<BoardActionOptionData> data)
         {
             _showSequence?.Kill();
             _hideSequence?.Kill();
-            for (int i = 0; i < _buttons.Count; i++)
-            {
-                if (_buttons[i] != null)
-                {
-                    _buttons[i].transform.DOKill(true);
-                    Destroy(_buttons[i].gameObject);
-                }
-            }
-            _buttons.Clear();
 
             if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return;
             if (binder.ButtonPrefab.gameObject.scene.IsValid())
@@ -151,57 +142,67 @@ namespace IndieGame.UI
                 Debug.LogWarning("[BoardActionMenuView] ButtonContainer is not a scene object, skipping button rebuild.");
                 return;
             }
-            for (int i = binder.ButtonContainer.childCount - 1; i >= 0; i--)
+            EnsurePoolFromChildren();
+
+            for (int i = 0; i < data.Count; i++)
             {
-                Destroy(binder.ButtonContainer.GetChild(i).gameObject);
+                BoardActionButton button = GetOrCreateButton(i);
+                if (button == null) break;
+                BoardActionOptionData option = data[i];
+                button.Setup(option.Name, option.Icon, i, OnButtonHover, OnButtonClick, OnButtonExit);
+                button.gameObject.SetActive(true);
             }
 
-            for (int i = 0; i < _options.Count; i++)
+            for (int i = data.Count; i < _buttons.Count; i++)
             {
-                BoardActionOptionData option = _options[i];
-                BoardActionButton button = Instantiate(binder.ButtonPrefab);
-                if (binder.ButtonContainer == null) break;
-                button.transform.SetParent(binder.ButtonContainer, false);
-                button.Setup(option.Name, option.Icon, i, OnButtonHover, OnButtonClick, OnButtonExit);
-                _buttons.Add(button);
+                if (_buttons[i] != null)
+                {
+                    _buttons[i].gameObject.SetActive(false);
+                }
             }
+            _selectedIndex = -1;
+            _selectionSource = SelectionSource.None;
         }
 
         private void LayoutButtons()
         {
-            int count = _buttons.Count;
-            if (count == 0) return;
+            int activeCount = _options.Count;
+            if (activeCount == 0) return;
 
             float startAngle = -arcAngle * 0.5f;
-            float step = count > 1 ? arcAngle / (count - 1) : 0f;
+            float step = activeCount > 1 ? arcAngle / (activeCount - 1) : 0f;
 
-            for (int i = 0; i < count; i++)
+            int activeIndex = 0;
+            for (int i = 0; i < _buttons.Count; i++)
             {
-                float angle = startAngle + step * i;
+                BoardActionButton button = _buttons[i];
+                if (button == null || !button.gameObject.activeSelf) continue;
+                float angle = startAngle + step * activeIndex;
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 pos = new Vector2(Mathf.Cos(rad) * radius, Mathf.Sin(rad) * radius) + offset;
 
-                RectTransform rt = _buttons[i].GetComponent<RectTransform>();
+                RectTransform rt = button.GetComponent<RectTransform>();
                 rt.anchoredPosition = pos;
+                activeIndex++;
             }
         }
 
         private void OnMoveInput(Vector2 input)
         {
             if (Time.time < _nextInputTime) return;
-            if (_buttons.Count == 0) return;
+            if (_options.Count == 0) return;
 
             if (input.y > 0.5f)
             {
                 _nextInputTime = Time.time + inputRepeatDelay;
                 _selectionSource = SelectionSource.Keyboard;
-                SelectIndex((_selectedIndex - 1 + _buttons.Count) % _buttons.Count);
+                SelectIndex((_selectedIndex - 1 + _options.Count) % _options.Count);
             }
             else if (input.y < -0.5f)
             {
                 _nextInputTime = Time.time + inputRepeatDelay;
                 _selectionSource = SelectionSource.Keyboard;
-                SelectIndex((_selectedIndex + 1) % _buttons.Count);
+                SelectIndex((_selectedIndex + 1) % _options.Count);
             }
         }
 
@@ -244,11 +245,12 @@ namespace IndieGame.UI
 
         private void SelectIndex(int index, bool instant = false)
         {
-            if (_buttons.Count == 0) return;
-            _selectedIndex = Mathf.Clamp(index, 0, _buttons.Count - 1);
+            if (_options.Count == 0) return;
+            _selectedIndex = Mathf.Clamp(index, 0, _options.Count - 1);
 
             for (int i = 0; i < _buttons.Count; i++)
             {
+                if (_buttons[i] == null || !_buttons[i].gameObject.activeSelf) continue;
                 bool isSelected = i == _selectedIndex;
                 _buttons[i].SetSelected(isSelected, isSelected ? selectedScale : normalScale, instant ? 0f : selectTweenDuration);
             }
@@ -280,10 +282,11 @@ namespace IndieGame.UI
             _showSequence = DOTween.Sequence();
             for (int i = 0; i < _buttons.Count; i++)
             {
+                if (_buttons[i] == null || !_buttons[i].gameObject.activeSelf) continue;
                 Transform t = _buttons[i].transform;
                 t.localScale = Vector3.zero;
                 _showSequence.Append(t.DOScale(normalScale, showDuration).SetEase(showEase));
-                if (i < _buttons.Count - 1) _showSequence.AppendInterval(showStagger);
+                if (i < _options.Count - 1) _showSequence.AppendInterval(showStagger);
             }
         }
 
@@ -295,6 +298,7 @@ namespace IndieGame.UI
             _hideSequence = DOTween.Sequence();
             for (int i = 0; i < _buttons.Count; i++)
             {
+                if (_buttons[i] == null || !_buttons[i].gameObject.activeSelf) continue;
                 Transform t = _buttons[i].transform;
                 _hideSequence.Join(t.DOScale(0f, hideDuration).SetEase(hideEase));
             }
@@ -306,7 +310,6 @@ namespace IndieGame.UI
                     _canvasGroup.blocksRaycasts = false;
                     _canvasGroup.interactable = false;
                 }
-                ClearButtons();
                 _isVisible = false;
             });
         }
@@ -327,22 +330,37 @@ namespace IndieGame.UI
             _inputSubscribed = false;
         }
 
-        private void ClearButtons()
+        private void EnsurePoolFromChildren()
         {
-            _showSequence?.Kill();
-            _hideSequence?.Kill();
-            for (int i = 0; i < _buttons.Count; i++)
+            if (_buttons.Count > 0 || binder.ButtonContainer == null) return;
+            for (int i = 0; i < binder.ButtonContainer.childCount; i++)
             {
-                if (_buttons[i] != null)
-                {
-                    _buttons[i].transform.DOKill(true);
-                    Destroy(_buttons[i].gameObject);
-                }
+                var button = binder.ButtonContainer.GetChild(i).GetComponent<BoardActionButton>();
+                if (button == null) continue;
+                button.gameObject.SetActive(false);
+                _buttons.Add(button);
             }
-            _buttons.Clear();
-            _options.Clear();
-            _selectedIndex = -1;
-            _selectionSource = SelectionSource.None;
+        }
+
+        private BoardActionButton GetOrCreateButton(int index)
+        {
+            if (index < _buttons.Count && _buttons[index] != null)
+            {
+                return _buttons[index];
+            }
+
+            if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return null;
+            BoardActionButton button = Instantiate(binder.ButtonPrefab);
+            button.transform.SetParent(binder.ButtonContainer, false);
+            if (index < _buttons.Count)
+            {
+                _buttons[index] = button;
+            }
+            else
+            {
+                _buttons.Add(button);
+            }
+            return button;
         }
     }
 }
