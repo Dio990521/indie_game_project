@@ -16,7 +16,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             _menu = UIManager.Instance != null ? UIManager.Instance.BoardActionMenuInstance : null;
             if (_menu != null)
             {
-                _menu.SetAllowShow(true);
+                _menu.Show(BuildDefaultMenuData());
                 _menu.OnRollDiceRequested += HandleRollDiceRequested;
             }
             InventoryManager.OnInventoryOpened += HandleInventoryOpened;
@@ -30,7 +30,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             if (_menu != null)
             {
                 _menu.OnRollDiceRequested -= HandleRollDiceRequested;
-                _menu.SetAllowShow(false);
+                _menu.Hide();
             }
         }
 
@@ -53,7 +53,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (_menu != null)
             {
-                _menu.SetAllowShow(false);
+                _menu.Hide();
             }
         }
 
@@ -61,8 +61,18 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (_menu != null)
             {
-                _menu.SetAllowShow(true);
+                _menu.Show(BuildDefaultMenuData());
             }
+        }
+
+        private System.Collections.Generic.List<BoardActionOptionData> BuildDefaultMenuData()
+        {
+            return new System.Collections.Generic.List<BoardActionOptionData>
+            {
+                new BoardActionOptionData { Id = BoardActionId.RollDice, Name = "Roll Dice" },
+                new BoardActionOptionData { Id = BoardActionId.Item, Name = "Item" },
+                new BoardActionOptionData { Id = BoardActionId.Camp, Name = "Camp" }
+            };
         }
     }
 }

@@ -178,7 +178,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 if (tempNode.connections.Count == 0)
                 {
                     ctx.StepsRemaining = 0;
-                    yield break;
+                    break;
                 }
                 if (tempNode.connections.Count == 1)
                 {

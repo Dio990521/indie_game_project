@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
-using IndieGame.Core;
 using IndieGame.Core.Input;
 
 namespace IndieGame.UI
@@ -46,8 +45,7 @@ namespace IndieGame.UI
 
         private readonly List<BoardActionOptionData> _options = new List<BoardActionOptionData>();
         private readonly List<BoardActionButton> _buttons = new List<BoardActionButton>();
-        private bool _isBuilt = false;
-        private int _selectedIndex = 0;
+        private int _selectedIndex = -1;
         private float _nextInputTime = 0f;
         private Sequence _showSequence;
         private Sequence _hideSequence;
@@ -55,7 +53,7 @@ namespace IndieGame.UI
         private RectTransform _canvasRect;
         private CanvasGroup _canvasGroup;
         private bool _isVisible = false;
-        private bool _allowShow = true;
+        private bool _inputSubscribed = false;
         private SelectionSource _selectionSource = SelectionSource.None;
 
         private void Awake()
@@ -75,6 +73,10 @@ namespace IndieGame.UI
             }
         }
 
+        private void OnEnable()
+        {
+        }
+
         private void Start()
         {
             if (binder != null)
@@ -83,30 +85,12 @@ namespace IndieGame.UI
                 Canvas canvas = root.GetComponentInParent<Canvas>();
                 if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
             }
-
-            if (target == null && GameManager.Instance != null)
-            {
-                target = GameManager.Instance.CurrentPlayer != null ? GameManager.Instance.CurrentPlayer.transform : null;
-            }
-
-            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode)
-            {
-                Show();
-            }
         }
 
-        private void OnEnable()
-        {
-            GameManager.OnStateChanged += HandleStateChanged;
-            if (inputReader != null) inputReader.MoveEvent += OnMoveInput;
-            if (inputReader != null) inputReader.InteractEvent += OnInteractInput;
-        }
 
         private void OnDisable()
         {
-            GameManager.OnStateChanged -= HandleStateChanged;
-            if (inputReader != null) inputReader.MoveEvent -= OnMoveInput;
-            if (inputReader != null) inputReader.InteractEvent -= OnInteractInput;
+            UnsubscribeInput();
             _showSequence?.Kill();
             _hideSequence?.Kill();
         }
@@ -119,62 +103,26 @@ namespace IndieGame.UI
             _selfRect.anchoredPosition = localPoint;
         }
 
-        public void SetAllowShow(bool allow)
+        public void Show(List<BoardActionOptionData> data)
         {
-            _allowShow = allow;
-            if (!allow)
-            {
-                Hide();
-                return;
-            }
+            if (_isVisible) return;
+            if (data == null || data.Count == 0) return;
 
-            if (GameManager.Instance.CurrentState == GameState.BoardMode)
-            {
-                Show();
-            }
-        }
-
-        public void Show()
-        {
-            if (!_allowShow || _isVisible) return;
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
-
-            if (!_isBuilt)
-            {
-                BuildDefaultData();
-                RebuildButtons();
-                LayoutButtons();
-                _isBuilt = true;
-            }
+            _options.Clear();
+            _options.AddRange(data);
+            RebuildButtons();
+            LayoutButtons();
             SelectIndex(0, instant: true);
             PlayShowAnimation();
             _isVisible = true;
+            SubscribeInput();
         }
 
         public void Hide()
         {
             if (!_isVisible) return;
+            UnsubscribeInput();
             PlayHideAnimation();
-        }
-
-        private void HandleStateChanged(GameState newState)
-        {
-            if (newState == GameState.BoardMode)
-            {
-                if (_allowShow) Show();
-            }
-            else
-            {
-                Hide();
-            }
-        }
-
-        private void BuildDefaultData()
-        {
-            _options.Clear();
-            _options.Add(new BoardActionOptionData { Id = BoardActionId.RollDice, Name = "Roll Dice" });
-            _options.Add(new BoardActionOptionData { Id = BoardActionId.Item, Name = "Item" });
-            _options.Add(new BoardActionOptionData { Id = BoardActionId.Camp, Name = "Camp" });
         }
 
         private void RebuildButtons()
@@ -190,7 +138,6 @@ namespace IndieGame.UI
                 }
             }
             _buttons.Clear();
-            _isBuilt = false;
 
             if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return;
             if (binder.ButtonPrefab.gameObject.scene.IsValid())
@@ -241,9 +188,8 @@ namespace IndieGame.UI
 
         private void OnMoveInput(Vector2 input)
         {
-            if (!_isVisible) return;
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
             if (Time.time < _nextInputTime) return;
+            if (_buttons.Count == 0) return;
 
             if (input.y > 0.5f)
             {
@@ -261,8 +207,6 @@ namespace IndieGame.UI
 
         private void OnInteractInput()
         {
-            if (!_isVisible) return;
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
             OnButtonClick(_selectedIndex);
         }
 
@@ -362,8 +306,43 @@ namespace IndieGame.UI
                     _canvasGroup.blocksRaycasts = false;
                     _canvasGroup.interactable = false;
                 }
+                ClearButtons();
                 _isVisible = false;
             });
+        }
+
+        private void SubscribeInput()
+        {
+            if (_inputSubscribed || inputReader == null) return;
+            inputReader.MoveEvent += OnMoveInput;
+            inputReader.InteractEvent += OnInteractInput;
+            _inputSubscribed = true;
+        }
+
+        private void UnsubscribeInput()
+        {
+            if (!_inputSubscribed || inputReader == null) return;
+            inputReader.MoveEvent -= OnMoveInput;
+            inputReader.InteractEvent -= OnInteractInput;
+            _inputSubscribed = false;
+        }
+
+        private void ClearButtons()
+        {
+            _showSequence?.Kill();
+            _hideSequence?.Kill();
+            for (int i = 0; i < _buttons.Count; i++)
+            {
+                if (_buttons[i] != null)
+                {
+                    _buttons[i].transform.DOKill(true);
+                    Destroy(_buttons[i].gameObject);
+                }
+            }
+            _buttons.Clear();
+            _options.Clear();
+            _selectedIndex = -1;
+            _selectionSource = SelectionSource.None;
         }
     }
 }
