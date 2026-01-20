@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using IndieGame.Core;
@@ -14,6 +15,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public BoardState CurrentState { get; private set; }
         public BoardState OverlayState { get; private set; }
         private bool _isBoardActive = false;
+        private Coroutine _initRoutine;
 
         protected override bool DestroyOnLoad => true;
 
@@ -21,10 +23,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             _isBoardActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode;
             SetBoardComponentsActive(_isBoardActive);
-            if (_isBoardActive)
-            {
-                ChangeState(new InitState(this));
-            }
+            if (_isBoardActive) BeginBoardInitialization();
         }
 
         private void Update()
@@ -49,6 +48,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void ChangeState(BoardState newState)
         {
             if (newState == null) return;
+            if (CurrentState != null && CurrentState.GetType() == newState.GetType()) return;
             CurrentState?.Exit();
             CurrentState = newState;
             CurrentState.Enter();
@@ -78,16 +78,10 @@ namespace IndieGame.Gameplay.Board.Runtime
             SetBoardComponentsActive(_isBoardActive);
             if (_isBoardActive)
             {
-                if (movementController != null)
-                {
-                    movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
-                }
-                if (CurrentState == null)
-                {
-                    InitializeBoard();
-                }
+                BeginBoardInitialization();
                 return;
             }
+            StopBoardInitialization();
             ClearOverlayState();
             CurrentState?.Exit();
             CurrentState = null;
@@ -96,20 +90,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             if (GameManager.Instance == null) return;
-
-            if (movementController == null || movementController.Equals(null))
-            {
-                movementController = FindAnyObjectByType<BoardMovementController>();
-            }
-
-            if (movementController != null)
-            {
-                bool isBoardMode = GameManager.Instance.CurrentState == GameState.BoardMode;
-                SetBoardComponentsActive(isBoardMode);
-                if (!isBoardMode) return;
-                movementController.ResolveReferences(GameManager.Instance.LastBoardIndex);
-                ChangeState(new InitState(this));
-            }
+            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
+            BeginBoardInitialization();
         }
 
         private void SetBoardComponentsActive(bool isActive)
@@ -124,9 +106,41 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
-        private void InitializeBoard()
+        private void BeginBoardInitialization()
         {
-            ChangeState(new InitState(this));
+            if (_initRoutine != null) return;
+            _initRoutine = StartCoroutine(InitializeBoardRoutine());
+        }
+
+        private void StopBoardInitialization()
+        {
+            if (_initRoutine == null) return;
+            StopCoroutine(_initRoutine);
+            _initRoutine = null;
+        }
+
+        private IEnumerator InitializeBoardRoutine()
+        {
+            yield return new WaitUntil(() => GameManager.Instance != null);
+            yield return new WaitUntil(() => _isBoardActive);
+            yield return new WaitUntil(() => SceneManager.GetActiveScene().isLoaded);
+
+            if (movementController == null || movementController.Equals(null))
+            {
+                movementController = FindAnyObjectByType<BoardMovementController>();
+            }
+
+            if (movementController != null)
+            {
+                movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+            }
+
+            if (CurrentState == null)
+            {
+                ChangeState(new InitState(this));
+            }
+
+            _initRoutine = null;
         }
 
         public void PushOverlayState(BoardState newState)
