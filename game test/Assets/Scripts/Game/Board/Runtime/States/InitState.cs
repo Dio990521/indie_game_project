@@ -4,20 +4,18 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 {
     public class InitState : BoardState
     {
-        public InitState(BoardGameManager context) : base(context) { }
-
-        public override void Enter()
+        public override void OnEnter(BoardGameManager context)
         {
             var gm = GameManager.Instance;
-            if (gm != null && gm.LastBoardIndex >= 0 && Context.movementController != null)
+            if (gm != null && gm.LastBoardIndex >= 0 && context.movementController != null)
             {
-                Context.movementController.SetCurrentNodeById(gm.LastBoardIndex);
+                context.movementController.SetCurrentNodeById(gm.LastBoardIndex);
             }
             else
             {
-                Context.ResetToStart();
+                context.ResetToStart();
             }
-            Context.ChangeState(new PlayerTurnState(Context));
+            context.ChangeState(new PlayerTurnState());
         }
     }
 }

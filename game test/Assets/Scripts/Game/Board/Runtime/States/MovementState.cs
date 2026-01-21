@@ -7,43 +7,41 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     public class MovementState : BoardState
     {
         private readonly int _steps;
+        private System.Action _onMoveEnded;
+        private System.Action<MapWaypoint, System.Action<WaypointConnection>> _onForkSelection;
 
-        public MovementState(BoardGameManager context, int steps) : base(context)
+        public MovementState(int steps)
         {
             _steps = steps;
         }
 
-        public override void Enter()
+        public override void OnEnter(BoardGameManager context)
         {
-            if (Context.movementController == null)
+            if (context.movementController == null)
             {
                 Debug.LogWarning("[MovementState] Missing movementController.");
-                Context.ChangeState(new PlayerTurnState(Context));
+                context.ChangeState(new PlayerTurnState());
                 return;
             }
 
-            Context.movementController.MoveEnded += HandleMoveEnded;
-            Context.movementController.ForkSelectionRequested += HandleForkSelectionRequested;
-            Context.movementController.BeginMove(_steps);
+            _onMoveEnded = () => context.ChangeState(new EventState());
+            _onForkSelection = (node, onSelected) =>
+                context.PushOverlayState(new ForkSelectionState(node, onSelected));
+
+            context.movementController.MoveEnded += _onMoveEnded;
+            context.movementController.ForkSelectionRequested += _onForkSelection;
+            context.movementController.BeginMove(_steps);
         }
 
-        public override void Exit()
+        public override void OnExit(BoardGameManager context)
         {
-            if (Context.movementController != null)
+            if (context.movementController != null)
             {
-                Context.movementController.MoveEnded -= HandleMoveEnded;
-                Context.movementController.ForkSelectionRequested -= HandleForkSelectionRequested;
+                if (_onMoveEnded != null) context.movementController.MoveEnded -= _onMoveEnded;
+                if (_onForkSelection != null) context.movementController.ForkSelectionRequested -= _onForkSelection;
             }
-        }
-
-        private void HandleMoveEnded()
-        {
-            Context.ChangeState(new EventState(Context));
-        }
-
-        private void HandleForkSelectionRequested(MapWaypoint forkNode, System.Action<WaypointConnection> onSelected)
-        {
-            Context.PushOverlayState(new ForkSelectionState(Context, forkNode, onSelected));
+            _onMoveEnded = null;
+            _onForkSelection = null;
         }
     }
 }

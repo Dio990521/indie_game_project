@@ -57,6 +57,7 @@ namespace IndieGame.Core
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
             OnStateChanged?.Invoke(newState);
+            EventBus.Raise(new GameStateChangedEvent { NewState = newState });
         }
 
         public void LoadScene(string sceneName, GameState newState)

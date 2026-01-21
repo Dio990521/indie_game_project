@@ -2,6 +2,7 @@ using System;
 using UnityEngine;
 using IndieGame.Core.Utilities;
 using UnityEngine.SceneManagement;
+using IndieGame.Core;
 
 namespace IndieGame.UI
 {
@@ -43,11 +44,13 @@ namespace IndieGame.UI
         private void OnEnable()
         {
             SceneManager.sceneLoaded += HandleSceneLoaded;
+            EventBus.Subscribe<GameStateChangedEvent>(HandleGameStateChanged);
         }
 
         private void OnDisable()
         {
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            EventBus.Unsubscribe<GameStateChangedEvent>(HandleGameStateChanged);
         }
 
         public Transform GetRoot(UILayerPriority priority)
@@ -111,6 +114,15 @@ namespace IndieGame.UI
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
         {
             RefreshWorldCamera();
+        }
+
+        private void HandleGameStateChanged(GameStateChangedEvent evt)
+        {
+            if (evt.NewState == GameState.BoardMode) return;
+            if (BoardActionMenuInstance != null)
+            {
+                BoardActionMenuInstance.Hide();
+            }
         }
 
         private void RefreshWorldCamera()

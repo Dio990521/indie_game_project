@@ -12,9 +12,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Header("Dependencies")]
         public BoardMovementController movementController;
 
-        public BoardState CurrentState { get; private set; }
-        public BoardState OverlayState { get; private set; }
+        private readonly StateMachine<BoardGameManager> _stateMachine = new StateMachine<BoardGameManager>();
+        private readonly StateMachine<BoardGameManager> _overlayStateMachine = new StateMachine<BoardGameManager>();
+        public BaseState<BoardGameManager> CurrentState => _stateMachine.CurrentState;
+        public BaseState<BoardGameManager> OverlayState => _overlayStateMachine.CurrentState;
         private bool _isBoardActive = false;
+        private bool _isInitializing = false;
         private Coroutine _initRoutine;
 
         protected override bool DestroyOnLoad => true;
@@ -29,8 +32,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void Update()
         {
             if (!_isBoardActive) return;
-            OverlayState?.Update();
-            CurrentState?.Update();
+            _overlayStateMachine.Update(this);
+            _stateMachine.Update(this);
         }
 
         private void OnEnable()
@@ -45,23 +48,21 @@ namespace IndieGame.Gameplay.Board.Runtime
             SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 
-        public void ChangeState(BoardState newState)
+        public void ChangeState(BaseState<BoardGameManager> newState)
         {
             if (newState == null) return;
-            if (CurrentState != null && CurrentState.GetType() == newState.GetType()) return;
-            CurrentState?.Exit();
-            CurrentState = newState;
-            CurrentState.Enter();
+            if (_isInitializing && CurrentState == null && !(newState is InitState)) return;
+            _stateMachine.ChangeState(newState, this);
         }
 
         public void RequestRollDice()
         {
             if (OverlayState != null)
             {
-                OverlayState.OnInteract();
+                OverlayState.OnInteract(this);
                 return;
             }
-            CurrentState?.OnInteract();
+            CurrentState?.OnInteract(this);
         }
 
         public void ResetToStart()
@@ -83,8 +84,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
             StopBoardInitialization();
             ClearOverlayState();
-            CurrentState?.Exit();
-            CurrentState = null;
+            _stateMachine.Clear(this);
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -117,10 +117,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_initRoutine == null) return;
             StopCoroutine(_initRoutine);
             _initRoutine = null;
+            _isInitializing = false;
         }
 
         private IEnumerator InitializeBoardRoutine()
         {
+            _isInitializing = true;
             yield return new WaitUntil(() => GameManager.Instance != null);
             yield return new WaitUntil(() => _isBoardActive);
             yield return new WaitUntil(() => SceneManager.GetActiveScene().isLoaded);
@@ -137,18 +139,18 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (CurrentState == null)
             {
-                ChangeState(new InitState(this));
+                ChangeState(new InitState());
             }
 
+            _isInitializing = false;
             _initRoutine = null;
         }
 
-        public void PushOverlayState(BoardState newState)
+        public void PushOverlayState(BaseState<BoardGameManager> newState)
         {
             if (newState == null) return;
             ClearOverlayState();
-            OverlayState = newState;
-            OverlayState.Enter();
+            _overlayStateMachine.ChangeState(newState, this);
         }
 
         public void PopOverlayState()
@@ -159,8 +161,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void ClearOverlayState()
         {
             if (OverlayState == null) return;
-            OverlayState.Exit();
-            OverlayState = null;
+            _overlayStateMachine.Clear(this);
         }
     }
 }

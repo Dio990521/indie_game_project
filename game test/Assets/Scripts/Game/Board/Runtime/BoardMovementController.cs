@@ -1,12 +1,12 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Board.Events;
 using IndieGame.Gameplay.Board.Data;
 using IndieGame.UI.Confirmation;
 using System;
+using IndieGame.Core;
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
@@ -338,6 +338,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (shouldTrigger)
             {
+                EventBus.Raise(new PlayerReachedNodeEvent { Node = node });
                 node.tileData.OnEnter(playerToken.gameObject);
             }
 

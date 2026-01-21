@@ -8,48 +8,54 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     public class PlayerTurnState : BoardState
     {
         private BoardActionMenuView _menu;
+        private System.Action _onRollDice;
+        private System.Action _onInventoryOpened;
+        private System.Action _onInventoryClosed;
 
-        public PlayerTurnState(BoardGameManager context) : base(context) { }
-
-        public override void Enter()
+        public override void OnEnter(BoardGameManager context)
         {
             _menu = UIManager.Instance != null ? UIManager.Instance.BoardActionMenuInstance : null;
             if (_menu != null)
             {
                 _menu.Show(BuildDefaultMenuData());
-                _menu.OnRollDiceRequested += HandleRollDiceRequested;
+                _onRollDice = () => OnInteract(context);
+                _menu.OnRollDiceRequested += _onRollDice;
             }
-            InventoryManager.OnInventoryOpened += HandleInventoryOpened;
-            InventoryManager.OnInventoryClosed += HandleInventoryClosed;
+            _onInventoryOpened = () => HandleInventoryOpened(context);
+            _onInventoryClosed = () => HandleInventoryClosed(context);
+            InventoryManager.OnInventoryOpened += _onInventoryOpened;
+            InventoryManager.OnInventoryClosed += _onInventoryClosed;
         }
 
-        public override void Exit()
+        public override void OnExit(BoardGameManager context)
         {
-            InventoryManager.OnInventoryOpened -= HandleInventoryOpened;
-            InventoryManager.OnInventoryClosed -= HandleInventoryClosed;
+            if (_onInventoryOpened != null) InventoryManager.OnInventoryOpened -= _onInventoryOpened;
+            if (_onInventoryClosed != null) InventoryManager.OnInventoryClosed -= _onInventoryClosed;
             if (_menu != null)
             {
-                _menu.OnRollDiceRequested -= HandleRollDiceRequested;
+                if (_onRollDice != null) _menu.OnRollDiceRequested -= _onRollDice;
                 _menu.Hide();
             }
+            _onRollDice = null;
+            _onInventoryOpened = null;
+            _onInventoryClosed = null;
         }
 
-        public override void OnInteract()
+        public override void OnInteract(BoardGameManager context)
         {
             if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
-            if (Context.movementController == null || Context.movementController.IsMoving) return;
+            if (context.movementController == null || context.movementController.IsMoving) return;
 
             int steps = Random.Range(1, 7);
             Debug.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
-            Context.ChangeState(new MovementState(Context, steps));
+            context.ChangeState(new MovementState(steps));
         }
 
         private void HandleRollDiceRequested()
         {
-            OnInteract();
         }
 
-        private void HandleInventoryOpened()
+        private void HandleInventoryOpened(BoardGameManager context)
         {
             if (_menu != null)
             {
@@ -57,7 +63,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             }
         }
 
-        private void HandleInventoryClosed()
+        private void HandleInventoryClosed(BoardGameManager context)
         {
             if (_menu != null)
             {

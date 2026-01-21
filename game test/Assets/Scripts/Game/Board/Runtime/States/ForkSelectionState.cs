@@ -10,39 +10,39 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private readonly System.Action<WaypointConnection> _onSelected;
         private Coroutine _routine;
 
-        public ForkSelectionState(BoardGameManager context, MapWaypoint forkNode, System.Action<WaypointConnection> onSelected) : base(context)
+        public ForkSelectionState(MapWaypoint forkNode, System.Action<WaypointConnection> onSelected)
         {
             _forkNode = forkNode;
             _onSelected = onSelected;
         }
 
-        public override void Enter()
+        public override void OnEnter(BoardGameManager context)
         {
-            if (Context.movementController == null || Context.movementController.forkSelector == null)
+            if (context.movementController == null || context.movementController.forkSelector == null)
             {
                 _onSelected?.Invoke(null);
-                Context.PopOverlayState();
+                context.PopOverlayState();
                 return;
             }
 
-            _routine = Context.StartCoroutine(SelectRoutine());
+            _routine = context.StartCoroutine(SelectRoutine(context));
         }
 
-        public override void Exit()
+        public override void OnExit(BoardGameManager context)
         {
             if (_routine != null)
             {
-                Context.StopCoroutine(_routine);
+                context.StopCoroutine(_routine);
                 _routine = null;
             }
         }
 
-        private IEnumerator SelectRoutine()
+        private IEnumerator SelectRoutine(BoardGameManager context)
         {
             WaypointConnection selected = null;
-            yield return Context.movementController.forkSelector.SelectConnection(_forkNode, result => selected = result);
+            yield return context.movementController.forkSelector.SelectConnection(_forkNode, result => selected = result);
             _onSelected?.Invoke(selected);
-            Context.PopOverlayState();
+            context.PopOverlayState();
         }
     }
 }

@@ -2,27 +2,27 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 {
     public class EventState : BoardState
     {
-        public EventState(BoardGameManager context) : base(context) { }
+        private System.Action<bool> _onResponded;
 
-        public override void Enter()
+        public override void OnEnter(BoardGameManager context)
         {
             if (!IndieGame.UI.Confirmation.ConfirmationEvent.HasPending)
             {
-                Context.ChangeState(new PlayerTurnState(Context));
+                context.ChangeState(new PlayerTurnState());
                 return;
             }
 
-            IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded += HandleResponse;
+            _onResponded = _ => context.ChangeState(new PlayerTurnState());
+            IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded += _onResponded;
         }
 
-        public override void Exit()
+        public override void OnExit(BoardGameManager context)
         {
-            IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded -= HandleResponse;
-        }
-
-        private void HandleResponse(bool confirmed)
-        {
-            Context.ChangeState(new PlayerTurnState(Context));
+            if (_onResponded != null)
+            {
+                IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded -= _onResponded;
+            }
+            _onResponded = null;
         }
     }
 }
