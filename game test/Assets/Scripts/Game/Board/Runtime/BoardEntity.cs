@@ -16,13 +16,28 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Header("Movement")]
         [SerializeField] private float moveSpeed = 5f;
         [SerializeField] private float rotateSpeed = 15f;
+        [SerializeField] private Animator animator;
+        [SerializeField] private string moveSpeedParamName = "Speed";
+        [SerializeField] private bool triggerConnectionEvents = false;
 
         public bool IsPlayer => isPlayer;
         public MapWaypoint CurrentNode { get; private set; }
         public bool IsMoving { get; private set; }
+        public bool TriggerConnectionEvents
+        {
+            get => triggerConnectionEvents;
+            set => triggerConnectionEvents = value;
+        }
         public event Action MoveEnded;
 
         private static readonly List<BoardEntity> Instances = new List<BoardEntity>();
+        private int _animIDSpeed;
+
+        private void Awake()
+        {
+            _animIDSpeed = Animator.StringToHash(moveSpeedParamName);
+            CacheAnimator();
+        }
 
         private void OnEnable()
         {
@@ -54,6 +69,18 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 transform.position = node.transform.position;
             }
+        }
+
+        public void SetMovingState(bool value)
+        {
+            IsMoving = value;
+        }
+
+        public void SetMoveAnimationSpeed(float value)
+        {
+            if (animator == null) return;
+            if (animator.runtimeAnimatorController == null) return;
+            animator.SetFloat(_animIDSpeed, value);
         }
 
         public void MoveTo(int steps)
@@ -90,7 +117,8 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private IEnumerator MoveRoutine(int totalSteps)
         {
-            IsMoving = true;
+            SetMovingState(true);
+            SetMoveAnimationSpeed(1f);
             int stepsRemaining = totalSteps;
             while (stepsRemaining > 0)
             {
@@ -100,10 +128,10 @@ namespace IndieGame.Gameplay.Board.Runtime
                 if (connection == null) break;
 
                 yield return StartCoroutine(MoveAlongConnection(connection));
-                CurrentNode = connection.targetNode;
                 stepsRemaining--;
             }
-            IsMoving = false;
+            SetMoveAnimationSpeed(0f);
+            SetMovingState(false);
             MoveEnded?.Invoke();
         }
 
@@ -114,23 +142,55 @@ namespace IndieGame.Gameplay.Board.Runtime
             return node.connections[index];
         }
 
-        private IEnumerator MoveAlongConnection(WaypointConnection conn)
+        public IEnumerator MoveAlongConnection(WaypointConnection conn)
         {
+            if (conn == null || conn.targetNode == null) yield break;
+            if (CurrentNode == null)
+            {
+                Debug.LogWarning("[BoardEntity] CurrentNode is null, cannot move along connection.");
+                yield break;
+            }
+
             Vector3 p0 = transform.position;
             Vector3 p2 = conn.targetNode.transform.position;
             Vector3 curveStartPos = CurrentNode.transform.position;
             Vector3 p1 = curveStartPos + conn.controlPointOffset;
 
             float approxDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
+            if (moveSpeed <= 0f || approxDist <= 0f)
+            {
+                transform.position = p2;
+                SetCurrentNode(conn.targetNode, false);
+                yield break;
+            }
             float duration = approxDist / moveSpeed;
 
+            int nextEventIndex = 0;
+            int totalEvents = conn.events.Count;
             float timer = 0f;
             while (timer < duration)
             {
                 float dt = Time.deltaTime;
-                timer += dt;
-                float t = timer / duration;
-                Vector3 nextPos = BezierUtils.GetQuadraticBezierPoint(t, curveStartPos, p1, p2);
+                float nextTimer = timer + dt;
+                float nextT = nextTimer / duration;
+
+                if (triggerConnectionEvents && nextEventIndex < totalEvents && conn.events[nextEventIndex].progressPoint <= nextT)
+                {
+                    ConnectionEvent evt = conn.events[nextEventIndex];
+
+                    float triggerT = evt.progressPoint;
+                    Vector3 triggerPos = BezierUtils.GetQuadraticBezierPoint(triggerT, curveStartPos, p1, p2);
+                    transform.position = triggerPos;
+                    timer = triggerT * duration;
+
+                    yield return StartCoroutine(HandleConnectionEvent(evt));
+
+                    nextEventIndex++;
+                    continue;
+                }
+
+                timer = nextTimer;
+                Vector3 nextPos = BezierUtils.GetQuadraticBezierPoint(nextT, curveStartPos, p1, p2);
 
                 Vector3 moveDir = (nextPos - transform.position).normalized;
                 if (moveDir != Vector3.zero)
@@ -144,6 +204,35 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             transform.position = p2;
+            SetCurrentNode(conn.targetNode, false);
+        }
+
+        private IEnumerator HandleConnectionEvent(ConnectionEvent evt)
+        {
+            SetMoveAnimationSpeed(0f);
+
+            if (evt.eventAction != null)
+            {
+                yield return StartCoroutine(evt.eventAction.Execute(BoardGameManager.Instance, evt.contextTarget));
+            }
+            else
+            {
+                Debug.LogWarning("Connection Event triggered but no Action SO assigned!");
+            }
+
+            SetMoveAnimationSpeed(1f);
+        }
+
+        private void CacheAnimator()
+        {
+            if (animator != null) return;
+            Animator[] animators = GetComponentsInChildren<Animator>(true);
+            for (int i = 0; i < animators.Length; i++)
+            {
+                if (animators[i].runtimeAnimatorController == null) continue;
+                animator = animators[i];
+                return;
+            }
         }
     }
 }

@@ -33,8 +33,16 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             int steps = Random.Range(1, 7);
             Debug.Log($"<color=orange>🤖 NPC 回合掷骰子: {steps}</color>");
 
-            npc.MoveTo(steps);
-            yield return new WaitUntil(() => npc == null || !npc.IsMoving);
+            if (context.movementController != null)
+            {
+                context.movementController.BeginMove(npc, steps, false);
+                yield return new WaitUntil(() => context.movementController == null || !context.movementController.IsMoving);
+            }
+            else
+            {
+                npc.MoveTo(steps);
+                yield return new WaitUntil(() => npc == null || !npc.IsMoving);
+            }
 
             context.ChangeState(new PlayerTurnState());
         }

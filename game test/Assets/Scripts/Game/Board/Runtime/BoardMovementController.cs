@@ -1,12 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
-using UnityEngine;
-using IndieGame.Core.Utilities;
-using IndieGame.Gameplay.Board.Events;
-using IndieGame.Gameplay.Board.Data;
-using IndieGame.UI.Confirmation;
-using System;
 using IndieGame.Core;
+using IndieGame.UI.Confirmation;
+using UnityEngine;
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
@@ -18,27 +15,22 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Header("Game References")]
         public Transform playerToken;
 
-        [Header("Settings")]
-        public float moveSpeed = 5f;
-        public float rotateSpeed = 15f;
-        public string moveSpeedParamName = "Speed";
-
         public bool IsMoving => _isMoving;
-        public int CurrentNodeId => _currentNode != null ? _currentNode.nodeID : -1;
+        public int CurrentNodeId => _playerEntity != null && _playerEntity.CurrentNode != null
+            ? _playerEntity.CurrentNode.nodeID
+            : -1;
         public event Action MoveStarted;
         public event Action MoveEnded;
         public event Action<MapWaypoint, Action<WaypointConnection>> ForkSelectionRequested;
 
-        private int _animIDSpeed;
-        private Animator _playerAnimator;
         private BoardEntity _playerEntity;
-        private MapWaypoint _currentNode;
+        private BoardEntity _activeEntity;
         private MapWaypoint _startNode;
         private bool _isMoving = false;
+        private bool _triggerNodeEvents = true;
 
         private void Awake()
         {
-            _animIDSpeed = Animator.StringToHash(moveSpeedParamName);
             _startNode = FindStartNode();
             Debug.Log("[BoardMovementController] Start Node ID: " + (_startNode != null ? _startNode.nodeID.ToString() : "null"));
         }
@@ -49,7 +41,6 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (playerToken != null)
             {
-                CacheAnimator();
                 CachePlayerEntity();
                 return;
             }
@@ -61,17 +52,32 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             StopAllCoroutines();
             _isMoving = false;
+            if (_activeEntity != null)
+            {
+                _activeEntity.SetMoveAnimationSpeed(0f);
+                _activeEntity.SetMovingState(false);
+            }
         }
 
         public void BeginMove(int totalSteps)
         {
+            BeginMove(_playerEntity, totalSteps, true);
+        }
+
+        public void BeginMove(BoardEntity entity, int totalSteps, bool triggerNodeEvents = true)
+        {
             if (_isMoving) return;
-            if (playerToken == null)
+            if (entity == null)
             {
                 ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
-                if (playerToken == null) return;
+                entity = _playerEntity;
+                if (entity == null) return;
             }
+            _activeEntity = entity;
+            _triggerNodeEvents = triggerNodeEvents;
+            _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
             _isMoving = true;
+            _activeEntity.SetMovingState(true);
             MoveStarted?.Invoke();
             StartCoroutine(MoveRoutine(totalSteps));
         }
@@ -81,26 +87,21 @@ namespace IndieGame.Gameplay.Board.Runtime
             StopAllCoroutines();
             _isMoving = false;
             if (forkSelector != null) forkSelector.ClearSelection();
-            if (_startNode != null && playerToken != null)
+            if (_startNode != null && _playerEntity != null)
             {
-                _currentNode = _startNode;
-                playerToken.position = _startNode.transform.position;
-                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
+                _playerEntity.SetCurrentNode(_startNode, true);
             }
         }
 
         public void SetCurrentNodeById(int nodeId)
         {
             MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
+            if (_playerEntity == null) CachePlayerEntity();
+            if (_playerEntity == null) return;
             for (int i = 0; i < nodes.Length; i++)
             {
                 if (nodes[i].nodeID != nodeId) continue;
-                _currentNode = nodes[i];
-                if (playerToken != null)
-                {
-                    playerToken.position = nodes[i].transform.position;
-                }
-                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
+                _playerEntity.SetCurrentNode(nodes[i], true);
                 return;
             }
         }
@@ -111,7 +112,6 @@ namespace IndieGame.Gameplay.Board.Runtime
             playerToken = GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null
                 ? GameManager.Instance.CurrentPlayer.transform
                 : null;
-            CacheAnimator();
             CachePlayerEntity();
 
             if (preferredNodeId >= 0)
@@ -120,14 +120,9 @@ namespace IndieGame.Gameplay.Board.Runtime
                 return;
             }
 
-            if (_currentNode == null && _startNode != null)
+            if (_playerEntity != null && _playerEntity.CurrentNode == null && _startNode != null)
             {
-                _currentNode = _startNode;
-                if (playerToken != null)
-                {
-                    playerToken.position = _startNode.transform.position;
-                }
-                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
+                _playerEntity.SetCurrentNode(_startNode, true);
             }
         }
 
@@ -139,20 +134,6 @@ namespace IndieGame.Gameplay.Board.Runtime
                 if (nodes[i].nodeID == 0) return nodes[i];
             }
             return null;
-        }
-
-        private void CacheAnimator()
-        {
-            _playerAnimator = null;
-            if (playerToken == null) return;
-
-            Animator[] animators = playerToken.GetComponentsInChildren<Animator>(true);
-            for (int i = 0; i < animators.Length; i++)
-            {
-                if (animators[i].runtimeAnimatorController == null) continue;
-                _playerAnimator = animators[i];
-                return;
-            }
         }
 
         private void CachePlayerEntity()
@@ -175,13 +156,15 @@ namespace IndieGame.Gameplay.Board.Runtime
         private IEnumerator MoveRoutine(int totalSteps)
         {
             StepContext ctx = new StepContext { StepsRemaining = totalSteps };
+            if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(1f);
             while (ctx.StepsRemaining > 0)
             {
                 yield return StartCoroutine(ProcessStep(ctx));
             }
 
-            SetAnimSpeed(0f);
+            if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(0f);
             _isMoving = false;
+            if (_activeEntity != null) _activeEntity.SetMovingState(false);
             MoveEnded?.Invoke();
         }
 
@@ -189,7 +172,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             List<WaypointConnection> path = new List<WaypointConnection>();
             bool encounteredFork = false;
-            MapWaypoint tempNode = _currentNode;
+            MapWaypoint tempNode = _activeEntity != null ? _activeEntity.CurrentNode : null;
+            if (tempNode == null)
+            {
+                ctx.StepsRemaining = 0;
+                yield break;
+            }
 
             for (int i = 0; i < ctx.StepsRemaining; i++)
             {
@@ -224,26 +212,28 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private IEnumerator MoveSegmentPath(List<WaypointConnection> path, StepContext ctx)
         {
-            SetAnimSpeed(1f);
+            if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(1f);
             foreach (var conn in path)
             {
-                yield return StartCoroutine(MoveAlongConnection(conn));
-                _currentNode = conn.targetNode;
-                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
+                if (_activeEntity == null) yield break;
+                yield return StartCoroutine(_activeEntity.MoveAlongConnection(conn));
                 ctx.StepsRemaining--;
-                yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
+                yield return StartCoroutine(HandleNodeArrival(conn.targetNode, ctx.StepsRemaining == 0));
             }
-            SetAnimSpeed(0f);
+            if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(0f);
         }
 
         private IEnumerator HandleFork(StepContext ctx)
         {
             WaypointConnection selectedConnection = null;
             bool selectionResolved = false;
+            MapWaypoint currentNode = _activeEntity != null ? _activeEntity.CurrentNode : null;
+            if (currentNode == null) yield break;
+            if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(0f);
 
             if (ForkSelectionRequested != null)
             {
-                ForkSelectionRequested.Invoke(_currentNode, result =>
+                ForkSelectionRequested.Invoke(currentNode, result =>
                 {
                     selectedConnection = result;
                     selectionResolved = true;
@@ -252,124 +242,41 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
             else
             {
-                Debug.LogWarning("[BoardMovementController] ForkSelectionRequested has no listeners.");
-                yield break;
+                selectedConnection = ChooseNextConnection(currentNode);
             }
 
             if (!isActiveAndEnabled || selectedConnection == null) yield break;
 
             yield return new WaitForSeconds(0.2f);
-            SetAnimSpeed(1f);
-            yield return StartCoroutine(MoveAlongConnection(selectedConnection));
-            _currentNode = selectedConnection.targetNode;
-            if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
+            if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(1f);
+            if (_activeEntity == null) yield break;
+            yield return StartCoroutine(_activeEntity.MoveAlongConnection(selectedConnection));
             ctx.StepsRemaining--;
-            yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
-            SetAnimSpeed(0f);
-        }
-
-        // --- 核心修改：支持事件中断的移动逻辑 ---
-        private IEnumerator MoveAlongConnection(WaypointConnection conn)
-        {
-            Vector3 p0 = playerToken.position;
-            Vector3 p2 = conn.targetNode.transform.position;
-            Vector3 curveStartPos = _currentNode.transform.position;
-            Vector3 p1 = curveStartPos + conn.controlPointOffset;
-
-            float approxDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
-            float duration = approxDist / moveSpeed;
-
-            int nextEventIndex = 0;
-            int totalEvents = conn.events.Count;
-
-            float timer = 0f;
-
-            while (timer < duration)
-            {
-                if (playerToken == null) yield break;
-                float dt = Time.deltaTime;
-                float nextTimer = timer + dt;
-
-                float nextT = nextTimer / duration;
-
-                // 检测：这一帧的移动是否“跨越”了下一个事件点
-                if (nextEventIndex < totalEvents && conn.events[nextEventIndex].progressPoint <= nextT)
-                {
-                    ConnectionEvent evt = conn.events[nextEventIndex];
-
-                    float triggerT = evt.progressPoint;
-                    Vector3 triggerPos = BezierUtils.GetQuadraticBezierPoint(triggerT, curveStartPos, p1, p2);
-                    playerToken.position = triggerPos;
-                    timer = triggerT * duration;
-
-                    yield return StartCoroutine(HandleConnectionEvent(evt));
-
-                    // 事件触发完，索引+1，指向下一个
-                    nextEventIndex++;
-                    continue;
-                }
-
-                // 正常移动逻辑
-                timer = nextTimer;
-                Vector3 nextPos = BezierUtils.GetQuadraticBezierPoint(nextT, curveStartPos, p1, p2);
-
-                if (playerToken == null) yield break;
-                Vector3 moveDir = (nextPos - playerToken.position).normalized;
-                if (moveDir != Vector3.zero)
-                {
-                    Quaternion targetRot = Quaternion.LookRotation(moveDir);
-                    playerToken.rotation = Quaternion.Slerp(playerToken.rotation, targetRot, rotateSpeed * dt);
-                }
-
-                playerToken.position = nextPos;
-                yield return null;
-            }
-            
-            if (playerToken != null) playerToken.position = p2;
-        }
-
-        // --- 处理事件的表现 ---
-        private IEnumerator HandleConnectionEvent(ConnectionEvent evt)
-        {
-            // 停止跑步动画
-            SetAnimSpeed(0f);
-
-            if (evt.eventAction != null)
-            {
-                yield return StartCoroutine(evt.eventAction.Execute(BoardGameManager.Instance, evt.contextTarget));
-            }
-            else
-            {
-                Debug.LogWarning("Connection Event triggered but no Action SO assigned!");
-            }
-
-            // 准备恢复移动
-            SetAnimSpeed(1f);
+            yield return StartCoroutine(HandleNodeArrival(selectedConnection.targetNode, ctx.StepsRemaining == 0));
         }
 
         private IEnumerator HandleNodeArrival(MapWaypoint node, bool isFinalStep)
         {
+            if (_activeEntity == null) yield break;
+            if (!_triggerNodeEvents) yield break;
             if (node == null || node.tileData == null) yield break;
-            if (playerToken == null) yield break;
 
-            if (_playerEntity != null) _playerEntity.SetCurrentNode(node, false);
-
-            BoardEntity other = BoardEntity.FindOtherAtNode(node, _playerEntity);
+            BoardEntity other = BoardEntity.FindOtherAtNode(node, _activeEntity);
             if (other != null)
             {
-                SetAnimSpeed(0f);
+                _activeEntity.SetMoveAnimationSpeed(0f);
                 yield return StartCoroutine(HandleEntityEncounter(other, node));
-                if (!isFinalStep) SetAnimSpeed(1f);
+                if (!isFinalStep) _activeEntity.SetMoveAnimationSpeed(1f);
             }
 
             bool shouldTrigger = isFinalStep || node.tileData.TriggerOnPass;
 
-            if (shouldTrigger) SetAnimSpeed(0f);
+            if (shouldTrigger) _activeEntity.SetMoveAnimationSpeed(0f);
 
             if (shouldTrigger)
             {
                 EventBus.Raise(new PlayerReachedNodeEvent { Node = node });
-                node.tileData.OnEnter(playerToken.gameObject);
+                node.tileData.OnEnter(_activeEntity.gameObject);
             }
 
             if (ConfirmationEvent.HasPending)
@@ -384,7 +291,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 ConfirmationEvent.OnResponded -= OnResponded;
             }
 
-            if (!isFinalStep) SetAnimSpeed(1f);
+            if (!isFinalStep) _activeEntity.SetMoveAnimationSpeed(1f);
         }
 
         private IEnumerator HandleEntityEncounter(BoardEntity other, MapWaypoint node)
@@ -392,7 +299,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             bool completed = false;
             BoardEntityInteractionEvent evt = new BoardEntityInteractionEvent
             {
-                Player = _playerEntity,
+                Player = _activeEntity,
                 Target = other,
                 Node = node,
                 OnCompleted = () => completed = true
@@ -409,16 +316,17 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
-        private void SetAnimSpeed(float value)
-        {
-            if (_playerAnimator == null) return;
-            if (_playerAnimator.runtimeAnimatorController == null) return;
-            _playerAnimator.SetFloat(_animIDSpeed, value);
-        }
-
         private bool IsBoardModeActive()
         {
             return GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode;
+        }
+
+        private WaypointConnection ChooseNextConnection(MapWaypoint node)
+        {
+            if (node == null || node.connections.Count == 0) return null;
+            if (node.connections.Count == 1) return node.connections[0];
+            int index = UnityEngine.Random.Range(0, node.connections.Count);
+            return node.connections[index];
         }
     }
 }
