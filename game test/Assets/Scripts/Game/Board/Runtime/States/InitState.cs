@@ -15,6 +15,11 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             {
                 context.ResetToStart();
             }
+        }
+
+        public override void OnUpdate(BoardGameManager context)
+        {
+            // 在第一帧更新时切换状态，此时状态机的 _isTransitioning 已重置为 false
             context.ChangeState(new PlayerTurnState());
         }
     }
