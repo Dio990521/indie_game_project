@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using IndieGame.Core.Input;
+using IndieGame.Core;
 
 namespace IndieGame.UI
 {
@@ -85,6 +86,7 @@ namespace IndieGame.UI
                 Canvas canvas = root.GetComponentInParent<Canvas>();
                 if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
             }
+            target = GameManager.Instance.CurrentPlayer.transform;
         }
 
 

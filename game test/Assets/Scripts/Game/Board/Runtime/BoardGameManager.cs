@@ -40,12 +40,14 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             GameManager.OnStateChanged += HandleGlobalStateChanged;
             SceneManager.sceneLoaded += HandleSceneLoaded;
+            EventBus.Subscribe<BoardEntityInteractionEvent>(HandleEntityInteraction);
         }
 
         private void OnDisable()
         {
             GameManager.OnStateChanged -= HandleGlobalStateChanged;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+            EventBus.Unsubscribe<BoardEntityInteractionEvent>(HandleEntityInteraction);
         }
 
         public void ChangeState(BaseState<BoardGameManager> newState)
@@ -162,6 +164,17 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (OverlayState == null) return;
             _overlayStateMachine.Clear(this);
+        }
+
+        private void HandleEntityInteraction(BoardEntityInteractionEvent evt)
+        {
+            if (evt.Target == null || evt.Node == null)
+            {
+                evt.OnCompleted?.Invoke();
+                return;
+            }
+            Debug.Log($"<color=yellow>⚔ 遇到单位: {evt.Target.name} (Node {evt.Node.nodeID})</color>");
+            evt.OnCompleted?.Invoke();
         }
     }
 }

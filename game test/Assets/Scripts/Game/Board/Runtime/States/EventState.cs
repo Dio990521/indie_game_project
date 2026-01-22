@@ -17,7 +17,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             }
 
             // 如果有事件，注册回调等待响应
-            _onResponded = _ => context.ChangeState(new PlayerTurnState());
+            _onResponded = _ => context.ChangeState(new EnemyTurnState());
             IndieGame.UI.Confirmation.ConfirmationEvent.OnResponded += _onResponded;
         }
 
@@ -27,7 +27,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             if (_shouldSkip)
             {
                 _shouldSkip = false;
-                context.ChangeState(new PlayerTurnState());
+                context.ChangeState(new EnemyTurnState());
             }
         }
 

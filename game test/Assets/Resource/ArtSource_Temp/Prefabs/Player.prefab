@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 4468255643223756498}
   - component: {fileID: 236204186819127652}
   - component: {fileID: 8397454419226806800}
+  - component: {fileID: -3561589510990479297}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -75,6 +76,23 @@ MonoBehaviour:
   moveSpeed: 5
   rotateSpeed: 10
   speedParamName: Speed
+--- !u!114 &-3561589510990479297
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9170140433642860262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: de55c8a3318c24b1485c7f89fbe48036, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardEntity
+  isPlayer: 1
+  initialNode: {fileID: 0}
+  snapToNodeOnStart: 1
+  moveSpeed: 5
+  rotateSpeed: 15
 --- !u!1001 &1409429107897280448
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -40,5 +40,11 @@ namespace IndieGame.Core
             if (!Handlers.TryGetValue(type, out Delegate existing)) return;
             ((Action<T>)existing)?.Invoke(evt);
         }
+
+        public static bool HasSubscribers<T>()
+        {
+            Type type = typeof(T);
+            return Handlers.TryGetValue(type, out Delegate existing) && existing != null;
+        }
     }
 }

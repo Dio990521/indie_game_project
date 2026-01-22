@@ -31,6 +31,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private int _animIDSpeed;
         private Animator _playerAnimator;
+        private BoardEntity _playerEntity;
         private MapWaypoint _currentNode;
         private MapWaypoint _startNode;
         private bool _isMoving = false;
@@ -49,6 +50,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (playerToken != null)
             {
                 CacheAnimator();
+                CachePlayerEntity();
                 return;
             }
 
@@ -83,6 +85,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 _currentNode = _startNode;
                 playerToken.position = _startNode.transform.position;
+                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
             }
         }
 
@@ -97,6 +100,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 {
                     playerToken.position = nodes[i].transform.position;
                 }
+                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
                 return;
             }
         }
@@ -108,6 +112,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 ? GameManager.Instance.CurrentPlayer.transform
                 : null;
             CacheAnimator();
+            CachePlayerEntity();
 
             if (preferredNodeId >= 0)
             {
@@ -122,6 +127,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 {
                     playerToken.position = _startNode.transform.position;
                 }
+                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
             }
         }
 
@@ -146,6 +152,18 @@ namespace IndieGame.Gameplay.Board.Runtime
                 if (animators[i].runtimeAnimatorController == null) continue;
                 _playerAnimator = animators[i];
                 return;
+            }
+        }
+
+        private void CachePlayerEntity()
+        {
+            _playerEntity = null;
+            if (playerToken == null) return;
+            _playerEntity = playerToken.GetComponent<BoardEntity>();
+            if (_playerEntity == null)
+            {
+                _playerEntity = playerToken.gameObject.AddComponent<BoardEntity>();
+                _playerEntity.SetAsPlayer(true);
             }
         }
 
@@ -211,6 +229,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 yield return StartCoroutine(MoveAlongConnection(conn));
                 _currentNode = conn.targetNode;
+                if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
                 ctx.StepsRemaining--;
                 yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
             }
@@ -243,6 +262,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             SetAnimSpeed(1f);
             yield return StartCoroutine(MoveAlongConnection(selectedConnection));
             _currentNode = selectedConnection.targetNode;
+            if (_playerEntity != null) _playerEntity.SetCurrentNode(_currentNode, false);
             ctx.StepsRemaining--;
             yield return StartCoroutine(HandleNodeArrival(_currentNode, ctx.StepsRemaining == 0));
             SetAnimSpeed(0f);
@@ -332,6 +352,16 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (node == null || node.tileData == null) yield break;
             if (playerToken == null) yield break;
 
+            if (_playerEntity != null) _playerEntity.SetCurrentNode(node, false);
+
+            BoardEntity other = BoardEntity.FindOtherAtNode(node, _playerEntity);
+            if (other != null)
+            {
+                SetAnimSpeed(0f);
+                yield return StartCoroutine(HandleEntityEncounter(other, node));
+                if (!isFinalStep) SetAnimSpeed(1f);
+            }
+
             bool shouldTrigger = isFinalStep || node.tileData.TriggerOnPass;
 
             if (shouldTrigger) SetAnimSpeed(0f);
@@ -355,6 +385,28 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             if (!isFinalStep) SetAnimSpeed(1f);
+        }
+
+        private IEnumerator HandleEntityEncounter(BoardEntity other, MapWaypoint node)
+        {
+            bool completed = false;
+            BoardEntityInteractionEvent evt = new BoardEntityInteractionEvent
+            {
+                Player = _playerEntity,
+                Target = other,
+                Node = node,
+                OnCompleted = () => completed = true
+            };
+
+            if (!EventBus.HasSubscribers<BoardEntityInteractionEvent>())
+            {
+                completed = true;
+            }
+            EventBus.Raise(evt);
+            while (!completed)
+            {
+                yield return null;
+            }
         }
 
         private void SetAnimSpeed(float value)
