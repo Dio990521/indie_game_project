@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using IndieGame.Core.Utilities; // 引用新的数学库
 using IndieGame.Gameplay.Board.Events;
 using IndieGame.Gameplay.Board.Data;
 #if UNITY_EDITOR
@@ -38,7 +37,6 @@ namespace IndieGame.Gameplay.Board.Runtime
         [HideInInspector] public bool hasTriggered = false; 
     }
 
-    [RequireComponent(typeof(LineRenderer))]
     public class MapWaypoint : MonoBehaviour
     {
         [Header("ID Settings")]
@@ -51,10 +49,6 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Header("Connections")]
         public List<WaypointConnection> connections = new List<WaypointConnection>();
 
-        [Header("Visualization")]
-        public float lineWidth = 0.3f; // 线稍微细一点
-        public int lineSegments = 20;
-
         private void Awake()
         {
             // [优化] 预处理：在游戏开始时就将所有连接上的事件按进度排序
@@ -66,11 +60,6 @@ namespace IndieGame.Gameplay.Board.Runtime
                     conn.events.Sort((a, b) => a.progressPoint.CompareTo(b.progressPoint));
                 }
             }
-        }
-
-        private void Start()
-        {
-            GenerateVisualLines();
         }
 
         public List<MapWaypoint> GetValidNextNodes(MapWaypoint incomingFrom)
@@ -121,76 +110,6 @@ namespace IndieGame.Gameplay.Board.Runtime
                 if (target != null && lookup.Contains(target)) results.Add(connections[i]);
             }
             return results;
-        }
-
-        public void GenerateVisualLines()
-        {
-            // 清理旧的 LineRenderer 子物体（如果有）
-            foreach (Transform child in transform)
-            {
-                if (child.name.StartsWith("Line_")) Destroy(child.gameObject);
-            }
-
-            for (int i = 0; i < connections.Count; i++)
-            {
-                if (connections[i].targetNode == null) continue;
-                if (!ShouldRenderConnection(connections[i].targetNode)) continue;
-
-                LineRenderer lr;
-                if (i == 0)
-                {
-                    lr = GetComponent<LineRenderer>();
-                }
-                else
-                {
-                    GameObject childLine = new GameObject($"Line_{i}");
-                    childLine.transform.SetParent(transform);
-                    childLine.transform.localPosition = Vector3.zero;
-                    lr = childLine.AddComponent<LineRenderer>();
-                }
-
-                SetupLineRenderer(lr, connections[i]);
-            }
-        }
-
-        private bool ShouldRenderConnection(MapWaypoint target)
-        {
-            if (target == null) return false;
-            if (!IsBidirectionalConnection(target)) return true;
-            if (nodeID != target.nodeID) return nodeID < target.nodeID;
-            return GetInstanceID() < target.GetInstanceID();
-        }
-
-        private bool IsBidirectionalConnection(MapWaypoint target)
-        {
-            if (target == null) return false;
-            for (int i = 0; i < target.connections.Count; i++)
-            {
-                if (target.connections[i].targetNode == this) return true;
-            }
-            return false;
-        }
-
-        private void SetupLineRenderer(LineRenderer lr, WaypointConnection conn)
-        {
-            lr.useWorldSpace = true;
-            lr.startWidth = lineWidth;
-            lr.endWidth = lineWidth;
-            lr.material = new Material(Shader.Find("Sprites/Default"));
-            lr.startColor = new Color(1, 1, 1, 0.5f); // 半透明白线，更优雅
-            lr.endColor = new Color(1, 1, 1, 0.5f);
-            lr.positionCount = lineSegments + 1;
-
-            Vector3 p0 = transform.position;
-            Vector3 p2 = conn.targetNode.transform.position;
-            Vector3 p1 = transform.position + conn.controlPointOffset;
-
-            for (int j = 0; j <= lineSegments; j++)
-            {
-                float t = j / (float)lineSegments;
-                Vector3 pixel = BezierUtils.GetQuadraticBezierPoint(t, p0, p1, p2);
-                lr.SetPosition(j, pixel + Vector3.up * 0.1f);
-            }
         }
 
         private void OnDrawGizmos()

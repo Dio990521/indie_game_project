@@ -1,8 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using IndieGame.Gameplay.Board.Runtime;
-using System.Collections.Generic;
-using IndieGame.Core.Utilities;
 
 namespace IndieGame.Editor.Board
 {
@@ -16,18 +14,12 @@ namespace IndieGame.Editor.Board
 
             if (waypoint.connections == null) return;
 
-            // 只绘制曲线和控制点，去掉箭头
             for (int i = 0; i < waypoint.connections.Count; i++)
             {
                 WaypointConnection conn = waypoint.connections[i];
                 if (conn.targetNode == null) continue;
-                if (IsBidirectionalConnection(waypoint, conn.targetNode) && waypoint.nodeID > conn.targetNode.nodeID)
-                {
-                    continue;
-                }
 
                 Vector3 startPos = waypoint.transform.position;
-                Vector3 endPos = conn.targetNode.transform.position;
                 Vector3 controlPointPos = startPos + conn.controlPointOffset;
 
                 // 1. 绘制控制点手柄
@@ -38,23 +30,8 @@ namespace IndieGame.Editor.Board
                 {
                     Undo.RecordObject(waypoint, "Move Control Point");
                     conn.controlPointOffset = newControlPos - startPos;
-                    // 实时刷新 LineRenderer
-                    waypoint.GenerateVisualLines();
+                    // 连接线由 BoardVisualizer 绘制
                 }
-
-                // 2. 绘制青色连接线 (仅在选中时显示高亮粗线，平时有 LineRenderer)
-                Handles.color = Color.cyan;
-                Vector3[] points = new Vector3[30];
-                for (int j = 0; j < 30; j++)
-                {
-                    points[j] = BezierUtils.GetQuadraticBezierPoint(j / 29f, startPos, controlPointPos, endPos);
-                }
-                Handles.DrawAAPolyLine(3f, points);
-
-                // 虚线辅助线
-                Handles.color = new Color(1, 1, 1, 0.2f);
-                Handles.DrawDottedLine(startPos, controlPointPos, 2f);
-                Handles.DrawDottedLine(controlPointPos, endPos, 2f);
             }
         }
 
@@ -80,7 +57,6 @@ namespace IndieGame.Editor.Board
             {
                 Undo.RecordObject(current, "Clear Links");
                 current.connections.Clear();
-                current.GenerateVisualLines();
             }
             GUILayout.EndHorizontal();
 
@@ -176,7 +152,6 @@ namespace IndieGame.Editor.Board
                 controlPointOffset = midPoint // 此时控制点就在连线正中间，即直线
             });
             
-            from.GenerateVisualLines(); 
         }
 
         private void ConnectNodesBidirectional(MapWaypoint a, MapWaypoint b)
@@ -185,10 +160,5 @@ namespace IndieGame.Editor.Board
             ConnectNodes(b, a);
         }
 
-        private bool IsBidirectionalConnection(MapWaypoint from, MapWaypoint to)
-        {
-            if (from == null || to == null) return false;
-            return to.connections.Exists(c => c.targetNode == from);
-        }
     }
 }
