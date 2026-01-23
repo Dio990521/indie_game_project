@@ -22,6 +22,8 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public bool IsPlayer => isPlayer;
         public MapWaypoint CurrentNode { get; private set; }
+        public MapWaypoint CurrentWaypoint => CurrentNode;
+        public MapWaypoint LastWaypoint { get; private set; }
         public bool IsMoving { get; private set; }
         public bool TriggerConnectionEvents
         {
@@ -62,9 +64,13 @@ namespace IndieGame.Gameplay.Board.Runtime
             isPlayer = value;
         }
 
-        public void SetCurrentNode(MapWaypoint node, bool snapToNode)
+        public void SetCurrentNode(MapWaypoint node, bool snapToNode, bool resetLastWaypoint = true)
         {
             CurrentNode = node;
+            if (resetLastWaypoint)
+            {
+                LastWaypoint = null;
+            }
             if (snapToNode && node != null)
             {
                 transform.position = node.transform.position;
@@ -137,9 +143,13 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private WaypointConnection ChooseNextConnection(MapWaypoint node)
         {
-            if (node.connections.Count == 1) return node.connections[0];
-            int index = UnityEngine.Random.Range(0, node.connections.Count);
-            return node.connections[index];
+            if (node == null || node.connections.Count == 0) return null;
+            List<MapWaypoint> validTargets = node.GetValidNextNodes(LastWaypoint);
+            if (validTargets.Count == 0) return null;
+            if (validTargets.Count == 1) return node.GetConnectionTo(validTargets[0]);
+
+            int index = UnityEngine.Random.Range(0, validTargets.Count);
+            return node.GetConnectionTo(validTargets[index]);
         }
 
         public IEnumerator MoveAlongConnection(WaypointConnection conn)
@@ -204,7 +214,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             transform.position = p2;
-            SetCurrentNode(conn.targetNode, false);
+            LastWaypoint = CurrentNode;
+            SetCurrentNode(conn.targetNode, false, false);
         }
 
         private IEnumerator HandleConnectionEvent(ConnectionEvent evt)

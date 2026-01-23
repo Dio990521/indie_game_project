@@ -19,6 +19,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public int CurrentNodeId => _playerEntity != null && _playerEntity.CurrentNode != null
             ? _playerEntity.CurrentNode.nodeID
             : -1;
+        public BoardEntity PlayerEntity => _playerEntity;
         public event Action MoveStarted;
         public event Action MoveEnded;
         public event Action<MapWaypoint, Action<WaypointConnection>> ForkSelectionRequested;
@@ -80,6 +81,46 @@ namespace IndieGame.Gameplay.Board.Runtime
             _activeEntity.SetMovingState(true);
             MoveStarted?.Invoke();
             StartCoroutine(MoveRoutine(totalSteps));
+        }
+
+        public void BeginDirectedMove(BoardEntity entity, bool triggerNodeEvents = true)
+        {
+            if (_isMoving) return;
+            if (entity == null)
+            {
+                ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                entity = _playerEntity;
+                if (entity == null) return;
+            }
+
+            _activeEntity = entity;
+            _triggerNodeEvents = triggerNodeEvents;
+            _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
+            _isMoving = true;
+            _activeEntity.SetMovingState(true);
+            MoveStarted?.Invoke();
+        }
+
+        public void EndDirectedMove()
+        {
+            if (!_isMoving) return;
+            _isMoving = false;
+            if (_activeEntity != null)
+            {
+                _activeEntity.SetMoveAnimationSpeed(0f);
+                _activeEntity.SetMovingState(false);
+            }
+            MoveEnded?.Invoke();
+            _activeEntity = null;
+        }
+
+        public IEnumerator MoveActiveEntityAlongConnection(WaypointConnection connection, bool isFinalStep)
+        {
+            if (_activeEntity == null || connection == null) yield break;
+            _activeEntity.SetMoveAnimationSpeed(1f);
+            yield return StartCoroutine(_activeEntity.MoveAlongConnection(connection));
+            yield return StartCoroutine(HandleNodeArrival(connection.targetNode, isFinalStep));
+            if (isFinalStep && _activeEntity != null) _activeEntity.SetMoveAnimationSpeed(0f);
         }
 
         public void ResetToStart()
@@ -173,6 +214,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             List<WaypointConnection> path = new List<WaypointConnection>();
             bool encounteredFork = false;
             MapWaypoint tempNode = _activeEntity != null ? _activeEntity.CurrentNode : null;
+            MapWaypoint tempLast = _activeEntity != null ? _activeEntity.LastWaypoint : null;
             if (tempNode == null)
             {
                 ctx.StepsRemaining = 0;
@@ -181,15 +223,22 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             for (int i = 0; i < ctx.StepsRemaining; i++)
             {
-                if (tempNode.connections.Count == 0)
+                System.Collections.Generic.List<MapWaypoint> validNodes = tempNode.GetValidNextNodes(tempLast);
+                if (validNodes.Count == 0)
                 {
                     ctx.StepsRemaining = 0;
                     break;
                 }
-                if (tempNode.connections.Count == 1)
+                if (validNodes.Count == 1)
                 {
-                    var conn = tempNode.connections[0];
+                    WaypointConnection conn = tempNode.GetConnectionTo(validNodes[0]);
+                    if (conn == null)
+                    {
+                        ctx.StepsRemaining = 0;
+                        break;
+                    }
                     path.Add(conn);
+                    tempLast = tempNode;
                     tempNode = conn.targetNode;
                 }
                 else
@@ -324,9 +373,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         private WaypointConnection ChooseNextConnection(MapWaypoint node)
         {
             if (node == null || node.connections.Count == 0) return null;
-            if (node.connections.Count == 1) return node.connections[0];
-            int index = UnityEngine.Random.Range(0, node.connections.Count);
-            return node.connections[index];
+            MapWaypoint last = _activeEntity != null ? _activeEntity.LastWaypoint : null;
+            System.Collections.Generic.List<MapWaypoint> validNodes = node.GetValidNextNodes(last);
+            if (validNodes.Count == 0) return null;
+            if (validNodes.Count == 1) return node.GetConnectionTo(validNodes[0]);
+            int index = UnityEngine.Random.Range(0, validNodes.Count);
+            return node.GetConnectionTo(validNodes[index]);
         }
     }
 }

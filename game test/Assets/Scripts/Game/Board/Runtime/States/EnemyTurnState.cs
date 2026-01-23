@@ -30,8 +30,8 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 yield break;
             }
 
-            int steps = Random.Range(1, 7);
-            Debug.Log($"<color=orange>🤖 NPC 回合掷骰子: {steps}</color>");
+            int steps = 1;
+            Debug.Log("<color=orange>🤖 NPC 回合移动: 1</color>");
 
             if (context.movementController != null)
             {

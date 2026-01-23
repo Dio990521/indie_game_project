@@ -21,6 +21,10 @@ namespace IndieGame.Editor.Board
             {
                 WaypointConnection conn = waypoint.connections[i];
                 if (conn.targetNode == null) continue;
+                if (IsBidirectionalConnection(waypoint, conn.targetNode) && waypoint.nodeID > conn.targetNode.nodeID)
+                {
+                    continue;
+                }
 
                 Vector3 startPos = waypoint.transform.position;
                 Vector3 endPos = conn.targetNode.transform.position;
@@ -65,8 +69,8 @@ namespace IndieGame.Editor.Board
 
             GUILayout.BeginHorizontal();
             
-            // 工具 1: 自动连接 ID + 1
-            if (GUILayout.Button("Auto Link Next ID (ID+1)"))
+            // 工具 1: 自动连接 ID + 1 / ID - 1 (双向)
+            if (GUILayout.Button("Auto Link Adjacent IDs (ID+1 / ID-1)"))
             {
                 AutoLinkNextID(current);
             }
@@ -92,27 +96,37 @@ namespace IndieGame.Editor.Board
 
         private void AutoLinkNextID(MapWaypoint current)
         {
-            // 查找场景中所有 ID = current.ID + 1 的节点
+            // 查找场景中所有 ID = current.ID + 1 / -1 的节点
             MapWaypoint[] allPoints = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-            MapWaypoint target = null;
+            MapWaypoint next = null;
+            MapWaypoint prev = null;
 
             foreach (var p in allPoints)
             {
                 if (p.nodeID == current.nodeID + 1)
                 {
-                    target = p;
-                    break;
+                    next = p;
+                }
+                else if (p.nodeID == current.nodeID - 1)
+                {
+                    prev = p;
                 }
             }
 
-            if (target != null)
+            if (next != null)
             {
-                ConnectNodes(current, target);
-                Debug.Log($"<color=green>Connected: [{current.nodeID}] -> [{target.nodeID}]</color>");
+                ConnectNodesBidirectional(current, next);
+                Debug.Log($"<color=green>Connected: [{current.nodeID}] <-> [{next.nodeID}]</color>");
             }
-            else
+            if (prev != null)
             {
-                Debug.LogWarning($"Could not find Node with ID {current.nodeID + 1}");
+                ConnectNodesBidirectional(current, prev);
+                Debug.Log($"<color=green>Connected: [{current.nodeID}] <-> [{prev.nodeID}]</color>");
+            }
+
+            if (next == null && prev == null)
+            {
+                Debug.LogWarning($"Could not find Node with ID {current.nodeID + 1} or {current.nodeID - 1}");
             }
         }
 
@@ -163,6 +177,18 @@ namespace IndieGame.Editor.Board
             });
             
             from.GenerateVisualLines(); 
+        }
+
+        private void ConnectNodesBidirectional(MapWaypoint a, MapWaypoint b)
+        {
+            ConnectNodes(a, b);
+            ConnectNodes(b, a);
+        }
+
+        private bool IsBidirectionalConnection(MapWaypoint from, MapWaypoint to)
+        {
+            if (from == null || to == null) return false;
+            return to.connections.Exists(c => c.targetNode == from);
         }
     }
 }

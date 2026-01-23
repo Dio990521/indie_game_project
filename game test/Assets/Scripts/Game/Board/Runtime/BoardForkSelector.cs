@@ -40,7 +40,13 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public IEnumerator SelectConnection(MapWaypoint forkNode, System.Action<WaypointConnection> onSelected)
         {
-            if (forkNode == null || forkNode.connections == null || forkNode.connections.Count == 0)
+            List<WaypointConnection> options = forkNode != null ? forkNode.connections : null;
+            return SelectConnection(forkNode, options, onSelected);
+        }
+
+        public IEnumerator SelectConnection(MapWaypoint forkNode, List<WaypointConnection> options, System.Action<WaypointConnection> onSelected)
+        {
+            if (forkNode == null || options == null || options.Count == 0)
             {
                 onSelected?.Invoke(null);
                 yield break;
@@ -53,7 +59,6 @@ namespace IndieGame.Gameplay.Board.Runtime
                 yield break;
             }
 
-            List<WaypointConnection> options = forkNode.connections;
             int currentIndex = 0;
             bool selected = false;
 

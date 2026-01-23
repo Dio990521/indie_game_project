@@ -73,6 +73,56 @@ namespace IndieGame.Gameplay.Board.Runtime
             GenerateVisualLines();
         }
 
+        public List<MapWaypoint> GetValidNextNodes(MapWaypoint incomingFrom)
+        {
+            List<MapWaypoint> results = new List<MapWaypoint>();
+            for (int i = 0; i < connections.Count; i++)
+            {
+                MapWaypoint target = connections[i].targetNode;
+                if (target == null || target == incomingFrom) continue;
+                results.Add(target);
+            }
+
+            if (results.Count == 0 && incomingFrom != null)
+            {
+                for (int i = 0; i < connections.Count; i++)
+                {
+                    MapWaypoint target = connections[i].targetNode;
+                    if (target == incomingFrom)
+                    {
+                        results.Add(target);
+                        break;
+                    }
+                }
+            }
+
+            return results;
+        }
+
+        public WaypointConnection GetConnectionTo(MapWaypoint node)
+        {
+            if (node == null) return null;
+            for (int i = 0; i < connections.Count; i++)
+            {
+                if (connections[i].targetNode == node) return connections[i];
+            }
+            return null;
+        }
+
+        public List<WaypointConnection> GetConnectionsTo(List<MapWaypoint> nodes)
+        {
+            List<WaypointConnection> results = new List<WaypointConnection>();
+            if (nodes == null || nodes.Count == 0) return results;
+
+            HashSet<MapWaypoint> lookup = new HashSet<MapWaypoint>(nodes);
+            for (int i = 0; i < connections.Count; i++)
+            {
+                MapWaypoint target = connections[i].targetNode;
+                if (target != null && lookup.Contains(target)) results.Add(connections[i]);
+            }
+            return results;
+        }
+
         public void GenerateVisualLines()
         {
             // 清理旧的 LineRenderer 子物体（如果有）
@@ -84,6 +134,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             for (int i = 0; i < connections.Count; i++)
             {
                 if (connections[i].targetNode == null) continue;
+                if (!ShouldRenderConnection(connections[i].targetNode)) continue;
 
                 LineRenderer lr;
                 if (i == 0)
@@ -100,6 +151,24 @@ namespace IndieGame.Gameplay.Board.Runtime
 
                 SetupLineRenderer(lr, connections[i]);
             }
+        }
+
+        private bool ShouldRenderConnection(MapWaypoint target)
+        {
+            if (target == null) return false;
+            if (!IsBidirectionalConnection(target)) return true;
+            if (nodeID != target.nodeID) return nodeID < target.nodeID;
+            return GetInstanceID() < target.GetInstanceID();
+        }
+
+        private bool IsBidirectionalConnection(MapWaypoint target)
+        {
+            if (target == null) return false;
+            for (int i = 0; i < target.connections.Count; i++)
+            {
+                if (target.connections[i].targetNode == this) return true;
+            }
+            return false;
         }
 
         private void SetupLineRenderer(LineRenderer lr, WaypointConnection conn)

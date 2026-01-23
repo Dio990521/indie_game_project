@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Gameplay.Board.Runtime;
@@ -7,8 +8,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     public class MovementState : BoardState
     {
         private readonly int _steps;
-        private System.Action _onMoveEnded;
-        private System.Action<MapWaypoint, System.Action<WaypointConnection>> _onForkSelection;
+        private Coroutine _routine;
 
         public MovementState(int steps)
         {
@@ -24,24 +24,79 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 return;
             }
 
-            _onMoveEnded = () => context.ChangeState(new EventState());
-            _onForkSelection = (node, onSelected) =>
-                context.PushOverlayState(new ForkSelectionState(node, onSelected));
+            if (context.movementController.PlayerEntity == null)
+            {
+                context.movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+            }
 
-            context.movementController.MoveEnded += _onMoveEnded;
-            context.movementController.ForkSelectionRequested += _onForkSelection;
-            context.movementController.BeginMove(_steps);
+            if (context.movementController.PlayerEntity == null)
+            {
+                Debug.LogWarning("[MovementState] Missing player entity.");
+                context.ChangeState(new PlayerTurnState());
+                return;
+            }
+
+            _routine = context.StartCoroutine(MoveRoutine(context));
         }
 
         public override void OnExit(BoardGameManager context)
         {
+            if (_routine != null)
+            {
+                context.StopCoroutine(_routine);
+                _routine = null;
+            }
             if (context.movementController != null)
             {
-                if (_onMoveEnded != null) context.movementController.MoveEnded -= _onMoveEnded;
-                if (_onForkSelection != null) context.movementController.ForkSelectionRequested -= _onForkSelection;
+                context.movementController.EndDirectedMove();
             }
-            _onMoveEnded = null;
-            _onForkSelection = null;
+        }
+
+        private IEnumerator MoveRoutine(BoardGameManager context)
+        {
+            BoardMovementController controller = context.movementController;
+            BoardEntity entity = controller.PlayerEntity;
+
+            controller.BeginDirectedMove(entity, true);
+
+            int stepsRemaining = _steps;
+            while (stepsRemaining > 0)
+            {
+                MapWaypoint current = entity.CurrentWaypoint;
+                if (current == null) break;
+
+                System.Collections.Generic.List<MapWaypoint> validNodes = current.GetValidNextNodes(entity.LastWaypoint);
+                if (validNodes.Count == 0) break;
+
+                WaypointConnection selectedConnection = null;
+
+                if (validNodes.Count == 1)
+                {
+                    selectedConnection = current.GetConnectionTo(validNodes[0]);
+                }
+                else
+                {
+                    System.Collections.Generic.List<WaypointConnection> options = current.GetConnectionsTo(validNodes);
+                    bool resolved = false;
+                    entity.SetMoveAnimationSpeed(0f);
+
+                    context.PushOverlayState(new ForkSelectionState(current, options, result =>
+                    {
+                        selectedConnection = result;
+                        resolved = true;
+                    }));
+
+                    yield return new WaitUntil(() => resolved || context.OverlayState == null || !context.isActiveAndEnabled);
+                }
+
+                if (selectedConnection == null) break;
+
+                yield return controller.MoveActiveEntityAlongConnection(selectedConnection, stepsRemaining == 1);
+                stepsRemaining--;
+            }
+
+            controller.EndDirectedMove();
+            context.ChangeState(new EventState());
         }
     }
 }

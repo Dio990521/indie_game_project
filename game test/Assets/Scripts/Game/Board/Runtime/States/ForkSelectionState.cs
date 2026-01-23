@@ -7,12 +7,20 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     public class ForkSelectionState : BoardState
     {
         private readonly MapWaypoint _forkNode;
+        private readonly System.Collections.Generic.List<WaypointConnection> _options;
         private readonly System.Action<WaypointConnection> _onSelected;
         private Coroutine _routine;
 
         public ForkSelectionState(MapWaypoint forkNode, System.Action<WaypointConnection> onSelected)
         {
             _forkNode = forkNode;
+            _onSelected = onSelected;
+        }
+
+        public ForkSelectionState(MapWaypoint forkNode, System.Collections.Generic.List<WaypointConnection> options, System.Action<WaypointConnection> onSelected)
+        {
+            _forkNode = forkNode;
+            _options = options;
             _onSelected = onSelected;
         }
 
@@ -40,7 +48,14 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private IEnumerator SelectRoutine(BoardGameManager context)
         {
             WaypointConnection selected = null;
-            yield return context.movementController.forkSelector.SelectConnection(_forkNode, result => selected = result);
+            if (_options != null)
+            {
+                yield return context.movementController.forkSelector.SelectConnection(_forkNode, _options, result => selected = result);
+            }
+            else
+            {
+                yield return context.movementController.forkSelector.SelectConnection(_forkNode, result => selected = result);
+            }
             _onSelected?.Invoke(selected);
             context.PopOverlayState();
         }
