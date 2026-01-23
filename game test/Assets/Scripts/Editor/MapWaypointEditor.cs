@@ -60,6 +60,11 @@ namespace IndieGame.Editor.Board
             }
             GUILayout.EndHorizontal();
 
+            if (GUILayout.Button("Reset Connections to Straight Lines"))
+            {
+                ResetConnectionsToStraightLines(current);
+            }
+
             EditorGUILayout.Space();
             EditorGUILayout.HelpBox("提示: 若要连接岔路(Fork)，请选中两个节点(起点和终点)，然后在下方点击 'Link Selected'.", MessageType.Info);
 
@@ -158,6 +163,26 @@ namespace IndieGame.Editor.Board
         {
             ConnectNodes(a, b);
             ConnectNodes(b, a);
+        }
+
+        private void ResetConnectionsToStraightLines(MapWaypoint current)
+        {
+            if (current == null || current.connections == null) return;
+
+            Undo.RecordObject(current, "Reset Connections to Straight Lines");
+            Vector3 start = current.transform.position;
+
+            for (int i = 0; i < current.connections.Count; i++)
+            {
+                WaypointConnection conn = current.connections[i];
+                if (conn.targetNode == null) continue;
+
+                Vector3 end = conn.targetNode.transform.position;
+                Vector3 mid = (start + end) * 0.5f;
+                conn.controlPointOffset = mid - start;
+            }
+
+            EditorUtility.SetDirty(current);
         }
 
     }

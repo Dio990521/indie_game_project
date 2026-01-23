@@ -20,6 +20,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         [SerializeField] private float lineWidth = 0.3f;
         [SerializeField] private int lineSegments = 20;
         [SerializeField] private Material lineMaterial;
+        [SerializeField] private bool syncBidirectionalOffsets = true;
 
         private const string LinePrefix = "BoardLine_";
 
@@ -31,6 +32,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void OnDrawGizmos()
         {
+            if (Application.isPlaying && renderRuntimeLines) return;
             MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
             if (nodes == null || nodes.Length == 0) return;
 
@@ -81,6 +83,10 @@ namespace IndieGame.Gameplay.Board.Runtime
                     if (!processed.Add(key)) continue;
 
                     bool isBidirectional = HasConnection(to, from);
+                    if (isBidirectional && syncBidirectionalOffsets)
+                    {
+                        SyncBidirectionalControlPoint(from, to, conn);
+                    }
                     CreateRuntimeLine(lineIndex++, from, to, conn, isBidirectional);
                 }
             }
@@ -130,6 +136,16 @@ namespace IndieGame.Gameplay.Board.Runtime
                     DestroyImmediate(child.gameObject);
                 }
             }
+        }
+
+        private void SyncBidirectionalControlPoint(MapWaypoint from, MapWaypoint to, WaypointConnection forwardConn)
+        {
+            if (from == null || to == null || forwardConn == null) return;
+            WaypointConnection reverseConn = to.GetConnectionTo(from);
+            if (reverseConn == null) return;
+
+            Vector3 controlWorld = from.transform.position + forwardConn.controlPointOffset;
+            reverseConn.controlPointOffset = controlWorld - to.transform.position;
         }
 
         private void DrawConnection(MapWaypoint from, MapWaypoint to, bool isBidirectional)
