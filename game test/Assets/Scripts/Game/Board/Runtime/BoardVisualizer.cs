@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using IndieGame.Core.Utilities;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -28,6 +29,16 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (!renderRuntimeLines) return;
             RebuildRuntimeLines();
+        }
+
+        private void OnEnable()
+        {
+            SceneManager.activeSceneChanged += HandleActiveSceneChanged;
+        }
+
+        private void OnDisable()
+        {
+            SceneManager.activeSceneChanged -= HandleActiveSceneChanged;
         }
 
         private void OnDrawGizmos()
@@ -136,6 +147,19 @@ namespace IndieGame.Gameplay.Board.Runtime
                     DestroyImmediate(child.gameObject);
                 }
             }
+        }
+
+        private void HandleActiveSceneChanged(Scene oldScene, Scene newScene)
+        {
+            if (!Application.isPlaying) return;
+
+            ClearRuntimeLines();
+            if (!renderRuntimeLines) return;
+
+            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
+            if (nodes == null || nodes.Length == 0) return;
+
+            RebuildRuntimeLines();
         }
 
         private void SyncBidirectionalControlPoint(MapWaypoint from, MapWaypoint to, WaypointConnection forwardConn)
