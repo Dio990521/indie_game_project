@@ -62,12 +62,8 @@ namespace IndieGame.Core.Utilities
             if (_instance == null)
             {
                 _instance = this as T;
-                if (!DestroyOnLoad)
+                if (DestroyOnLoad && transform.parent == null)
                 {
-                    if (transform.parent != null)
-                    {
-                        transform.SetParent(null, true);
-                    }
                     DontDestroyOnLoad(gameObject);
                 }
             }

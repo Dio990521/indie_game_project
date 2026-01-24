@@ -94,6 +94,13 @@ namespace IndieGame.Core
         {
             if (instance != null) return instance;
 
+            T existing = root.GetComponentInChildren<T>(true);
+            if (existing != null)
+            {
+                instance = existing;
+                return instance;
+            }
+
             GameObject go;
             if (prefab != null)
             {

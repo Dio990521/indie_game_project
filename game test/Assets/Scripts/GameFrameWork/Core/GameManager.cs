@@ -19,6 +19,14 @@ namespace IndieGame.Core
 
         public GameObject CurrentPlayer { get; private set; }
 
+        protected override void Awake()
+        {
+            base.Awake(); // 确保调用基类的单例逻辑
+            // 打印当前实例的 ID 和 HashCode
+            Debug.Log($"<color=yellow>[Check] GameManager Awake called.</color> " +
+              $"InstanceID: {this.GetInstanceID()}, Hash: {this.GetHashCode()}");
+        }
+
         public void SetPlayerPrefab(GameObject prefab)
         {
             playerPrefab = prefab;
