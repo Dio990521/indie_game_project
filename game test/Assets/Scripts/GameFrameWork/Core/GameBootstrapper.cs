@@ -26,6 +26,12 @@ namespace IndieGame.Core
         [SerializeField] private GameObject cameraManagerPrefab;
         [SerializeField] private GameObject playerPrefab;
 
+        private GameManager _gameManagerInstance;
+        private UIManager _uiManagerInstance;
+        private InventoryManager _inventoryManagerInstance;
+        private BoardGameManager _boardGameManagerInstance;
+        private CameraManager _cameraManagerInstance;
+
         private void Awake()
         {
             EnsureGameSystemRoot();
@@ -44,11 +50,11 @@ namespace IndieGame.Core
             Debug.Log("[GameBootstrapper] Starting Game Systems...");
 
             GameObject root = EnsureGameSystemRoot();
-            var gm = EnsureManagerFromPrefab<GameManager>(root, gameManagerPrefab, "GameManager");
-            EnsureManagerFromPrefab<UIManager>(root, uiManagerPrefab, "UIManager");
-            EnsureManagerFromPrefab<BoardGameManager>(root, boardGameManagerPrefab, "BoardGameManager");
-            EnsureManagerFromPrefab<InventoryManager>(root, inventoryManagerPrefab, "InventoryManager");
-            EnsureManagerFromPrefab<CameraManager>(root, cameraManagerPrefab, "CameraManager");
+            var gm = EnsureManagerFromPrefab(root, gameManagerPrefab, "GameManager", ref _gameManagerInstance);
+            EnsureManagerFromPrefab(root, uiManagerPrefab, "UIManager", ref _uiManagerInstance);
+            EnsureManagerFromPrefab(root, boardGameManagerPrefab, "BoardGameManager", ref _boardGameManagerInstance);
+            EnsureManagerFromPrefab(root, inventoryManagerPrefab, "InventoryManager", ref _inventoryManagerInstance);
+            EnsureManagerFromPrefab(root, cameraManagerPrefab, "CameraManager", ref _cameraManagerInstance);
 
             // 2. 可以在这里查找场景里的其他依赖
             // var ui = FindObjectOfType<UIManager>();
@@ -83,50 +89,29 @@ namespace IndieGame.Core
             return root;
         }
 
-        private T EnsureManager<T>(GameObject root, string name) where T : MonoBehaviour
+        private T EnsureManagerFromPrefab<T>(GameObject root, GameObject prefab, string fallbackName, ref T instance)
+            where T : MonoBehaviour
         {
-            T instance = FindAnyObjectByType<T>();
-            if (instance != null)
+            if (instance != null) return instance;
+
+            GameObject go;
+            if (prefab != null)
             {
-                if (instance.transform.parent != root.transform)
-                {
-                    instance.transform.SetParent(root.transform, false);
-                }
-                return instance;
+                go = Instantiate(prefab, root.transform);
+            }
+            else
+            {
+                Debug.LogWarning($"[GameBootstrapper] Missing manager prefab for {fallbackName}, creating empty GameObject.");
+                go = new GameObject(fallbackName);
+                go.transform.SetParent(root.transform, false);
             }
 
-            GameObject go = new GameObject(name);
-            go.transform.SetParent(root.transform, false);
-            return go.AddComponent<T>();
-        }
-
-        private T EnsureManagerFromPrefab<T>(GameObject root, GameObject prefab, string fallbackName) where T : MonoBehaviour
-        {
-            T instance = FindAnyObjectByType<T>();
-            if (instance != null)
+            instance = go.GetComponent<T>();
+            if (instance == null)
             {
-                if (instance.transform.parent != root.transform)
-                {
-                    instance.transform.SetParent(root.transform, false);
-                }
-                return instance;
+                instance = go.AddComponent<T>();
             }
-
-            if (prefab == null)
-            {
-                Debug.LogWarning($"[GameBootstrapper] Missing manager prefab for {fallbackName}, falling back to empty GameObject.");
-                return EnsureManager<T>(root, fallbackName);
-            }
-
-            GameObject go = Instantiate(prefab, root.transform);
-            T comp = go.GetComponent<T>();
-            if (comp == null)
-            {
-                Debug.LogWarning($"[GameBootstrapper] Prefab {fallbackName} has no {typeof(T).Name}, falling back.");
-                Destroy(go);
-                return EnsureManager<T>(root, fallbackName);
-            }
-            return comp;
+            return instance;
         }
     }
 }

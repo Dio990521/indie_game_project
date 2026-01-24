@@ -13,6 +13,10 @@ namespace IndieGame.Core
         public GameState NewState;
     }
 
+    public struct OpenInventoryEvent
+    {
+    }
+
     public struct BoardEntityInteractionEvent
     {
         public Gameplay.Board.Runtime.BoardEntity Player;

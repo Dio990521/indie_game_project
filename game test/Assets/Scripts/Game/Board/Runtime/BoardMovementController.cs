@@ -331,13 +331,13 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (ConfirmationEvent.HasPending)
             {
                 bool responded = false;
-                void OnResponded(bool _) => responded = true;
-                ConfirmationEvent.OnResponded += OnResponded;
+                void OnResponded(ConfirmationRespondedEvent _) => responded = true;
+                EventBus.Subscribe<ConfirmationRespondedEvent>(OnResponded);
                 while (!responded)
                 {
                     yield return null;
                 }
-                ConfirmationEvent.OnResponded -= OnResponded;
+                EventBus.Unsubscribe<ConfirmationRespondedEvent>(OnResponded);
             }
 
             if (!isFinalStep) _activeEntity.SetMoveAnimationSpeed(1f);

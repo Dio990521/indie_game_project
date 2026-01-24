@@ -1,4 +1,5 @@
 using UnityEngine;
+using IndieGame.Core;
 
 namespace IndieGame.UI.Confirmation
 {
@@ -44,17 +45,17 @@ namespace IndieGame.UI.Confirmation
 
         private void OnEnable()
         {
-            ConfirmationEvent.OnRequested += HandleRequest;
+            EventBus.Subscribe<ConfirmationRequestEvent>(HandleRequest);
         }
 
         private void OnDisable()
         {
-            ConfirmationEvent.OnRequested -= HandleRequest;
+            EventBus.Unsubscribe<ConfirmationRequestEvent>(HandleRequest);
         }
 
-        private void HandleRequest(ConfirmationRequest request)
+        private void HandleRequest(ConfirmationRequestEvent evt)
         {
-            _data.Message = request.Message;
+            _data.Message = evt.Request.Message;
             ApplyData();
             Show();
         }

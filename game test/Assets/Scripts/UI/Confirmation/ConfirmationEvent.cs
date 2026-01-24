@@ -1,4 +1,5 @@
 using System;
+using IndieGame.Core;
 
 namespace IndieGame.UI.Confirmation
 {
@@ -9,11 +10,18 @@ namespace IndieGame.UI.Confirmation
         public Action OnCancel;
     }
 
+    public struct ConfirmationRequestEvent
+    {
+        public ConfirmationRequest Request;
+    }
+
+    public struct ConfirmationRespondedEvent
+    {
+        public bool Confirmed;
+    }
+
     public static class ConfirmationEvent
     {
-        public static event Action<ConfirmationRequest> OnRequested;
-        public static event Action<bool> OnResponded;
-
         public static bool HasPending => _hasPending;
         private static bool _hasPending;
         private static ConfirmationRequest _pending;
@@ -22,14 +30,14 @@ namespace IndieGame.UI.Confirmation
         {
             _pending = request;
             _hasPending = true;
-            OnRequested?.Invoke(request);
+            EventBus.Raise(new ConfirmationRequestEvent { Request = request });
         }
 
         public static void Respond(bool confirmed)
         {
             if (!_hasPending) return;
             _hasPending = false;
-            OnResponded?.Invoke(confirmed);
+            EventBus.Raise(new ConfirmationRespondedEvent { Confirmed = confirmed });
             if (confirmed) _pending.OnConfirm?.Invoke();
             else _pending.OnCancel?.Invoke();
             _pending = default;

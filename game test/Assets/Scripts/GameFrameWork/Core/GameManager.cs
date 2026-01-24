@@ -1,5 +1,4 @@
 using UnityEngine;
-using System;
 using System.Collections;
 using IndieGame.Core.Utilities;
 using UnityEngine.SceneManagement;
@@ -9,9 +8,8 @@ namespace IndieGame.Core
 {
     public class GameManager : MonoSingleton<GameManager>
     {
-        protected override bool DestroyOnLoad => true;
+        protected override bool DestroyOnLoad => false;
         public GameState CurrentState { get; private set; } = GameState.Initialization;
-        public static event Action<GameState> OnStateChanged;
 
         // 是否已初始化
         public bool IsInitialized { get; private set; } = false;
@@ -56,7 +54,6 @@ namespace IndieGame.Core
 
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
-            OnStateChanged?.Invoke(newState);
             EventBus.Raise(new GameStateChangedEvent { NewState = newState });
         }
 

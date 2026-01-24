@@ -38,16 +38,16 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void OnEnable()
         {
-            GameManager.OnStateChanged += HandleGlobalStateChanged;
             SceneManager.sceneLoaded += HandleSceneLoaded;
             EventBus.Subscribe<BoardEntityInteractionEvent>(HandleEntityInteraction);
+            EventBus.Subscribe<GameStateChangedEvent>(HandleGlobalStateChanged);
         }
 
         private void OnDisable()
         {
-            GameManager.OnStateChanged -= HandleGlobalStateChanged;
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             EventBus.Unsubscribe<BoardEntityInteractionEvent>(HandleEntityInteraction);
+            EventBus.Unsubscribe<GameStateChangedEvent>(HandleGlobalStateChanged);
         }
 
         public void ChangeState(BaseState<BoardGameManager> newState)
@@ -75,8 +75,9 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
-        private void HandleGlobalStateChanged(GameState newState)
+        private void HandleGlobalStateChanged(GameStateChangedEvent evt)
         {
+            GameState newState = evt.NewState;
             _isBoardActive = newState == GameState.BoardMode;
             SetBoardComponentsActive(_isBoardActive);
             if (_isBoardActive)

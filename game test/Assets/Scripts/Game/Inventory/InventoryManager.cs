@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core.Utilities;
 using IndieGame.UI;
+using IndieGame.Core;
 
 namespace IndieGame.Gameplay.Inventory
 {
@@ -18,12 +19,17 @@ namespace IndieGame.Gameplay.Inventory
 
         private void OnEnable()
         {
-            BoardActionMenuView.OnRequestOpenInventory += OpenInventory;
+            EventBus.Subscribe<OpenInventoryEvent>(HandleOpenInventory);
         }
 
         private void OnDisable()
         {
-            BoardActionMenuView.OnRequestOpenInventory -= OpenInventory;
+            EventBus.Unsubscribe<OpenInventoryEvent>(HandleOpenInventory);
+        }
+
+        private void HandleOpenInventory(OpenInventoryEvent evt)
+        {
+            OpenInventory();
         }
 
         public void OpenInventory()

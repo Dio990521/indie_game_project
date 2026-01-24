@@ -42,7 +42,6 @@ namespace IndieGame.UI
         public Ease hideEase = Ease.InBack;
 
         public event Action OnRollDiceRequested;
-        public static event Action OnRequestOpenInventory;
 
         private readonly List<BoardActionOptionData> _options = new List<BoardActionOptionData>();
         private readonly List<BoardActionButton> _buttons = new List<BoardActionButton>();
@@ -56,6 +55,7 @@ namespace IndieGame.UI
         private bool _isVisible = false;
         private bool _inputSubscribed = false;
         private SelectionSource _selectionSource = SelectionSource.None;
+        private Camera _mainCam;
 
         private void Awake()
         {
@@ -86,6 +86,7 @@ namespace IndieGame.UI
                 Canvas canvas = root.GetComponentInParent<Canvas>();
                 if (canvas != null) _canvasRect = canvas.GetComponent<RectTransform>();
             }
+            _mainCam = Camera.main;
             target = GameManager.Instance.CurrentPlayer.transform;
         }
 
@@ -100,7 +101,9 @@ namespace IndieGame.UI
         private void LateUpdate()
         {
             if (_selfRect == null || _canvasRect == null || target == null) return;
-            Vector3 screenPos = Camera.main.WorldToScreenPoint(target.position);
+            if (_mainCam == null) _mainCam = Camera.main;
+            if (_mainCam == null) return;
+            Vector3 screenPos = _mainCam.WorldToScreenPoint(target.position);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPos, null, out Vector2 localPoint);
             _selfRect.anchoredPosition = localPoint;
         }
@@ -236,7 +239,7 @@ namespace IndieGame.UI
                     Hide();
                     break;
                 case BoardActionId.Item:
-                    OnRequestOpenInventory?.Invoke();
+                    EventBus.Raise(new OpenInventoryEvent());
                     Hide();
                     break;
                 case BoardActionId.Camp:

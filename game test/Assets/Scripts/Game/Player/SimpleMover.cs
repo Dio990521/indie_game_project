@@ -33,12 +33,12 @@ namespace IndieGame.Gameplay.Player
             // 缓存 Animator ID
             _animIDSpeed = Animator.StringToHash(speedParamName);
 
-            GameManager.OnStateChanged += HandleStateChanged;
+            EventBus.Subscribe<GameStateChangedEvent>(HandleStateChanged);
         }
 
         private void OnDestroy()
         {
-            GameManager.OnStateChanged -= HandleStateChanged;
+            EventBus.Unsubscribe<GameStateChangedEvent>(HandleStateChanged);
         }
 
         private void OnEnable()
@@ -66,14 +66,15 @@ namespace IndieGame.Gameplay.Player
             }
             
             // 初始化状态检查
-            if(GameManager.Instance != null)
+            if (GameManager.Instance != null)
             {
-                HandleStateChanged(GameManager.Instance.CurrentState);
+                HandleStateChanged(new GameStateChangedEvent { NewState = GameManager.Instance.CurrentState });
             }
         }
 
-        private void HandleStateChanged(GameState newState)
+        private void HandleStateChanged(GameStateChangedEvent evt)
         {
+            GameState newState = evt.NewState;
             if (newState == GameState.FreeRoam)
             {
                 _canMove = true;
