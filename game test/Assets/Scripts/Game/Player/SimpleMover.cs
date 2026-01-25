@@ -2,6 +2,7 @@ using UnityEngine;
 using IndieGame.Core; 
 using IndieGame.Core.CameraSystem; 
 using IndieGame.Core.Input; // 引用 InputReader
+using IndieGame.Gameplay.Stats;
 
 namespace IndieGame.Gameplay.Player
 {
@@ -15,6 +16,7 @@ namespace IndieGame.Gameplay.Player
         public float moveSpeed = 5f;
         public float rotateSpeed = 15f; 
         public string speedParamName = "Speed"; 
+        [SerializeField] private CharacterStats stats;
         
         private CharacterController _controller;
         private Animator _animator;
@@ -28,6 +30,7 @@ namespace IndieGame.Gameplay.Player
         {
             _controller = GetComponent<CharacterController>();
             _animator = GetComponentInChildren<Animator>();
+            if (stats == null) stats = GetComponent<CharacterStats>();
             if (Camera.main != null) _cameraTransform = Camera.main.transform;
             
             // 缓存 Animator ID
@@ -128,7 +131,8 @@ namespace IndieGame.Gameplay.Player
 
             Vector3 moveDir = (forward * _currentInputVector.y + right * _currentInputVector.x).normalized;
 
-            _controller.Move(moveDir * moveSpeed * Time.deltaTime);
+            float speed = stats != null ? stats.MoveSpeed.Value : moveSpeed;
+            _controller.Move(moveDir * speed * Time.deltaTime);
 
             if (moveDir != Vector3.zero)
             {

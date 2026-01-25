@@ -1,4 +1,5 @@
 using System;
+using UnityEngine;
 using IndieGame.Gameplay.Board.Runtime;
 
 namespace IndieGame.Core
@@ -15,6 +16,31 @@ namespace IndieGame.Core
 
     public struct OpenInventoryEvent
     {
+    }
+
+    public struct HealthChangedEvent
+    {
+        public GameObject Owner;
+        public int Current;
+        public int Max;
+    }
+
+    public struct DeathEvent
+    {
+        public GameObject Owner;
+    }
+
+    public struct LevelChangedEvent
+    {
+        public GameObject Owner;
+        public int Level;
+    }
+
+    public struct ExpChangedEvent
+    {
+        public GameObject Owner;
+        public int Current;
+        public int Required;
     }
 
     public struct BoardEntityInteractionEvent

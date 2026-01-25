@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 236204186819127652}
   - component: {fileID: 8397454419226806800}
   - component: {fileID: -3561589510990479297}
+  - component: {fileID: -3269462684130208509}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -76,6 +77,7 @@ MonoBehaviour:
   moveSpeed: 5
   rotateSpeed: 10
   speedParamName: Speed
+  stats: {fileID: 0}
 --- !u!114 &-3561589510990479297
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -93,6 +95,26 @@ MonoBehaviour:
   snapToNodeOnStart: 1
   moveSpeed: 5
   rotateSpeed: 15
+  animator: {fileID: 0}
+  moveSpeedParamName: Speed
+  triggerConnectionEvents: 0
+  stats: {fileID: 0}
+--- !u!114 &-3269462684130208509
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9170140433642860262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0191702c3e17434eacf32550378be67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Stats.CharacterStats
+  config: {fileID: 11400000, guid: 00730b86950064310b1d577c7c5cd57b, type: 2}
+  currentHP: 0
+  currentLevel: 1
+  currentEXP: 0
 --- !u!1001 &1409429107897280448
 PrefabInstance:
   m_ObjectHideFlags: 0

@@ -1,8 +1,9 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using IndieGame.Core.Utilities;
 using UnityEngine;
+using IndieGame.Core.Utilities;
+using IndieGame.Gameplay.Stats;
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
@@ -19,6 +20,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         [SerializeField] private Animator animator;
         [SerializeField] private string moveSpeedParamName = "Speed";
         [SerializeField] private bool triggerConnectionEvents = false;
+        [SerializeField] private CharacterStats stats;
 
         public bool IsPlayer => isPlayer;
         public MapWaypoint CurrentNode { get; private set; }
@@ -39,6 +41,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             _animIDSpeed = Animator.StringToHash(moveSpeedParamName);
             CacheAnimator();
+            if (stats == null) stats = GetComponent<CharacterStats>();
         }
 
         private void OnEnable()
@@ -167,13 +170,14 @@ namespace IndieGame.Gameplay.Board.Runtime
             Vector3 p1 = curveStartPos + conn.controlPointOffset;
 
             float approxDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
-            if (moveSpeed <= 0f || approxDist <= 0f)
+            float speed = stats != null ? stats.MoveSpeed.Value : moveSpeed;
+            if (speed <= 0f || approxDist <= 0f)
             {
                 transform.position = p2;
                 SetCurrentNode(conn.targetNode, false);
                 yield break;
             }
-            float duration = approxDist / moveSpeed;
+            float duration = approxDist / speed;
 
             int nextEventIndex = 0;
             int totalEvents = conn.events.Count;
