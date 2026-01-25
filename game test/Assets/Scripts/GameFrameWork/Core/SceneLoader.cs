@@ -45,6 +45,10 @@ namespace IndieGame.Core
         {
             Scene scene = SceneManager.GetActiveScene();
             GameMode mode = sceneRegistry != null ? sceneRegistry.GetGameMode(scene.name) : GameMode.Exploration;
+            if (mode == GameMode.Board && GameManager.Instance != null)
+            {
+                GameManager.Instance.ChangeState(GameState.BoardMode);
+            }
             EventBus.Raise(new GameModeChangedEvent
             {
                 SceneName = scene.name,
