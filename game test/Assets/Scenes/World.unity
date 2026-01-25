@@ -3039,6 +3039,7 @@ GameObject:
   - component: {fileID: 1401343126}
   - component: {fileID: 1401343125}
   - component: {fileID: 1401343129}
+  - component: {fileID: 1401343130}
   m_Layer: 0
   m_Name: NPC
   m_TagString: Untagged
@@ -3159,6 +3160,23 @@ MonoBehaviour:
   animator: {fileID: 0}
   moveSpeedParamName: Speed
   triggerConnectionEvents: 0
+  stats: {fileID: 0}
+--- !u!114 &1401343130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1401343124}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e0191702c3e17434eacf32550378be67, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Stats.CharacterStats
+  config: {fileID: 11400000, guid: 00730b86950064310b1d577c7c5cd57b, type: 2}
+  currentHP: 0
+  currentLevel: 99
+  currentEXP: 0
 --- !u!1 &1464109570
 GameObject:
   m_ObjectHideFlags: 0

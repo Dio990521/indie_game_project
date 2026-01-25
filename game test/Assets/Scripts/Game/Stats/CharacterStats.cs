@@ -3,7 +3,7 @@ using IndieGame.Core;
 
 namespace IndieGame.Gameplay.Stats
 {
-    public class CharacterStats : MonoBehaviour
+    public class CharacterStats : MonoBehaviour, IDamageable
     {
         [Header("Config")]
         [SerializeField] private CharacterStatConfigSO config;
