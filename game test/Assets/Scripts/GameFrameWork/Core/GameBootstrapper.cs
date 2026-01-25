@@ -66,6 +66,7 @@ namespace IndieGame.Core
             // 3. 正式启动游戏逻辑
             if (gm != null)
             {
+                bool wasInitialized = gm.IsInitialized;
                 if (playerPrefab != null)
                 {
                     gm.SetPlayerPrefab(playerPrefab);
@@ -73,7 +74,7 @@ namespace IndieGame.Core
                 gm.InitGame();
                 
                 // 如果是测试场景，可能会强制覆盖状态
-                if (isTestScene)
+                if (isTestScene && !wasInitialized)
                 {
                     // 确保刚开始是自由移动
                     if(gm.CurrentState != GameState.FreeRoam) 
