@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using IndieGame.Core;
+using IndieGame.Core.CameraSystem;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Board.Runtime.States;
 
@@ -24,9 +25,8 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void Start()
         {
-            _isBoardActive = GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode;
-            SetBoardComponentsActive(_isBoardActive);
-            if (_isBoardActive) BeginBoardInitialization();
+            _isBoardActive = false;
+            SetBoardComponentsActive(false);
         }
 
         private void Update()
@@ -38,16 +38,14 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void OnEnable()
         {
-            SceneManager.sceneLoaded += HandleSceneLoaded;
             EventBus.Subscribe<BoardEntityInteractionEvent>(HandleEntityInteraction);
-            EventBus.Subscribe<GameStateChangedEvent>(HandleGlobalStateChanged);
+            EventBus.Subscribe<GameModeChangedEvent>(HandleGameModeChanged);
         }
 
         private void OnDisable()
         {
-            SceneManager.sceneLoaded -= HandleSceneLoaded;
             EventBus.Unsubscribe<BoardEntityInteractionEvent>(HandleEntityInteraction);
-            EventBus.Unsubscribe<GameStateChangedEvent>(HandleGlobalStateChanged);
+            EventBus.Unsubscribe<GameModeChangedEvent>(HandleGameModeChanged);
         }
 
         public void ChangeState(BaseState<BoardGameManager> newState)
@@ -75,26 +73,20 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
         }
 
-        private void HandleGlobalStateChanged(GameStateChangedEvent evt)
+        private void HandleGameModeChanged(GameModeChangedEvent evt)
         {
-            GameState newState = evt.NewState;
-            _isBoardActive = newState == GameState.BoardMode;
+            _isBoardActive = evt.Mode == GameMode.Board;
             SetBoardComponentsActive(_isBoardActive);
             if (_isBoardActive)
             {
+                // 进入棋盘场景：唤醒并初始化棋盘逻辑
                 BeginBoardInitialization();
                 return;
             }
             StopBoardInitialization();
             ClearOverlayState();
             _stateMachine.Clear(this);
-        }
-
-        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
-        {
-            if (GameManager.Instance == null) return;
-            if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
-            BeginBoardInitialization();
+            SetBoardVisualActive(false);
         }
 
         private void SetBoardComponentsActive(bool isActive)
@@ -107,6 +99,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                     movementController.forkSelector.enabled = isActive;
                 }
             }
+            SetBoardVisualActive(isActive);
         }
 
         private void BeginBoardInitialization()
@@ -138,6 +131,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (movementController != null)
             {
                 movementController.ResolveReferences(-1);
+                RestoreBoardPosition();
             }
 
             if (CurrentState == null)
@@ -165,6 +159,43 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (OverlayState == null) return;
             _overlayStateMachine.Clear(this);
+        }
+
+        private void RestoreBoardPosition()
+        {
+            if (movementController == null) return;
+            SceneLoader loader = SceneLoader.Instance;
+            int savedIndex = loader != null ? loader.GetSavedBoardIndex() : -1;
+            if (savedIndex >= 0)
+            {
+                // 有记忆节点，直接恢复
+                movementController.SetCurrentNodeById(savedIndex);
+            }
+            else
+            {
+                // 无记忆节点，回到默认起点
+                movementController.ResetToStart();
+            }
+
+            if (CameraManager.Instance != null && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+            {
+                CameraManager.Instance.SetFollowTarget(GameManager.Instance.CurrentPlayer.transform);
+                CameraManager.Instance.WarpCameraToTarget();
+            }
+
+            if (loader != null && loader.IsReturnToBoard)
+            {
+                loader.ClearPayload();
+            }
+        }
+
+        private void SetBoardVisualActive(bool isActive)
+        {
+            if (movementController == null) return;
+            BoardEntity entity = movementController.PlayerEntity;
+            if (entity == null) return;
+            if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer == entity.gameObject) return;
+            entity.gameObject.SetActive(isActive);
         }
 
         private void HandleEntityInteraction(BoardEntityInteractionEvent evt)

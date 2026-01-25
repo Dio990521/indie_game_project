@@ -6,7 +6,6 @@ namespace IndieGame.Gameplay.Exploration
 {
     public class ExitZoneTrigger : MonoBehaviour
     {
-        [SerializeField] private int waypointIndex = 0;
         public string ZoneName = "Board";
 
         private void OnTriggerEnter(Collider other)
@@ -19,9 +18,10 @@ namespace IndieGame.Gameplay.Exploration
                 Message = message,
                 OnConfirm = () =>
                 {
+                    // 统一通过 SceneLoader 返回棋盘（自动恢复上次节点）
                     SceneLoader loader = SceneLoader.Instance;
                     if (loader == null) return;
-                    loader.ReturnToBoard(waypointIndex);
+                    loader.ReturnToBoard();
                 },
                 OnCancel = null
             });

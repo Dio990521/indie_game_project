@@ -9,4 +9,11 @@ namespace IndieGame.Core
         Dialogue,       
         Paused          
     }
+
+    public enum GameMode
+    {
+        Menu,
+        Board,
+        Exploration
+    }
 }

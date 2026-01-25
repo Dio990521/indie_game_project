@@ -51,6 +51,12 @@ namespace IndieGame.Core
         public bool ReturnToBoard;
     }
 
+    public struct GameModeChangedEvent
+    {
+        public string SceneName;
+        public GameMode Mode;
+    }
+
     public struct BoardEntityInteractionEvent
     {
         public Gameplay.Board.Runtime.BoardEntity Player;

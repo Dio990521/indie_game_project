@@ -45,3 +45,4 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.SceneLoader
   boardSceneName: World
+  sceneRegistry: {fileID: 11400000, guid: 6c812714131fd4fd6b6ce851d036e8f2, type: 2}
