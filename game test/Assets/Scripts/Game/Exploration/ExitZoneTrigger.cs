@@ -6,7 +6,7 @@ namespace IndieGame.Gameplay.Exploration
 {
     public class ExitZoneTrigger : MonoBehaviour
     {
-        public string BoardSceneName;
+        [SerializeField] private int waypointIndex = 0;
         public string ZoneName = "Board";
 
         private void OnTriggerEnter(Collider other)
@@ -19,10 +19,9 @@ namespace IndieGame.Gameplay.Exploration
                 Message = message,
                 OnConfirm = () =>
                 {
-                    var gm = GameManager.Instance;
-                    if (gm == null) return;
-                    gm.ChangeState(GameState.BoardMode);
-                    gm.LoadScene(BoardSceneName, GameState.BoardMode);
+                    SceneLoader loader = SceneLoader.Instance;
+                    if (loader == null) return;
+                    loader.ReturnToBoard(waypointIndex);
                 },
                 OnCancel = null
             });

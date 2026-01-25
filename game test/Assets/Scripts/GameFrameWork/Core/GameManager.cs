@@ -1,7 +1,5 @@
 using UnityEngine;
-using System.Collections;
 using IndieGame.Core.Utilities;
-using UnityEngine.SceneManagement;
 using IndieGame.Core.CameraSystem;
 
 namespace IndieGame.Core
@@ -13,7 +11,6 @@ namespace IndieGame.Core
 
         // 是否已初始化
         public bool IsInitialized { get; private set; } = false;
-        public int LastBoardIndex { get; set; } = -1;
 
         private GameObject playerPrefab;
 
@@ -56,19 +53,6 @@ namespace IndieGame.Core
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
             EventBus.Raise(new GameStateChangedEvent { NewState = newState });
-        }
-
-        public void LoadScene(string sceneName, GameState newState)
-        {
-            if (string.IsNullOrEmpty(sceneName)) return;
-            StartCoroutine(LoadSceneRoutine(sceneName, newState));
-        }
-
-        private IEnumerator LoadSceneRoutine(string sceneName, GameState newState)
-        {
-            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
-            while (!op.isDone) yield return null;
-            ChangeState(newState);
         }
 
         private void EnsurePlayer()

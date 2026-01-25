@@ -1,4 +1,5 @@
 using IndieGame.Core;
+using IndieGame.Core.CameraSystem;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
 {
@@ -6,10 +7,16 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     {
         public override void OnEnter(BoardGameManager context)
         {
-            var gm = GameManager.Instance;
-            if (gm != null && gm.LastBoardIndex >= 0 && context.movementController != null)
+            SceneLoader loader = SceneLoader.Instance;
+            if (loader != null && loader.HasPayload && loader.IsReturnToBoard && context.movementController != null)
             {
-                context.movementController.SetCurrentNodeById(gm.LastBoardIndex);
+                context.movementController.SetCurrentNodeById(loader.TargetWaypointIndex);
+                if (CameraManager.Instance != null && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+                {
+                    CameraManager.Instance.SetFollowTarget(GameManager.Instance.CurrentPlayer.transform);
+                    CameraManager.Instance.WarpCameraToTarget();
+                }
+                loader.ClearPayload();
             }
             else
             {

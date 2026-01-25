@@ -43,6 +43,14 @@ namespace IndieGame.Core
         public int Required;
     }
 
+    public struct SceneTransitionEvent
+    {
+        public string SceneName;
+        public LocationID TargetLocation;
+        public int WaypointIndex;
+        public bool ReturnToBoard;
+    }
+
     public struct BoardEntityInteractionEvent
     {
         public Gameplay.Board.Runtime.BoardEntity Player;

@@ -15,5 +15,6 @@ MonoBehaviour:
   tileName: Teleport
   gizmoColor: {r: 1, g: 1, b: 1, a: 1}
   TargetSceneName: Town
+  TargetLocationId: {fileID: 11400000, guid: 9c49f1b0f39664ceb9df75d3ec2f6d9e, type: 2}
   ZoneName: Teleport
   Description: go to fucking town

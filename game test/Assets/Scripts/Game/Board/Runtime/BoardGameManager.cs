@@ -137,7 +137,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (movementController != null)
             {
-                movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                movementController.ResolveReferences(-1);
             }
 
             if (CurrentState == null)

@@ -9,6 +9,7 @@ namespace IndieGame.Gameplay.Board.Data
     public class ZoneTile : TileBase
     {
         public string TargetSceneName;
+        public LocationID TargetLocationId;
         public string ZoneName;
         [TextArea] public string Description;
 
@@ -29,16 +30,9 @@ namespace IndieGame.Gameplay.Board.Data
                 Message = message,
                 OnConfirm = () =>
                 {
-                    var gm = GameManager.Instance;
-                    if (gm == null) return;
-
-                    var board = BoardGameManager.Instance;
-                    if (board != null && board.movementController != null)
-                    {
-                        gm.LastBoardIndex = board.movementController.CurrentNodeId;
-                    }
-
-                    gm.LoadScene(TargetSceneName, GameState.FreeRoam);
+                    SceneLoader loader = SceneLoader.Instance;
+                    if (loader == null) return;
+                    loader.LoadScene(TargetSceneName, TargetLocationId);
                 },
                 OnCancel = null
             });

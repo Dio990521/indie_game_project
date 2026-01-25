@@ -46,7 +46,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 return;
             }
 
-            ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+            ResolveReferences(-1);
         }
 
         private void OnDisable()
@@ -70,7 +70,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_isMoving) return;
             if (entity == null)
             {
-                ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                ResolveReferences(-1);
                 entity = _playerEntity;
                 if (entity == null) return;
             }
@@ -88,7 +88,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_isMoving) return;
             if (entity == null)
             {
-                ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                ResolveReferences(-1);
                 entity = _playerEntity;
                 if (entity == null) return;
             }

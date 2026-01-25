@@ -26,7 +26,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             if (context.movementController.PlayerEntity == null)
             {
-                context.movementController.ResolveReferences(GameManager.Instance != null ? GameManager.Instance.LastBoardIndex : -1);
+                context.movementController.ResolveReferences(-1);
             }
 
             if (context.movementController.PlayerEntity == null)
