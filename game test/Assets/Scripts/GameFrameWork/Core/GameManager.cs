@@ -16,6 +16,28 @@ namespace IndieGame.Core
 
         public GameObject CurrentPlayer { get; private set; }
 
+        private void OnEnable()
+        {
+            EventBus.Subscribe<GameModeChangedEvent>(OnGameModeChanged);
+        }
+
+        private void OnDisable()
+        {
+            EventBus.Unsubscribe<GameModeChangedEvent>(OnGameModeChanged);
+        }
+
+        private void OnGameModeChanged(GameModeChangedEvent evt)
+        {
+            // 根据事件传来的 Mode 切换状态
+            if (evt.Mode == GameMode.Board)
+            {
+                ChangeState(GameState.BoardMode);
+            }
+            else
+            {
+                ChangeState(GameState.FreeRoam);
+            }
+        }
 
         public void SetPlayerPrefab(GameObject prefab)
         {

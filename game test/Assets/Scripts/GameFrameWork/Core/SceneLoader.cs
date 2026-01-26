@@ -56,9 +56,9 @@ namespace IndieGame.Core
             });
         }
 
-        public void LoadScene(string sceneName, LocationID targetID)
+        public AsyncOperation LoadScene(string sceneName, LocationID targetID)      
         {
-            if (string.IsNullOrEmpty(sceneName)) return;
+            if (string.IsNullOrEmpty(sceneName)) return null;
             // 进入探索场景前，缓存棋盘位置
             CacheBoardNodeIndex();
             _payload = new TransitionPayload
@@ -70,11 +70,14 @@ namespace IndieGame.Core
             };
             _hasPayload = true;
 
-            SceneManager.LoadSceneAsync(sceneName);
+            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName);
+    
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.ChangeState(GameState.FreeRoam);
             }
+
+            return op; // 返回句柄
         }
 
         public void ReturnToBoard()
