@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using TMPro;
 using UnityEngine.UI;
 using DG.Tweening;
+using UnityEngine.Localization;
 
 namespace IndieGame.UI
 {
@@ -18,14 +19,29 @@ namespace IndieGame.UI
         private Action<int> _onClick;
         private Action<int> _onExit;
 
-        public void Setup(string name, Sprite icon, int index, Action<int> onHover, Action<int> onClick, Action<int> onExit)
+        public void Setup(LocalizedString name, Sprite icon, int index, Action<int> onHover, Action<int> onClick, Action<int> onExit)
         {
             _index = index;
             _onHover = onHover;
             _onClick = onClick;
             _onExit = onExit;
 
-            if (label != null) label.text = name;
+            if (label != null)
+            {
+                if (name == null)
+                {
+                    label.text = string.Empty;
+                }
+                else
+                {
+                    var handle = name.GetLocalizedStringAsync();
+                    handle.Completed += op =>
+                    {
+                        if (label == null) return;
+                        label.text = op.Result;
+                    };
+                }
+            }
             if (iconImage != null) iconImage.sprite = icon;
         }
 

@@ -1378,7 +1378,27 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f3f4cf3260ac84862ab93031eed72bc9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Exploration.ExitZoneTrigger
-  ZoneName: fuck
+  ZoneName:
+    m_TableReference:
+      m_TableCollectionName: GUID:b09628aa04d1b4078b1699ff9856e587
+    m_TableEntryReference:
+      m_KeyId: 2195461234688
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  LeavePrompt:
+    m_TableReference:
+      m_TableCollectionName: GUID:b09628aa04d1b4078b1699ff9856e587
+    m_TableEntryReference:
+      m_KeyId: 2195461234688
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1638741645
 GameObject:
   m_ObjectHideFlags: 0

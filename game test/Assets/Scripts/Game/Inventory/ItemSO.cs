@@ -1,16 +1,23 @@
 using UnityEngine;
+using UnityEngine.Localization;
+using UnityEngine.Serialization;
+
 
 namespace IndieGame.Gameplay.Inventory
 {
     [CreateAssetMenu(menuName = "IndieGame/Inventory/Item")]
     public class ItemSO : ScriptableObject
     {
-        public string ItemName;
-        [TextArea] public string Description;
+        [FormerlySerializedAs("ItemName")]
+        public LocalizedString ItemName;
+        [TextArea]
+        [FormerlySerializedAs("Description")]
+        public LocalizedString Description;
 
         public virtual void Use()
         {
-            Debug.Log($"使用了道具: {ItemName}");
+            string name = ItemName != null ? ItemName.GetLocalizedString() : "Item";
+            Debug.Log($"使用了道具: {name}");
         }
     }
 }

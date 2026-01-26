@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Localization;
 
 namespace IndieGame.UI
 {
@@ -13,7 +14,7 @@ namespace IndieGame.UI
     public class BoardActionOptionData
     {
         public BoardActionId Id;
-        public string Name;
+        public LocalizedString Name;
         public Sprite Icon;
     }
 

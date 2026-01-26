@@ -229,6 +229,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Confirmation.ConfirmationPopupView
   binder: {fileID: 5373188128845934333}
   inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
+  confirmLabel:
+    m_TableReference:
+      m_TableCollectionName: GUID:b09628aa04d1b4078b1699ff9856e587
+    m_TableEntryReference:
+      m_KeyId: 2195461234688
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  cancelLabel:
+    m_TableReference:
+      m_TableCollectionName: GUID:b09628aa04d1b4078b1699ff9856e587
+    m_TableEntryReference:
+      m_KeyId: 2195461234688
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1919982874554236788
 GameObject:
   m_ObjectHideFlags: 0

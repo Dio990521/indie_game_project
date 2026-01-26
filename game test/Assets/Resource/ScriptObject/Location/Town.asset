@@ -12,4 +12,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 18e9115ca71d24a3c8f7aca263854e26, type: 3}
   m_Name: Town
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.LocationID
-  displayName: 
+  displayName:
+    m_TableReference:
+      m_TableCollectionName: GUID:b09628aa04d1b4078b1699ff9856e587
+    m_TableEntryReference:
+      m_KeyId: 2195461234688
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []

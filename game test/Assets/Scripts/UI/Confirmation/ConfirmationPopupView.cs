@@ -1,5 +1,6 @@
 using UnityEngine;
 using IndieGame.Core;
+using UnityEngine.Localization;
 
 namespace IndieGame.UI.Confirmation
 {
@@ -8,6 +9,8 @@ namespace IndieGame.UI.Confirmation
         [Header("Binder")]
         [SerializeField] private ConfirmationPopupBinder binder;
         [SerializeField] private IndieGame.Core.Input.GameInputReader inputReader;
+        [SerializeField] private LocalizedString confirmLabel;
+        [SerializeField] private LocalizedString cancelLabel;
 
         private ConfirmationPopupData _data = new ConfirmationPopupData();
         private CanvasGroup _canvasGroup;
@@ -31,6 +34,7 @@ namespace IndieGame.UI.Confirmation
                 binder.CancelButton.onClick.AddListener(HandleCancel);
             }
 
+            ApplyButtonLabels();
             SetupVisibility();
             SetVisible(false);
         }
@@ -66,6 +70,31 @@ namespace IndieGame.UI.Confirmation
             {
                 binder.MessageLabel.text = _data.Message;
             }
+        }
+
+        private void ApplyButtonLabels()
+        {
+            if (binder == null) return;
+            ApplyButtonLabel(binder.ConfirmButton, confirmLabel);
+            ApplyButtonLabel(binder.CancelButton, cancelLabel);
+        }
+
+        private void ApplyButtonLabel(UnityEngine.UI.Button button, LocalizedString text)
+        {
+            if (button == null) return;
+            var label = button.GetComponentInChildren<TMPro.TMP_Text>(true);
+            if (label == null) return;
+            if (text == null)
+            {
+                label.text = string.Empty;
+                return;
+            }
+            var handle = text.GetLocalizedStringAsync();
+            handle.Completed += op =>
+            {
+                if (label == null) return;
+                label.text = op.Result;
+            };
         }
 
         private void HandleConfirm()

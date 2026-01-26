@@ -13,6 +13,8 @@ MonoBehaviour:
   m_Name: SceneRegistry
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.SceneRegistrySO
   entries:
+  - SceneName: Title
+    Mode: 0
   - SceneName: World
     Mode: 1
   - SceneName: Town

@@ -2,6 +2,8 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.UI.Confirmation;
 using IndieGame.Gameplay.Board.Runtime;
+using UnityEngine.Localization;
+using UnityEngine.Serialization;
 
 namespace IndieGame.Gameplay.Board.Data
 {
@@ -10,8 +12,13 @@ namespace IndieGame.Gameplay.Board.Data
     {
         public string TargetSceneName;
         public LocationID TargetLocationId;
-        public string ZoneName;
-        [TextArea] public string Description;
+        [FormerlySerializedAs("ZoneName")]
+        public LocalizedString ZoneName;
+        [TextArea]
+        [FormerlySerializedAs("Description")]
+        public LocalizedString Description;
+        [FormerlySerializedAs("EnterPrompt")]
+        public LocalizedString EnterPrompt;
 
         public override bool TriggerOnPass => true;
 
@@ -23,8 +30,13 @@ namespace IndieGame.Gameplay.Board.Data
 
         public override void OnEnter(GameObject player)
         {
-            string label = string.IsNullOrEmpty(ZoneName) ? "this zone?" : ZoneName;
-            string message = $"Enter {label}?";
+            string zoneLabel = ZoneName != null ? ZoneName.GetLocalizedString() : "this zone";
+            string message = $"Enter {zoneLabel}?";
+            if (EnterPrompt != null)
+            {
+                EnterPrompt.Arguments = new object[] { zoneLabel };
+                message = EnterPrompt.GetLocalizedString();
+            }
             ConfirmationEvent.Request(new ConfirmationRequest
             {
                 Message = message,

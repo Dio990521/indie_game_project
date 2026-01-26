@@ -2,6 +2,7 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.UI;
 using IndieGame.Gameplay.Inventory;
+using UnityEngine.Localization;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
 {
@@ -75,9 +76,21 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             return new System.Collections.Generic.List<BoardActionOptionData>
             {
-                new BoardActionOptionData { Id = BoardActionId.RollDice, Name = "Roll Dice" },
-                new BoardActionOptionData { Id = BoardActionId.Item, Name = "Item" },
-                new BoardActionOptionData { Id = BoardActionId.Camp, Name = "Camp" }
+                new BoardActionOptionData
+                {
+                    Id = BoardActionId.RollDice,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "RollDice" }
+                },
+                new BoardActionOptionData
+                {
+                    Id = BoardActionId.Item,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Item" }
+                },
+                new BoardActionOptionData
+                {
+                    Id = BoardActionId.Camp,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Camp" }
+                }
             };
         }
     }

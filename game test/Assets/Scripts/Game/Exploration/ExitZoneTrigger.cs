@@ -1,18 +1,29 @@
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.UI.Confirmation;
+using UnityEngine.Localization;
+using UnityEngine.Serialization;
 
 namespace IndieGame.Gameplay.Exploration
 {
     public class ExitZoneTrigger : MonoBehaviour
     {
-        public string ZoneName = "Board";
+        [FormerlySerializedAs("ZoneName")]
+        public LocalizedString ZoneName;
+        [FormerlySerializedAs("LeavePrompt")]
+        public LocalizedString LeavePrompt;
 
         private void OnTriggerEnter(Collider other)
         {
             if (!other.CompareTag("Player")) return;
 
-            string message = $"Leave {ZoneName}?";
+            string zoneLabel = ZoneName != null ? ZoneName.GetLocalizedString() : "Board";
+            string message = $"Leave {zoneLabel}?";
+            if (LeavePrompt != null)
+            {
+                LeavePrompt.Arguments = new object[] { zoneLabel };
+                message = LeavePrompt.GetLocalizedString();
+            }
             ConfirmationEvent.Request(new ConfirmationRequest
             {
                 Message = message,
