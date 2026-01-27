@@ -16,6 +16,7 @@ namespace IndieGame.UI
     {
         private Transform screenOverlayTop75;
         private Transform screenCameraBottom25;
+        private UIPriorityRoots uiRoots;
 
         [Header("UI Prefabs")]
         [SerializeField] private GameObject uiCanvasPrefab;
@@ -142,10 +143,19 @@ namespace IndieGame.UI
         private void CacheRoots()
         {
             if (CanvasInstance == null) return;
-            Transform overlay = CanvasInstance.transform.Find("UIScreenOverlay_TOP75");
-            Transform cameraRoot = CanvasInstance.transform.Find("UIScreenCamera_Bottom25");
-            if (overlay != null) screenOverlayTop75 = overlay;
-            if (cameraRoot != null) screenCameraBottom25 = cameraRoot;
+
+            if (uiRoots == null)
+            {
+                uiRoots = CanvasInstance.GetComponent<UIPriorityRoots>();
+                if (uiRoots == null)
+                {
+                    Debug.LogWarning("[UIManager] UIRoots component missing on Canvas.");
+                    return;
+                }
+            }
+
+            screenOverlayTop75 = uiRoots.OverlayTop75;
+            screenCameraBottom25 = uiRoots.CameraBottom25;
         }
 
         private void EnsureCanvasInstance()
