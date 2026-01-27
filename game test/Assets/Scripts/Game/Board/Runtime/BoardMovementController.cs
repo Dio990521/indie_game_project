@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using IndieGame.Core;
-using IndieGame.UI.Confirmation;
 using UnityEngine;
 
 namespace IndieGame.Gameplay.Board.Runtime
@@ -29,25 +28,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private MapWaypoint _startNode;
         private bool _isMoving = false;
         private bool _triggerNodeEvents = true;
-
-        private void Awake()
-        {
-            _startNode = FindStartNode();
-            Debug.Log("[BoardMovementController] Start Node ID: " + (_startNode != null ? _startNode.nodeID.ToString() : "null"));
-        }
-
-        private void Start()
-        {
-            if (!IsBoardModeActive()) return;
-
-            if (playerToken != null)
-            {
-                CachePlayerEntity();
-                return;
-            }
-
-            ResolveReferences(-1);
-        }
+        private BoardInteractionHandler _interactionHandler;
 
         private void OnDisable()
         {
@@ -136,20 +117,21 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public void SetCurrentNodeById(int nodeId)
         {
-            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
             if (_playerEntity == null) CachePlayerEntity();
             if (_playerEntity == null) return;
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                if (nodes[i].nodeID != nodeId) continue;
-                _playerEntity.SetCurrentNode(nodes[i], true);
-                return;
-            }
+            MapWaypoint node = BoardMapManager.Instance != null ? BoardMapManager.Instance.GetNode(nodeId) : null;
+            if (node == null) return;
+            _playerEntity.SetCurrentNode(node, true);
         }
 
         public void ResolveReferences(int preferredNodeId)
         {
-            _startNode = FindStartNode();
+            EnsureInteractionHandler();
+            if (BoardMapManager.Instance != null && !BoardMapManager.Instance.IsReady)
+            {
+                BoardMapManager.Instance.Init();
+            }
+            _startNode = BoardMapManager.Instance != null ? BoardMapManager.Instance.GetNode(0) : null;
             playerToken = GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null
                 ? GameManager.Instance.CurrentPlayer.transform
                 : null;
@@ -165,16 +147,6 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 _playerEntity.SetCurrentNode(_startNode, true);
             }
-        }
-
-        private MapWaypoint FindStartNode()
-        {
-            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-            for (int i = 0; i < nodes.Length; i++)
-            {
-                if (nodes[i].nodeID == 0) return nodes[i];
-            }
-            return null;
         }
 
         private void CachePlayerEntity()
@@ -307,67 +279,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private IEnumerator HandleNodeArrival(MapWaypoint node, bool isFinalStep)
         {
             if (_activeEntity == null) yield break;
-            if (!_triggerNodeEvents) yield break;
-            if (node == null || node.tileData == null) yield break;
-
-            BoardEntity other = BoardEntity.FindOtherAtNode(node, _activeEntity);
-            if (other != null)
-            {
-                _activeEntity.SetMoveAnimationSpeed(0f);
-                yield return StartCoroutine(HandleEntityEncounter(other, node));
-                if (!isFinalStep) _activeEntity.SetMoveAnimationSpeed(1f);
-            }
-
-            bool shouldTrigger = isFinalStep || node.tileData.TriggerOnPass;
-
-            if (shouldTrigger) _activeEntity.SetMoveAnimationSpeed(0f);
-
-            if (shouldTrigger)
-            {
-                EventBus.Raise(new PlayerReachedNodeEvent { Node = node });
-                node.tileData.OnEnter(_activeEntity.gameObject);
-            }
-
-            if (ConfirmationEvent.HasPending)
-            {
-                bool responded = false;
-                void OnResponded(ConfirmationRespondedEvent _) => responded = true;
-                EventBus.Subscribe<ConfirmationRespondedEvent>(OnResponded);
-                while (!responded)
-                {
-                    yield return null;
-                }
-                EventBus.Unsubscribe<ConfirmationRespondedEvent>(OnResponded);
-            }
-
-            if (!isFinalStep) _activeEntity.SetMoveAnimationSpeed(1f);
-        }
-
-        private IEnumerator HandleEntityEncounter(BoardEntity other, MapWaypoint node)
-        {
-            bool completed = false;
-            BoardEntityInteractionEvent evt = new BoardEntityInteractionEvent
-            {
-                Player = _activeEntity,
-                Target = other,
-                Node = node,
-                OnCompleted = () => completed = true
-            };
-
-            if (!EventBus.HasSubscribers<BoardEntityInteractionEvent>())
-            {
-                completed = true;
-            }
-            EventBus.Raise(evt);
-            while (!completed)
-            {
-                yield return null;
-            }
-        }
-
-        private bool IsBoardModeActive()
-        {
-            return GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.BoardMode;
+            EnsureInteractionHandler();
+            yield return _interactionHandler.HandleArrival(_activeEntity, node, isFinalStep, _triggerNodeEvents);
         }
 
         private WaypointConnection ChooseNextConnection(MapWaypoint node)
@@ -379,6 +292,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (validNodes.Count == 1) return node.GetConnectionTo(validNodes[0]);
             int index = UnityEngine.Random.Range(0, validNodes.Count);
             return node.GetConnectionTo(validNodes[index]);
+        }
+
+        private void EnsureInteractionHandler()
+        {
+            if (_interactionHandler != null) return;
+            _interactionHandler = new BoardInteractionHandler();
         }
     }
 }

@@ -10,6 +10,17 @@ namespace IndieGame.Core.CameraSystem
         [SerializeField] private CinemachineCamera _mainGameplayCamera; 
 
         private Transform _currentTarget;
+        private bool _isInitialized;
+
+        public void Init()
+        {
+            if (_isInitialized) return;
+            if (_mainGameplayCamera == null)
+            {
+                _mainGameplayCamera = GetComponentInChildren<CinemachineCamera>();
+            }
+            _isInitialized = true;
+        }
 
         public void SetFollowTarget(Transform target)
         {

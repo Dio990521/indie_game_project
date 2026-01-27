@@ -1,6 +1,4 @@
-using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using IndieGame.Core;
 using IndieGame.Core.CameraSystem;
 using IndieGame.Core.Utilities;
@@ -18,8 +16,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public BaseState<BoardGameManager> CurrentState => _stateMachine.CurrentState;
         public BaseState<BoardGameManager> OverlayState => _overlayStateMachine.CurrentState;
         private bool _isBoardActive = false;
-        private bool _isInitializing = false;
-        private Coroutine _initRoutine;
+        private bool _isInitialized;
 
         protected override bool DestroyOnLoad => true;
 
@@ -51,7 +48,6 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void ChangeState(BaseState<BoardGameManager> newState)
         {
             if (newState == null) return;
-            if (_isInitializing && CurrentState == null && !(newState is InitState)) return;
             _stateMachine.ChangeState(newState, this);
         }
 
@@ -76,17 +72,14 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void HandleGameModeChanged(GameModeChangedEvent evt)
         {
             _isBoardActive = evt.Mode == GameMode.Board;
-            SetBoardComponentsActive(_isBoardActive);
             if (_isBoardActive)
             {
-                // 进入棋盘场景：唤醒并初始化棋盘逻辑
-                BeginBoardInitialization();
+                // 进入棋盘场景：显式唤醒并强制重新初始化
+                SetBoardComponentsActive(true);
+                Init(true);
                 return;
             }
-            StopBoardInitialization();
-            ClearOverlayState();
-            _stateMachine.Clear(this);
-            SetBoardVisualActive(false);
+            Sleep();
         }
 
         private void SetBoardComponentsActive(bool isActive)
@@ -102,45 +95,25 @@ namespace IndieGame.Gameplay.Board.Runtime
             SetBoardVisualActive(isActive);
         }
 
-        private void BeginBoardInitialization()
+        // 由 GameManager 显式调用，避免协程轮询。
+        public void Init(bool force)
         {
-            if (_initRoutine != null) return;
-            _initRoutine = StartCoroutine(InitializeBoardRoutine());
-        }
-
-        private void StopBoardInitialization()
-        {
-            if (_initRoutine == null) return;
-            StopCoroutine(_initRoutine);
-            _initRoutine = null;
-            _isInitializing = false;
-        }
-
-        private IEnumerator InitializeBoardRoutine()
-        {
-            _isInitializing = true;
-            yield return new WaitUntil(() => GameManager.Instance != null);
-            yield return new WaitUntil(() => _isBoardActive);
-            yield return new WaitUntil(() => SceneManager.GetActiveScene().isLoaded);
+            if (!_isBoardActive) return;
+            if (_isInitialized && !force) return;
 
             if (movementController == null || movementController.Equals(null))
             {
                 movementController = FindAnyObjectByType<BoardMovementController>();
             }
+            if (movementController == null) return;
 
-            if (movementController != null)
-            {
-                movementController.ResolveReferences(-1);
-                RestoreBoardPosition();
-            }
+            movementController.ResolveReferences(-1);
+            bool restoredFromSave = RestoreBoardPosition();
 
-            if (CurrentState == null)
-            {
-                ChangeState(new InitState());
-            }
-
-            _isInitializing = false;
-            _initRoutine = null;
+            ClearOverlayState();
+            _stateMachine.Clear(this);
+            ChangeState(restoredFromSave ? new PlayerTurnState() : new InitState());
+            _isInitialized = true;
         }
 
         public void PushOverlayState(BaseState<BoardGameManager> newState)
@@ -161,32 +134,24 @@ namespace IndieGame.Gameplay.Board.Runtime
             _overlayStateMachine.Clear(this);
         }
 
-        private void RestoreBoardPosition()
+        private bool RestoreBoardPosition()
         {
-            if (movementController == null) return;
+            if (movementController == null) return false;
             SceneLoader loader = SceneLoader.Instance;
             int savedIndex = loader != null ? loader.GetSavedBoardIndex() : -1;
             if (savedIndex >= 0)
             {
-                // 有记忆节点，直接恢复
                 movementController.SetCurrentNodeById(savedIndex);
+                SyncCameraToPlayer();
+                if (loader != null && loader.IsReturnToBoard)
+                {
+                    loader.ClearPayload();
+                }
+                return true;
             }
-            else
-            {
-                // 无记忆节点，回到默认起点
-                movementController.ResetToStart();
-            }
-
-            if (CameraManager.Instance != null && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
-            {
-                CameraManager.Instance.SetFollowTarget(GameManager.Instance.CurrentPlayer.transform);
-                CameraManager.Instance.WarpCameraToTarget();
-            }
-
-            if (loader != null && loader.IsReturnToBoard)
-            {
-                loader.ClearPayload();
-            }
+            movementController.ResetToStart();
+            SyncCameraToPlayer();
+            return false;
         }
 
         private void SetBoardVisualActive(bool isActive)
@@ -196,6 +161,22 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (entity == null) return;
             if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer == entity.gameObject) return;
             entity.gameObject.SetActive(isActive);
+        }
+
+        private void SyncCameraToPlayer()
+        {
+            if (CameraManager.Instance == null) return;
+            if (GameManager.Instance == null || GameManager.Instance.CurrentPlayer == null) return;
+            CameraManager.Instance.SetFollowTarget(GameManager.Instance.CurrentPlayer.transform);
+            CameraManager.Instance.WarpCameraToTarget();
+        }
+
+        private void Sleep()
+        {
+            ClearOverlayState();
+            _stateMachine.Clear(this);
+            SetBoardComponentsActive(false);
+            SetBoardVisualActive(false);
         }
 
         private void HandleEntityInteraction(BoardEntityInteractionEvent evt)

@@ -23,6 +23,7 @@ namespace IndieGame.Core
         private TransitionPayload _payload;
         private int _lastBoardNodeIndex = -1; // 记录上次离开棋盘时的节点
         private string _lastBoardSceneName; // 记录上次棋盘场景名
+        private bool _isInitialized;
 
         public bool HasPayload => _hasPayload;
         public bool IsReturnToBoard => _hasPayload && _payload.ReturnToBoard;
@@ -41,8 +42,10 @@ namespace IndieGame.Core
             SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 
-        private void Start()
+        // 由 GameManager 按顺序调用，避免各系统抢跑。
+        public void Init()
         {
+            if (_isInitialized) return;
             Scene scene = SceneManager.GetActiveScene();
             GameMode mode = sceneRegistry != null ? sceneRegistry.GetGameMode(scene.name) : GameMode.Exploration;
             if (mode == GameMode.Board && GameManager.Instance != null)
@@ -54,6 +57,7 @@ namespace IndieGame.Core
                 SceneName = scene.name,
                 Mode = mode
             });
+            _isInitialized = true;
         }
 
         public AsyncOperation LoadScene(string sceneName, LocationID targetID)      

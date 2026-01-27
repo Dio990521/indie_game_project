@@ -1,6 +1,9 @@
 using UnityEngine;
 using IndieGame.Core.Utilities;
 using IndieGame.Core.CameraSystem;
+using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Gameplay.Inventory;
+using IndieGame.UI;
 
 namespace IndieGame.Core
 {
@@ -52,17 +55,35 @@ namespace IndieGame.Core
             if (IsInitialized) return;
 
             Debug.Log("<color=green>[GameManager] Game Initializing...</color>");
-            
-            // 1. 这里可以加载配置表、读取存档、初始化音频系统等
-            // StartCoroutine(LoadAssetsRoutine()); 
-            
-            IsInitialized = true;
-            
-            // 2. 初始化完成后，进入第一个逻辑状态
-            // 如果有主菜单场景，这里应该切到 MainMenu
-            // 对于 Demo，我们直接进 FreeRoam
+
+            // 1) SceneLoader: 先广播当前场景模式，清理状态。
+            if (SceneLoader.Instance != null) SceneLoader.Instance.Init();
+
+            // 2) BoardMapManager: 缓存地图数据，作为后续逻辑基础。
+            if (BoardMapManager.Instance != null) BoardMapManager.Instance.Init();
+
+            // 3) InventoryManager: 准备玩家数据。
+            if (InventoryManager.Instance != null) InventoryManager.Instance.Init();
+
+            // 4) UIManager: 生成并初始化 UI。
+            if (UIManager.Instance != null) UIManager.Instance.Init();
+
+            // 5) BoardGameManager: 玩家存在后再启动棋盘逻辑。
             EnsurePlayer();
-            ChangeState(GameState.FreeRoam);
+            if (BoardGameManager.Instance != null) BoardGameManager.Instance.Init(true);
+
+            // 6) CameraManager: 最后设置跟随目标。
+            if (CameraManager.Instance != null)
+            {
+                CameraManager.Instance.Init();
+                if (CurrentPlayer != null)
+                {
+                    CameraManager.Instance.SetFollowTarget(CurrentPlayer.transform);
+                    CameraManager.Instance.WarpCameraToTarget();
+                }
+            }
+
+            IsInitialized = true;
         }
 
         public void ChangeState(GameState newState)
@@ -89,11 +110,6 @@ namespace IndieGame.Core
             GameObject player = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
             CurrentPlayer = player;
             DontDestroyOnLoad(player);
-            if (CameraManager.Instance != null)
-            {
-                CameraManager.Instance.SetFollowTarget(player.transform);
-                CameraManager.Instance.WarpCameraToTarget();
-            }
         }
         
     }

@@ -30,6 +30,7 @@ namespace IndieGame.UI
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
 
         public static event Action OnUIReady;
+        private bool _isInitialized;
 
         protected override bool DestroyOnLoad => true;
 
@@ -37,9 +38,16 @@ namespace IndieGame.UI
         {
             base.Awake();
             if (Instance != this) return;
+        }
+
+        // 由 GameManager 以确定性顺序调用。
+        public void Init()
+        {
+            if (_isInitialized) return;
             EnsureCanvasInstance();
             CacheRoots();
             InitUI();
+            _isInitialized = true;
         }
 
         private void OnEnable()

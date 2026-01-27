@@ -16,6 +16,7 @@ namespace IndieGame.Gameplay.Inventory
         public static event Action<List<ItemSO>> OnInventoryUpdated;
         public static event Action OnInventoryOpened;
         public static event Action OnInventoryClosed;
+        private bool _isInitialized;
 
         private void OnEnable()
         {
@@ -30,6 +31,12 @@ namespace IndieGame.Gameplay.Inventory
         private void HandleOpenInventory(OpenInventoryEvent evt)
         {
             OpenInventory();
+        }
+
+        public void Init()
+        {
+            if (_isInitialized) return;
+            _isInitialized = true;
         }
 
         public void OpenInventory()
