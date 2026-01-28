@@ -44,12 +44,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void OnDrawGizmos()
         {
             if (Application.isPlaying && renderRuntimeLines) return;
-            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-            if (nodes == null || nodes.Length == 0) return;
+            List<MapWaypoint> nodes = GetAllNodes();
+            if (nodes == null || nodes.Count == 0) return;
 
             HashSet<string> processed = new HashSet<string>();
 
-            for (int i = 0; i < nodes.Length; i++)
+            for (int i = 0; i < nodes.Count; i++)
             {
                 MapWaypoint from = nodes[i];
                 if (from == null || from.connections == null) continue;
@@ -73,13 +73,13 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             ClearRuntimeLines();
 
-            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-            if (nodes == null || nodes.Length == 0) return;
+            List<MapWaypoint> nodes = GetAllNodes();
+            if (nodes == null || nodes.Count == 0) return;
 
             HashSet<string> processed = new HashSet<string>();
             int lineIndex = 0;
 
-            for (int i = 0; i < nodes.Length; i++)
+            for (int i = 0; i < nodes.Count; i++)
             {
                 MapWaypoint from = nodes[i];
                 if (from == null || from.connections == null) continue;
@@ -106,7 +106,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void CreateRuntimeLine(int index, MapWaypoint from, MapWaypoint to, WaypointConnection conn, bool isBidirectional)
         {
             GameObject lineObj = new GameObject($"{LinePrefix}{index}");
-            lineObj.transform.SetParent(transform);
+            lineObj.transform.SetParent(from.transform, false);
             lineObj.transform.localPosition = Vector3.zero;
 
             LineRenderer lr = lineObj.AddComponent<LineRenderer>();
@@ -134,17 +134,27 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void ClearRuntimeLines()
         {
-            for (int i = transform.childCount - 1; i >= 0; i--)
+            List<MapWaypoint> nodes = GetAllNodes();
+            if (nodes == null || nodes.Count == 0) return;
+
+            for (int n = 0; n < nodes.Count; n++)
             {
-                Transform child = transform.GetChild(i);
-                if (!child.name.StartsWith(LinePrefix)) continue;
-                if (Application.isPlaying)
+                MapWaypoint node = nodes[n];
+                if (node == null) continue;
+
+                Transform parent = node.transform;
+                for (int i = parent.childCount - 1; i >= 0; i--)
                 {
-                    Destroy(child.gameObject);
-                }
-                else
-                {
-                    DestroyImmediate(child.gameObject);
+                    Transform child = parent.GetChild(i);
+                    if (!child.name.StartsWith(LinePrefix)) continue;
+                    if (Application.isPlaying)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                    else
+                    {
+                        DestroyImmediate(child.gameObject);
+                    }
                 }
             }
         }
@@ -155,9 +165,6 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             ClearRuntimeLines();
             if (!renderRuntimeLines) return;
-
-            MapWaypoint[] nodes = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
-            if (nodes == null || nodes.Length == 0) return;
 
             RebuildRuntimeLines();
         }
@@ -227,6 +234,12 @@ namespace IndieGame.Gameplay.Board.Runtime
                 if (from.connections[i].targetNode == to) return true;
             }
             return false;
+        }
+
+        private List<MapWaypoint> GetAllNodes()
+        {
+            if (BoardMapManager.Instance == null) return null;
+            return BoardMapManager.Instance.GetAllNodes();
         }
     }
 }

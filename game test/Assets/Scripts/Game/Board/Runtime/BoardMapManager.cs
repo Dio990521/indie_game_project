@@ -52,6 +52,15 @@ namespace IndieGame.Gameplay.Board.Runtime
             return node;
         }
 
+        public List<MapWaypoint> GetAllNodes()
+        {
+            if (!_isReady)
+            {
+                Init();
+            }
+            return new List<MapWaypoint>(_nodes.Values);
+        }
+
         private void HandleGameModeChanged(GameModeChangedEvent evt)
         {
             if (evt.Mode != GameMode.Board) return;
