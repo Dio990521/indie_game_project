@@ -32,6 +32,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void OnDisable()
         {
+            // 关闭时强制停止移动与协程，避免残留状态
             StopAllCoroutines();
             _isMoving = false;
             if (_activeEntity != null)
@@ -51,12 +52,14 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_isMoving) return;
             if (entity == null)
             {
+                // 尝试修复引用并回退到玩家实体
                 ResolveReferences(-1);
                 entity = _playerEntity;
                 if (entity == null) return;
             }
             _activeEntity = entity;
             _triggerNodeEvents = triggerNodeEvents;
+            // 同步到实体层，确保事件在连接上触发
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
             _isMoving = true;
             _activeEntity.SetMovingState(true);
@@ -69,6 +72,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_isMoving) return;
             if (entity == null)
             {
+                // 没有显式传入实体时，优先用玩家实体
                 ResolveReferences(-1);
                 entity = _playerEntity;
                 if (entity == null) return;
@@ -76,6 +80,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             _activeEntity = entity;
             _triggerNodeEvents = triggerNodeEvents;
+            // DirectedMove 由外部按步驱动，但事件触发逻辑一致
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
             _isMoving = true;
             _activeEntity.SetMovingState(true);
@@ -98,6 +103,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public IEnumerator MoveActiveEntityAlongConnection(WaypointConnection connection, bool isFinalStep)
         {
             if (_activeEntity == null || connection == null) yield break;
+            // 逐段移动，保持与 BoardEntity 的曲线逻辑一致
             _activeEntity.SetMoveAnimationSpeed(1f);
             yield return StartCoroutine(_activeEntity.MoveAlongConnection(connection));
             yield return StartCoroutine(HandleNodeArrival(connection.targetNode, isFinalStep));
@@ -109,6 +115,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             StopAllCoroutines();
             _isMoving = false;
             if (forkSelector != null) forkSelector.ClearSelection();
+            // 重置到起点只改变玩家实体位置
             if (_startNode != null && _playerEntity != null)
             {
                 _playerEntity.SetCurrentNode(_startNode, true);
@@ -129,6 +136,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EnsureInteractionHandler();
             if (BoardMapManager.Instance != null && !BoardMapManager.Instance.IsReady)
             {
+                // 保证地图节点缓存就绪
                 BoardMapManager.Instance.Init();
             }
             _startNode = BoardMapManager.Instance != null ? BoardMapManager.Instance.GetNode(0) : null;
@@ -139,12 +147,14 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (preferredNodeId >= 0)
             {
+                // 外部指定起始节点时优先使用
                 SetCurrentNodeById(preferredNodeId);
                 return;
             }
 
             if (_playerEntity != null && _playerEntity.CurrentNode == null && _startNode != null)
             {
+                // 首次进入时将玩家放到起点
                 _playerEntity.SetCurrentNode(_startNode, true);
             }
         }
@@ -156,6 +166,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             _playerEntity = playerToken.GetComponent<BoardEntity>();
             if (_playerEntity == null)
             {
+                // 玩家物体缺少 BoardEntity 时自动补齐
                 _playerEntity = playerToken.gameObject.AddComponent<BoardEntity>();
                 _playerEntity.SetAsPlayer(true);
             }
@@ -172,6 +183,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_activeEntity != null) _activeEntity.SetMoveAnimationSpeed(1f);
             while (ctx.StepsRemaining > 0)
             {
+                // 每步独立处理，可能在分叉点暂停
                 yield return StartCoroutine(ProcessStep(ctx));
             }
 
@@ -203,6 +215,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
                 if (validNodes.Count == 1)
                 {
+                    // 只有一条路时直接加入路径
                     WaypointConnection conn = tempNode.GetConnectionTo(validNodes[0]);
                     if (conn == null)
                     {
@@ -215,6 +228,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
                 else
                 {
+                    // 遇到分叉时停止路径收集，交由选择流程
                     encounteredFork = true;
                     break;
                 }
@@ -254,6 +268,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (ForkSelectionRequested != null)
             {
+                // 由外部 UI/输入系统决定分叉路线
                 ForkSelectionRequested.Invoke(currentNode, result =>
                 {
                     selectedConnection = result;
@@ -263,6 +278,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
             else
             {
+                // 没有监听者则随机选择
                 selectedConnection = ChooseNextConnection(currentNode);
             }
 
@@ -280,6 +296,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (_activeEntity == null) yield break;
             EnsureInteractionHandler();
+            // 节点事件由交互处理器统一负责
             yield return _interactionHandler.HandleArrival(_activeEntity, node, isFinalStep, _triggerNodeEvents);
         }
 

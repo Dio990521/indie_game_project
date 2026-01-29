@@ -8,6 +8,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (context.movementController != null && context.movementController.CurrentNodeId >= 0)
             {
+                // 已有有效节点时不强制重置
                 return;
             }
             context.ResetToStart();

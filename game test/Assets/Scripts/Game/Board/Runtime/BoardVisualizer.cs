@@ -44,6 +44,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void OnDrawGizmos()
         {
             if (Application.isPlaying && renderRuntimeLines) return;
+            // 编辑器下也走缓存节点，避免全场景扫描
             List<MapWaypoint> nodes = GetAllNodes();
             if (nodes == null || nodes.Count == 0) return;
 
@@ -71,6 +72,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         public void RebuildRuntimeLines()
         {
+            // 旧线条分散在各节点下，需要先按节点清理
             ClearRuntimeLines();
 
             List<MapWaypoint> nodes = GetAllNodes();
@@ -106,6 +108,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void CreateRuntimeLine(int index, MapWaypoint from, MapWaypoint to, WaypointConnection conn, bool isBidirectional)
         {
             GameObject lineObj = new GameObject($"{LinePrefix}{index}");
+            // 线条挂在起点节点下，节点销毁时自动清理
             lineObj.transform.SetParent(from.transform, false);
             lineObj.transform.localPosition = Vector3.zero;
 
@@ -147,6 +150,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 {
                     Transform child = parent.GetChild(i);
                     if (!child.name.StartsWith(LinePrefix)) continue;
+                    // 仅清理运行时生成的线条对象
                     if (Application.isPlaying)
                     {
                         Destroy(child.gameObject);
@@ -163,6 +167,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (!Application.isPlaying) return;
 
+            // 场景切换后强制重建线条，避免残留
             ClearRuntimeLines();
             if (!renderRuntimeLines) return;
 
@@ -238,6 +243,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private List<MapWaypoint> GetAllNodes()
         {
+            // 统一从 BoardMapManager 缓存中获取节点
             if (BoardMapManager.Instance == null) return null;
             return BoardMapManager.Instance.GetAllNodes();
         }

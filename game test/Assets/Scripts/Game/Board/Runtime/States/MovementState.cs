@@ -26,6 +26,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             if (context.movementController.PlayerEntity == null)
             {
+                // 兜底补齐玩家实体引用
                 context.movementController.ResolveReferences(-1);
             }
 
@@ -36,6 +37,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 return;
             }
 
+            // 进入移动协程，等待移动完成后切换状态
             _routine = context.StartCoroutine(MoveRoutine(context));
         }
 
@@ -57,6 +59,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             BoardMovementController controller = context.movementController;
             BoardEntity entity = controller.PlayerEntity;
 
+            // 进入受控移动模式，由本状态逐步驱动
             controller.BeginDirectedMove(entity, true);
 
             int stepsRemaining = _steps;
@@ -72,10 +75,12 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
                 if (validNodes.Count == 1)
                 {
+                    // 单一路径直接移动
                     selectedConnection = current.GetConnectionTo(validNodes[0]);
                 }
                 else
                 {
+                    // 多分叉进入选择覆盖状态
                     System.Collections.Generic.List<WaypointConnection> options = current.GetConnectionsTo(validNodes);
                     bool resolved = false;
                     entity.SetMoveAnimationSpeed(0f);
@@ -95,6 +100,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 stepsRemaining--;
             }
 
+            // 移动结束后进入事件处理阶段
             controller.EndDirectedMove();
             context.ChangeState(new EventState());
         }

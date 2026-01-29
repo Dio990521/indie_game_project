@@ -23,12 +23,14 @@ namespace IndieGame.Gameplay.Board.Runtime
         private void Start()
         {
             _isBoardActive = false;
+            // 默认关闭棋盘逻辑，等待进入 Board 模式
             SetBoardComponentsActive(false);
         }
 
         private void Update()
         {
             if (!_isBoardActive) return;
+            // Overlay 先更新，确保 UI/选择状态优先处理
             _overlayStateMachine.Update(this);
             _stateMachine.Update(this);
         }
@@ -79,6 +81,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 Init(true);
                 return;
             }
+            // 离开棋盘时进入休眠，停止更新与可视
             Sleep();
         }
 
@@ -92,6 +95,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                     movementController.forkSelector.enabled = isActive;
                 }
             }
+            // 同步棋盘可视对象
             SetBoardVisualActive(isActive);
         }
 
@@ -103,15 +107,18 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (movementController == null || movementController.Equals(null))
             {
+                // 场景中查找控制器作为兜底
                 movementController = FindAnyObjectByType<BoardMovementController>();
             }
             if (movementController == null) return;
 
+            // 初始化引用并根据保存位置设置起点
             movementController.ResolveReferences(-1);
             bool restoredFromSave = RestoreBoardPosition();
 
             ClearOverlayState();
             _stateMachine.Clear(this);
+            // 如果有存档点则直接进入玩家回合，否则进入初始化状态
             ChangeState(restoredFromSave ? new PlayerTurnState() : new InitState());
             _isInitialized = true;
         }
@@ -141,14 +148,17 @@ namespace IndieGame.Gameplay.Board.Runtime
             int savedIndex = loader != null ? loader.GetSavedBoardIndex() : -1;
             if (savedIndex >= 0)
             {
+                // 从 SceneLoader 缓存的节点恢复
                 movementController.SetCurrentNodeById(savedIndex);
                 SyncCameraToPlayer();
                 if (loader != null && loader.IsReturnToBoard)
                 {
+                    // 清理返回棋盘标记，避免重复触发
                     loader.ClearPayload();
                 }
                 return true;
             }
+            // 没有保存点时回到起始位置
             movementController.ResetToStart();
             SyncCameraToPlayer();
             return false;
@@ -160,6 +170,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             BoardEntity entity = movementController.PlayerEntity;
             if (entity == null) return;
             if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer == entity.gameObject) return;
+            // 非玩家棋盘实体按模式显示/隐藏
             entity.gameObject.SetActive(isActive);
         }
 
@@ -186,6 +197,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 evt.OnCompleted?.Invoke();
                 return;
             }
+            // 这里只做简单输出，后续可扩展战斗或对话
             Debug.Log($"<color=yellow>⚔ 遇到单位: {evt.Target.name} (Node {evt.Node.nodeID})</color>");
             evt.OnCompleted?.Invoke();
         }

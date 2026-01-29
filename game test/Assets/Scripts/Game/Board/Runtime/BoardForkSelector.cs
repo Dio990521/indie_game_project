@@ -29,12 +29,14 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private void OnInteractInput()
         {
+            // 记录一次确认输入，由协程在合适时机消费
             _interactTriggered = true;
         }
 
         public void ClearSelection()
         {
             _interactTriggered = false;
+            // 切分叉时清理 UI 光标
             if (viewHelper != null) viewHelper.ClearCursors();
         }
 
@@ -76,6 +78,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 Vector2 moveInput = inputReader.CurrentMoveInput;
                 if (Time.time > nextInputTime && Mathf.Abs(moveInput.x) > 0.5f)
                 {
+                    // 左右切换分叉选项
                     if (moveInput.x < 0) currentIndex--;
                     else currentIndex++;
 
@@ -88,6 +91,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
                 if (_interactTriggered)
                 {
+                    // 确认输入后锁定选择
                     selected = true;
                     _interactTriggered = false;
                 }

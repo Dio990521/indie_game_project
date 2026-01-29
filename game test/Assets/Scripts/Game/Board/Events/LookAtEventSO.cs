@@ -20,6 +20,7 @@ namespace IndieGame.Gameplay.Board.Events
             while (timer < duration)
             {
                 timer += Time.deltaTime;
+                // 平滑插值转向目标
                 player.rotation = Quaternion.Slerp(player.rotation, targetRot, timer * 5f);
                 yield return null;
             }

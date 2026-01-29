@@ -69,6 +69,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 MapWaypoint target = connections[i].targetNode;
                 if (target == null || target == incomingFrom) continue;
+                // 优先排除来路，避免原路返回
                 results.Add(target);
             }
 
@@ -79,6 +80,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                     MapWaypoint target = connections[i].targetNode;
                     if (target == incomingFrom)
                     {
+                        // 没有其他出口时允许原路返回
                         results.Add(target);
                         break;
                     }
@@ -103,6 +105,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             List<WaypointConnection> results = new List<WaypointConnection>();
             if (nodes == null || nodes.Count == 0) return results;
 
+            // 使用 HashSet 加速查找目标节点
             HashSet<MapWaypoint> lookup = new HashSet<MapWaypoint>(nodes);
             for (int i = 0; i < connections.Count; i++)
             {

@@ -26,6 +26,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             BoardEntity npc = BoardEntity.FindFirstNpc();
             if (npc == null)
             {
+                // 没有 NPC 时直接回到玩家回合
                 context.ChangeState(new PlayerTurnState());
                 yield break;
             }
@@ -35,15 +36,18 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             if (context.movementController != null)
             {
+                // 使用同一套移动控制器，避免逻辑分叉
                 context.movementController.BeginMove(npc, steps, false);
                 yield return new WaitUntil(() => context.movementController == null || !context.movementController.IsMoving);
             }
             else
             {
+                // 兜底使用实体自身移动
                 npc.MoveTo(steps);
                 yield return new WaitUntil(() => npc == null || !npc.IsMoving);
             }
 
+            // 敌方回合结束切回玩家回合
             context.ChangeState(new PlayerTurnState());
         }
     }

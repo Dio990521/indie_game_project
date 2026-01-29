@@ -12,11 +12,13 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 检查是否有挂起的确认事件
             if (!IndieGame.UI.Confirmation.ConfirmationEvent.HasPending)
             {
+                // 没有弹窗则直接跳过事件阶段
                 _shouldSkip = true;
                 return;
             }
 
             // 如果有事件，注册回调等待响应
+            // 响应后再进入敌方回合，确保事件完整结束
             _onResponded = _ => context.ChangeState(new EnemyTurnState());
             EventBus.Subscribe(_onResponded);
         }
@@ -26,6 +28,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (_shouldSkip)
             {
+                // 延后一帧跳转，保证状态机稳定
                 _shouldSkip = false;
                 context.ChangeState(new EnemyTurnState());
             }

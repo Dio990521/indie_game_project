@@ -18,10 +18,12 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             _menu = UIManager.Instance != null ? UIManager.Instance.BoardActionMenuInstance : null;
             if (_menu != null)
             {
+                // 打开回合菜单并注册掷骰子回调
                 _menu.Show(BuildDefaultMenuData());
                 _onRollDice = () => OnInteract(context);
                 _menu.OnRollDiceRequested += _onRollDice;
             }
+            // 监听背包开关，以便隐藏/恢复菜单
             _onInventoryOpened = () => HandleInventoryOpened(context);
             _onInventoryClosed = () => HandleInventoryClosed(context);
             InventoryManager.OnInventoryOpened += _onInventoryOpened;
@@ -30,6 +32,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         public override void OnExit(BoardGameManager context)
         {
+            // 清理 UI 与事件订阅，避免泄漏
             if (_onInventoryOpened != null) InventoryManager.OnInventoryOpened -= _onInventoryOpened;
             if (_onInventoryClosed != null) InventoryManager.OnInventoryClosed -= _onInventoryClosed;
             if (_menu != null)
@@ -47,6 +50,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
             if (context.movementController == null || context.movementController.IsMoving) return;
 
+            // 掷骰子进入移动阶段
             int steps = Random.Range(1, 7);
             Debug.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
             context.ChangeState(new MovementState(steps));
@@ -60,6 +64,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (_menu != null)
             {
+                // 打开背包时隐藏棋盘菜单
                 _menu.Hide();
             }
         }
@@ -68,6 +73,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (_menu != null)
             {
+                // 关闭背包后恢复棋盘菜单
                 _menu.Show(BuildDefaultMenuData());
             }
         }

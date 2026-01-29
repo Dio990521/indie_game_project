@@ -53,6 +53,7 @@ namespace IndieGame.Gameplay.Board.View
                 GameObject cursor;
                 if (cursorPrefab != null)
                 {
+                    // 有预制体时走对象池，避免频繁实例化
                     cursor = _cursorPool.Get();
                 }
                 else
@@ -102,6 +103,7 @@ namespace IndieGame.Gameplay.Board.View
                 if (!c) continue;
                 if (_usePooling && _cursorPool != null)
                 {
+                    // 走对象池回收，避免内存抖动
                     _cursorPool.Release(c);
                 }
                 else

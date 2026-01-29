@@ -15,6 +15,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             BoardEntity other = BoardEntity.FindOtherAtNode(node, entity);
             if (other != null)
             {
+                // 遇到其他单位时先暂停移动并处理交互
                 entity.SetMoveAnimationSpeed(0f);
                 yield return HandleEntityEncounter(entity, other, node);
                 if (!isFinalStep) entity.SetMoveAnimationSpeed(1f);
@@ -25,12 +26,14 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (shouldTrigger)
             {
+                // 广播抵达事件并触发格子效果
                 EventBus.Raise(new PlayerReachedNodeEvent { Node = node });
                 node.tileData.OnEnter(entity.gameObject);
             }
 
             if (ConfirmationEvent.HasPending)
             {
+                // 等待确认弹窗响应，避免移动过程中继续推进
                 bool responded = false;
                 void OnResponded(ConfirmationRespondedEvent _) => responded = true;
                 EventBus.Subscribe<ConfirmationRespondedEvent>(OnResponded);

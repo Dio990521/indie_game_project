@@ -58,6 +58,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (CurrentNode == null && initialNode != null)
             {
+                // 初始节点配置时可直接贴到该点
                 SetCurrentNode(initialNode, snapToNodeOnStart);
             }
         }
@@ -72,10 +73,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             CurrentNode = node;
             if (resetLastWaypoint)
             {
+                // 切换节点时通常要清理上一个节点引用
                 LastWaypoint = null;
             }
             if (snapToNode && node != null)
             {
+                // 立即移动到节点位置（用于初始化/传送）
                 transform.position = node.transform.position;
             }
         }
@@ -100,6 +103,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 Debug.LogWarning("[BoardEntity] CurrentNode is null, cannot move.");
                 return;
             }
+            // 由自身执行简化移动逻辑（不含分叉交互）
             StartCoroutine(MoveRoutine(steps));
         }
 
@@ -173,6 +177,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             float speed = stats != null ? stats.MoveSpeed.Value : moveSpeed;
             if (speed <= 0f || approxDist <= 0f)
             {
+                // 速度为 0 或距离无效时直接传送到终点
                 transform.position = p2;
                 SetCurrentNode(conn.targetNode, false);
                 yield break;
@@ -197,6 +202,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                     transform.position = triggerPos;
                     timer = triggerT * duration;
 
+                    // 在路径中断点执行事件
                     yield return StartCoroutine(HandleConnectionEvent(evt));
 
                     nextEventIndex++;
@@ -209,6 +215,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 Vector3 moveDir = (nextPos - transform.position).normalized;
                 if (moveDir != Vector3.zero)
                 {
+                    // 让角色朝移动方向旋转
                     Quaternion targetRot = Quaternion.LookRotation(moveDir);
                     transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * dt);
                 }
@@ -228,6 +235,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             if (evt.eventAction != null)
             {
+                // 事件可包含动画/对白等，需要协程等待完成
                 yield return StartCoroutine(evt.eventAction.Execute(BoardGameManager.Instance, evt.contextTarget));
             }
             else
@@ -245,6 +253,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             for (int i = 0; i < animators.Length; i++)
             {
                 if (animators[i].runtimeAnimatorController == null) continue;
+                // 选第一个可用控制器，避免反复查找
                 animator = animators[i];
                 return;
             }

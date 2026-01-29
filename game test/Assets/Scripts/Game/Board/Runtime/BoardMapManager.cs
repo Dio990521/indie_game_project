@@ -26,6 +26,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         // 由 GameManager 或进入 Board 模式时显式调用。
         public void Init()
         {
+            // 进入棋盘或需要时重建缓存，避免运行期频繁查找
             _nodes.Clear();
             MapWaypoint[] waypoints = FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None);
             for (int i = 0; i < waypoints.Length; i++)
@@ -46,6 +47,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (!_isReady)
             {
+                // 延迟初始化，确保查询时有数据
                 Init();
             }
             _nodes.TryGetValue(id, out MapWaypoint node);
@@ -56,6 +58,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             if (!_isReady)
             {
+                // 避免外部在未初始化时取空数据
                 Init();
             }
             return new List<MapWaypoint>(_nodes.Values);

@@ -30,6 +30,7 @@ namespace IndieGame.Gameplay.Board.Data
 
         public override void OnEnter(GameObject player)
         {
+            // 组装进入提示文案（支持本地化）
             string zoneLabel = ZoneName != null ? ZoneName.GetLocalizedString() : "this zone";
             string message = $"Enter {zoneLabel}?";
             if (EnterPrompt != null)
@@ -44,6 +45,7 @@ namespace IndieGame.Gameplay.Board.Data
                 {
                     SceneLoader loader = SceneLoader.Instance;
                     if (loader == null) return;
+                    // 确认后跳转到目标探索场景
                     loader.LoadScene(TargetSceneName, TargetLocationId);
                 },
                 OnCancel = null

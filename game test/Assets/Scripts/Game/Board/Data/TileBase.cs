@@ -26,6 +26,7 @@ namespace IndieGame.Gameplay.Board.Data
         /// </summary>
         public virtual void OnEnter(GameObject player)
         {
+            // 默认进入行为等同于停留触发
             OnPlayerStop(player);
         }
     }

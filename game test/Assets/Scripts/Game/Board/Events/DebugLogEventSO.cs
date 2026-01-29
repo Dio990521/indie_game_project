@@ -14,6 +14,7 @@ namespace IndieGame.Gameplay.Board.Events
         {
             // targetContext 可以是场景里配置的触发点物体
             string targetName = targetContext != null ? targetContext.name : "null";
+            // 统一用富文本颜色输出，便于调试区分
             Debug.Log($"<color=#{ColorUtility.ToHtmlStringRGB(logColor)}>⚡ [Event] {message} (At: {targetName})</color>");
             yield return null; // 稍微停一帧
         }

@@ -28,11 +28,13 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             if (context.movementController == null || context.movementController.forkSelector == null)
             {
+                // 没有分叉选择器时直接返回空结果
                 _onSelected?.Invoke(null);
                 context.PopOverlayState();
                 return;
             }
 
+            // 进入选择协程，等待用户输入
             _routine = context.StartCoroutine(SelectRoutine(context));
         }
 
@@ -50,6 +52,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             WaypointConnection selected = null;
             if (_options != null)
             {
+                // 有显式候选列表时使用该列表
                 yield return context.movementController.forkSelector.SelectConnection(_forkNode, _options, result => selected = result);
             }
             else
