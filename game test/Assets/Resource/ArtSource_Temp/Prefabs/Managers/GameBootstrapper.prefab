@@ -53,4 +53,5 @@ MonoBehaviour:
   cameraManagerPrefab: {fileID: 8903109993617494670, guid: 953af9d22f83d4d80a49e6e81564f2a8, type: 3}
   sceneLoaderPrefab: {fileID: 3052409784558630232, guid: ab46d0b2a20834d5b9b26be3e9ba978e, type: 3}
   boardMapManagerPrefab: {fileID: 2721992974281658544, guid: 50df90190ad5b45158face12236334b6, type: 3}
+  boardEntityManagerPrefab: {fileID: 8507365613467577213, guid: e98bf9f2f6638435797af81696c6c5bc, type: 3}
   playerPrefab: {fileID: 9170140433642860262, guid: 3fdf0eb77ea2e4bf69465f1396181008, type: 3}

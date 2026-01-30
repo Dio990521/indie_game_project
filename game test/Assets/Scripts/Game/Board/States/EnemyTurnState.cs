@@ -23,7 +23,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         private IEnumerator RunEnemyTurn(BoardGameManager context)
         {
-            BoardEntity npc = BoardEntity.FindFirstNpc();
+            BoardEntity npc = BoardEntityManager.Instance != null
+                ? BoardEntityManager.Instance.FindFirstNpc()
+                : null;
             if (npc == null)
             {
                 // 没有 NPC 时直接回到玩家回合

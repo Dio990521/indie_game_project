@@ -22,8 +22,6 @@ namespace IndieGame.Core.Utilities
             {
                 if (_applicationIsQuitting)
                 {
-                    Debug.LogWarning($"[MonoSingleton] Instance '{typeof(T)}' already destroyed on application quit." +
-                                     " Won't create again - returning null.");
                     return null;
                 }
 

@@ -26,6 +26,7 @@ namespace IndieGame.Core
         [SerializeField] private GameObject cameraManagerPrefab;
         [SerializeField] private GameObject sceneLoaderPrefab;
         [SerializeField] private GameObject boardMapManagerPrefab;
+        [SerializeField] private GameObject boardEntityManagerPrefab;
         [SerializeField] private GameObject playerPrefab;
 
         private GameManager _gameManagerInstance;
@@ -35,6 +36,7 @@ namespace IndieGame.Core
         private CameraManager _cameraManagerInstance;
         private SceneLoader _sceneLoaderInstance;
         private BoardMapManager _boardMapManagerInstance;
+        private BoardEntityManager _boardEntityManagerInstance;
 
         private void Awake()
         {
@@ -61,6 +63,7 @@ namespace IndieGame.Core
             EnsureManagerFromPrefab(root, cameraManagerPrefab, "CameraManager", ref _cameraManagerInstance);
             EnsureManagerFromPrefab(root, sceneLoaderPrefab, "SceneLoader", ref _sceneLoaderInstance);
             EnsureManagerFromPrefab(root, boardMapManagerPrefab, "BoardMapManager", ref _boardMapManagerInstance);
+            EnsureManagerFromPrefab(root, boardEntityManagerPrefab, "BoardEntityManager", ref _boardEntityManagerInstance);
 
             // 2. 可以在这里查找场景里的其他依赖
             // var ui = FindObjectOfType<UIManager>();

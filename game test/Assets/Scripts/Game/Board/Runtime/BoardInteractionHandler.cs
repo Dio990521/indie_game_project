@@ -12,7 +12,9 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (entity == null || node == null) yield break;
             if (!triggerNodeEvents || node.tileData == null) yield break;
 
-            BoardEntity other = BoardEntity.FindOtherAtNode(node, entity);
+            BoardEntity other = BoardEntityManager.Instance != null
+                ? BoardEntityManager.Instance.FindOtherAtNode(node, entity)
+                : null;
             if (other != null)
             {
                 // 遇到其他单位时先暂停移动并处理交互

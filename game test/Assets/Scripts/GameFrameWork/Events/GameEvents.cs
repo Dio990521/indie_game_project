@@ -64,4 +64,9 @@ namespace IndieGame.Core
         public MapWaypoint Node;
         public System.Action OnCompleted;
     }
+
+    public struct BoardEntityMoveEndedEvent
+    {
+        public Gameplay.Board.Runtime.BoardEntity Entity;
+    }
 }
