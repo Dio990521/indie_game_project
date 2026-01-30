@@ -1,56 +1,73 @@
-using System.Collections;
 using UnityEngine;
+using IndieGame.Core;
+using IndieGame.Gameplay.Board.Runtime;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
 {
     public class EnemyTurnState : BoardState
     {
-        private Coroutine _routine;
+        private BoardGameManager _context;
+        private BoardMovementController _controller;
+        private BoardEntity _npc;
+        private System.Action<BoardMovementEndedEvent> _onMoveEnded;
 
         public override void OnEnter(BoardGameManager context)
         {
-            _routine = context.StartCoroutine(RunEnemyTurn(context));
-        }
-
-        public override void OnExit(BoardGameManager context)
-        {
-            if (_routine != null)
-            {
-                context.StopCoroutine(_routine);
-                _routine = null;
-            }
-        }
-
-        private IEnumerator RunEnemyTurn(BoardGameManager context)
-        {
-            BoardEntity npc = BoardEntityManager.Instance != null
+            _context = context;
+            _controller = context.movementController;
+            _npc = BoardEntityManager.Instance != null
                 ? BoardEntityManager.Instance.FindFirstNpc()
                 : null;
-            if (npc == null)
+
+            if (_npc == null)
             {
                 // 没有 NPC 时直接回到玩家回合
                 context.ChangeState(new PlayerTurnState());
-                yield break;
+                return;
+            }
+
+            if (_controller == null)
+            {
+                Debug.LogWarning("[EnemyTurnState] Missing movementController.");
+                context.ChangeState(new PlayerTurnState());
+                return;
             }
 
             int steps = 1;
             Debug.Log("<color=orange>🤖 NPC 回合移动: 1</color>");
 
-            if (context.movementController != null)
-            {
-                // 使用同一套移动控制器，避免逻辑分叉
-                context.movementController.BeginMove(npc, steps, false);
-                yield return new WaitUntil(() => context.movementController == null || !context.movementController.IsMoving);
-            }
-            else
-            {
-                // 兜底使用实体自身移动
-                npc.MoveTo(steps);
-                yield return new WaitUntil(() => npc == null || !npc.IsMoving);
-            }
+            _onMoveEnded = OnMoveEnded;
+            EventBus.Subscribe(_onMoveEnded);
 
-            // 敌方回合结束切回玩家回合
-            context.ChangeState(new PlayerTurnState());
+            _controller.BeginMove(_npc, steps, false);
+            if (!_controller.IsMoving)
+            {
+                CleanupSubscriptions();
+                context.ChangeState(new PlayerTurnState());
+            }
+        }
+
+        public override void OnExit(BoardGameManager context)
+        {
+            CleanupSubscriptions();
+        }
+
+        private void OnMoveEnded(BoardMovementEndedEvent evt)
+        {
+            if (_context == null) return;
+            if (evt.Entity != _npc) return;
+
+            CleanupSubscriptions();
+            _context.ChangeState(new PlayerTurnState());
+        }
+
+        private void CleanupSubscriptions()
+        {
+            if (_onMoveEnded != null)
+            {
+                EventBus.Unsubscribe(_onMoveEnded);
+                _onMoveEnded = null;
+            }
         }
     }
 }

@@ -1,5 +1,4 @@
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
@@ -112,68 +111,6 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
-        /// 启动移动逻辑（不考虑分叉交互的简化版本）
-        /// </summary>
-        /// <param name="steps">移动步数</param>
-        public void MoveTo(int steps)
-        {
-            if (IsMoving) return;
-            if (CurrentNode == null)
-            {
-                Debug.LogWarning("[BoardEntity] CurrentNode 为空，无法开始移动。");
-                return;
-            }
-            StartCoroutine(MoveRoutine(steps));
-        }
-
-        /// <summary>
-        /// 移动逻辑的主协程
-        /// </summary>
-        private IEnumerator MoveRoutine(int totalSteps)
-        {
-            SetMovingState(true);
-            SetMoveAnimationSpeed(1f); // 开启跑步/行走动画
-
-            int stepsRemaining = totalSteps;
-            while (stepsRemaining > 0)
-            {
-                if (CurrentNode == null || CurrentNode.connections.Count == 0) break;
-
-                // 寻找下一个连接节点（处理路径选择）
-                WaypointConnection connection = ChooseNextConnection(CurrentNode);
-                if (connection == null) break;
-
-                // 沿着路径线段移动（直到到达该段终点）
-                yield return StartCoroutine(MoveAlongConnection(connection));
-                stepsRemaining--;
-            }
-
-            SetMoveAnimationSpeed(0f); // 恢复待机动画
-            SetMovingState(false);
-            EventBus.Raise(new BoardEntityMoveEndedEvent { Entity = this }); // 广播全局事件，便于解耦监听
-        }
-
-        /// <summary>
-        /// 根据当前节点决定下一步走哪条路径。
-        /// 如果有分叉，目前会随机选择（不包含UI交互逻辑）。
-        /// </summary>
-        private WaypointConnection ChooseNextConnection(MapWaypoint node)
-        {
-            if (node == null || node.connections.Count == 0) return null;
-
-            // 获取合法地块（通常会排除掉掉头回来的地块）
-            List<MapWaypoint> validTargets = node.GetValidNextNodes(LastWaypoint);
-            if (validTargets.Count == 0) return null;
-
-            // 单一路径直接走
-            if (validTargets.Count == 1) return node.GetConnectionTo(validTargets[0]);
-
-            // 多路径随机选（如果需要玩家选路，逻辑通常在此处拦截）
-            int index = UnityEngine.Random.Range(0, validTargets.Count);
-            return node.GetConnectionTo(validTargets[index]);
-        }
-
-        /// <summary>
         /// 核心移动协程：沿着两个节点间的二阶贝塞尔曲线平滑移动。
         /// </summary>
         public IEnumerator MoveAlongConnection(WaypointConnection conn)
@@ -245,6 +182,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             transform.position = p2;
             LastWaypoint = CurrentNode;
             SetCurrentNode(conn.targetNode, false, false);
+            // 广播“单段移动完成”事件，交由上层调度继续行动
+            EventBus.Raise(new BoardEntitySegmentCompletedEvent
+            {
+                Entity = this,
+                Node = conn.targetNode
+            });
         }
 
         /// <summary>

@@ -1,4 +1,3 @@
-using System.Collections;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Gameplay.Board.Runtime;
@@ -8,7 +7,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     public class MovementState : BoardState
     {
         private readonly int _steps;
-        private Coroutine _routine;
+        private BoardGameManager _context;
+        private BoardMovementController _controller;
+        private System.Action<BoardMovementEndedEvent> _onMoveEnded;
+        private System.Action<MapWaypoint, System.Collections.Generic.List<WaypointConnection>, System.Action<WaypointConnection>> _onForkRequested;
 
         public MovementState(int steps)
         {
@@ -17,6 +19,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         public override void OnEnter(BoardGameManager context)
         {
+            _context = context;
             if (context.movementController == null)
             {
                 Debug.LogWarning("[MovementState] Missing movementController.");
@@ -37,72 +40,66 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 return;
             }
 
-            // 进入移动协程，等待移动完成后切换状态
-            _routine = context.StartCoroutine(MoveRoutine(context));
+            _controller = context.movementController;
+
+            _onMoveEnded = OnMoveEnded;
+            EventBus.Subscribe(_onMoveEnded);
+
+            _onForkRequested = HandleForkSelectionRequested;
+            _controller.ForkSelectionRequested += _onForkRequested;
+
+            // 交由控制器统一执行步数与选路逻辑
+            _controller.BeginMove(_controller.PlayerEntity, _steps, true);
+            if (!_controller.IsMoving)
+            {
+                CleanupSubscriptions();
+                context.ChangeState(new PlayerTurnState());
+            }
         }
 
         public override void OnExit(BoardGameManager context)
         {
-            if (_routine != null)
-            {
-                context.StopCoroutine(_routine);
-                _routine = null;
-            }
-            if (context.movementController != null)
-            {
-                context.movementController.EndDirectedMove();
-            }
+            CleanupSubscriptions();
         }
 
-        private IEnumerator MoveRoutine(BoardGameManager context)
+        private void OnMoveEnded(BoardMovementEndedEvent evt)
         {
-            BoardMovementController controller = context.movementController;
-            BoardEntity entity = controller.PlayerEntity;
+            if (_controller == null || _context == null) return;
+            if (evt.Entity != _controller.PlayerEntity) return;
 
-            // 进入受控移动模式，由本状态逐步驱动
-            controller.BeginDirectedMove(entity, true);
+            CleanupSubscriptions();
+            _context.ChangeState(new EventState());
+        }
 
-            int stepsRemaining = _steps;
-            while (stepsRemaining > 0)
+        private void HandleForkSelectionRequested(
+            MapWaypoint node,
+            System.Collections.Generic.List<WaypointConnection> options,
+            System.Action<WaypointConnection> onSelected)
+        {
+            if (_context == null)
             {
-                MapWaypoint current = entity.CurrentWaypoint;
-                if (current == null) break;
-
-                System.Collections.Generic.List<MapWaypoint> validNodes = current.GetValidNextNodes(entity.LastWaypoint);
-                if (validNodes.Count == 0) break;
-
-                WaypointConnection selectedConnection = null;
-
-                if (validNodes.Count == 1)
-                {
-                    // 单一路径直接移动
-                    selectedConnection = current.GetConnectionTo(validNodes[0]);
-                }
-                else
-                {
-                    // 多分叉进入选择覆盖状态
-                    System.Collections.Generic.List<WaypointConnection> options = current.GetConnectionsTo(validNodes);
-                    bool resolved = false;
-                    entity.SetMoveAnimationSpeed(0f);
-
-                    context.PushOverlayState(new ForkSelectionState(current, options, result =>
-                    {
-                        selectedConnection = result;
-                        resolved = true;
-                    }));
-
-                    yield return new WaitUntil(() => resolved || context.OverlayState == null || !context.isActiveAndEnabled);
-                }
-
-                if (selectedConnection == null) break;
-
-                yield return controller.MoveActiveEntityAlongConnection(selectedConnection, stepsRemaining == 1);
-                stepsRemaining--;
+                onSelected?.Invoke(null);
+                return;
             }
 
-            // 移动结束后进入事件处理阶段
-            controller.EndDirectedMove();
-            context.ChangeState(new EventState());
+            _context.PushOverlayState(new ForkSelectionState(node, options, result =>
+            {
+                onSelected?.Invoke(result);
+            }));
+        }
+
+        private void CleanupSubscriptions()
+        {
+            if (_onMoveEnded != null)
+            {
+                EventBus.Unsubscribe(_onMoveEnded);
+                _onMoveEnded = null;
+            }
+            if (_controller != null && _onForkRequested != null)
+            {
+                _controller.ForkSelectionRequested -= _onForkRequested;
+                _onForkRequested = null;
+            }
         }
     }
 }

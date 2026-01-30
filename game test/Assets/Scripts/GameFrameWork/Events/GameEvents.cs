@@ -65,7 +65,13 @@ namespace IndieGame.Core
         public System.Action OnCompleted;
     }
 
-    public struct BoardEntityMoveEndedEvent
+    public struct BoardEntitySegmentCompletedEvent
+    {
+        public Gameplay.Board.Runtime.BoardEntity Entity;
+        public MapWaypoint Node;
+    }
+
+    public struct BoardMovementEndedEvent
     {
         public Gameplay.Board.Runtime.BoardEntity Entity;
     }
