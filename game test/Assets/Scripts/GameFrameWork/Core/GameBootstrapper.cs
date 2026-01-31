@@ -13,12 +13,15 @@ namespace IndieGame.Core
     public class GameBootstrapper : MonoBehaviour
     {
         [Header("Settings")]
+        // 是否在 Start 时自动初始化
         public bool autoInitOnStart = true;
         
         [Tooltip("如果是开发测试场景，可能没有主菜单，直接进入 Gameplay")]
+        // 是否为测试场景（用于跳过主菜单流程）
         public bool isTestScene = true;
 
         [Header("Manager Prefabs")]
+        // 各类系统管理器的预制体（允许在 Inspector 中配置）
         [SerializeField] private GameObject gameManagerPrefab;
         [SerializeField] private GameObject uiManagerPrefab;
         [SerializeField] private GameObject inventoryManagerPrefab;
@@ -27,8 +30,10 @@ namespace IndieGame.Core
         [SerializeField] private GameObject sceneLoaderPrefab;
         [SerializeField] private GameObject boardMapManagerPrefab;
         [SerializeField] private GameObject boardEntityManagerPrefab;
+        // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
+        // --- 已创建的管理器实例缓存 ---
         private GameManager _gameManagerInstance;
         private UIManager _uiManagerInstance;
         private InventoryManager _inventoryManagerInstance;
@@ -40,11 +45,13 @@ namespace IndieGame.Core
 
         private void Awake()
         {
+            // 提前确保有全局根节点，避免系统散落到场景中
             EnsureGameSystemRoot();
         }
 
         private void Start()
         {
+            // 根据开关决定是否自动启动
             if (autoInitOnStart)
             {
                 Bootstrap();
@@ -55,6 +62,7 @@ namespace IndieGame.Core
         {
             Debug.Log("[GameBootstrapper] Starting Game Systems...");
 
+            // 1) 统一确保所有管理器在同一根节点下生成
             GameObject root = EnsureGameSystemRoot();
             var gm = EnsureManagerFromPrefab(root, gameManagerPrefab, "GameManager", ref _gameManagerInstance);
             EnsureManagerFromPrefab(root, uiManagerPrefab, "UIManager", ref _uiManagerInstance);
@@ -72,11 +80,14 @@ namespace IndieGame.Core
             // 3. 正式启动游戏逻辑
             if (gm != null)
             {
+                // 记录是否已初始化，避免重复进入测试逻辑
                 bool wasInitialized = gm.IsInitialized;
                 if (playerPrefab != null)
                 {
+                    // 注入玩家预制体给 GameManager
                     gm.SetPlayerPrefab(playerPrefab);
                 }
+                // 执行全局系统初始化
                 gm.InitGame();
                 
                 // 如果是测试场景，可能会强制覆盖状态
@@ -91,10 +102,8 @@ namespace IndieGame.Core
 
         private GameObject EnsureGameSystemRoot()
         {
-            GameObject root = GameObject.Find("[GameSystem]");
-            if (root != null) return root;
-
-            root = new GameObject("[GameSystem]");
+            // 统一使用固定名称的根对象存放所有管理器
+            GameObject root = new GameObject("[GameSystem]");
             root.AddComponent<DontDestroyRoot>();
             return root;
         }
@@ -102,8 +111,10 @@ namespace IndieGame.Core
         private T EnsureManagerFromPrefab<T>(GameObject root, GameObject prefab, string fallbackName, ref T instance)
             where T : MonoBehaviour
         {
+            // 已有实例时直接返回
             if (instance != null) return instance;
 
+            // 优先查找根节点下已有组件（避免重复创建）
             T existing = root.GetComponentInChildren<T>(true);
             if (existing != null)
             {
@@ -114,10 +125,12 @@ namespace IndieGame.Core
             GameObject go;
             if (prefab != null)
             {
+                // 使用预制体实例化
                 go = Instantiate(prefab, root.transform);
             }
             else
             {
+                // 兜底创建空物体并附加组件
                 Debug.LogWarning($"[GameBootstrapper] Missing manager prefab for {fallbackName}, creating empty GameObject.");
                 go = new GameObject(fallbackName);
                 go.transform.SetParent(root.transform, false);
@@ -126,6 +139,7 @@ namespace IndieGame.Core
             instance = go.GetComponent<T>();
             if (instance == null)
             {
+                // 预制体上没有目标组件时，动态添加
                 instance = go.AddComponent<T>();
             }
             return instance;

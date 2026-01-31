@@ -4,29 +4,45 @@ using IndieGame.Core.Utilities;
 
 namespace IndieGame.Core
 {
+    /// <summary>
+    /// 场景加载器（单例）：
+    /// 负责根据 SceneRegistry 的场景模式，执行“主菜单 / 棋盘 / 探索”的加载策略，
+    /// 同时维护跨场景的临时载荷（出生点、返回棋盘标记等）。
+    /// </summary>
     public class SceneLoader : MonoSingleton<SceneLoader>
     {
         [Header("Board Scene")]
+        // 棋盘场景名称（默认 World）
         [SerializeField] private string boardSceneName = "World";
+        // 场景注册表，用于获取场景类型
         [SerializeField] private SceneRegistrySO sceneRegistry;
 
         // 用于跨场景传递的临时数据
         private struct TransitionPayload
         {
+            // 目标场景名
             public string SceneName;
+            // 目标出生点
             public LocationID TargetLocation;
+            // 棋盘返回时的节点索引
             public int WaypointIndex;
+            // 是否为“返回棋盘”
             public bool ReturnToBoard;
         }
 
+        // 是否有有效载荷
         private bool _hasPayload;
+        // 当前载荷内容
         private TransitionPayload _payload;
         private int _lastBoardNodeIndex = -1; // 记录上次离开棋盘时的节点
         private string _lastBoardSceneName; // 记录上次棋盘场景名
         private bool _isInitialized;
+        // 缓存棋盘场景引用（用于常驻场景架构）
         private Scene _boardScene;
+        // 当前叠加的探索场景名
         private string _currentExplorationScene;
 
+        // --- 载荷读取接口 ---
         public bool HasPayload => _hasPayload;
         public bool IsReturnToBoard => _hasPayload && _payload.ReturnToBoard;
         public LocationID TargetLocationId => _payload.TargetLocation;
@@ -36,11 +52,13 @@ namespace IndieGame.Core
 
         private void OnEnable()
         {
+            // 监听场景加载完成事件
             SceneManager.sceneLoaded += HandleSceneLoaded;
         }
 
         private void OnDisable()
         {
+            // 退订事件，避免重复触发
             SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 
@@ -58,6 +76,7 @@ namespace IndieGame.Core
                     GameManager.Instance.ChangeState(GameState.BoardMode);
                 }
             }
+            // 广播当前场景模式，驱动系统初始化
             EventBus.Raise(new GameModeChangedEvent
             {
                 SceneName = scene.name,
@@ -66,6 +85,10 @@ namespace IndieGame.Core
             _isInitialized = true;
         }
 
+        /// <summary>
+        /// 通用场景加载入口：
+        /// 根据目标场景的 GameMode 决定 Single / Additive / 先加载棋盘再叠加等策略。
+        /// </summary>
         public AsyncOperation LoadScene(string sceneName, LocationID targetID)
         {
             if (string.IsNullOrEmpty(sceneName)) return null;
@@ -83,6 +106,7 @@ namespace IndieGame.Core
 
             if (targetMode == GameMode.Menu)
             {
+                // 菜单场景：完全切换，清理叠加状态
                 _currentExplorationScene = null;
                 _boardScene = default;
                 return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
@@ -90,12 +114,18 @@ namespace IndieGame.Core
 
             if (targetMode == GameMode.Board)
             {
+                // 目标为棋盘：走“回棋盘”逻辑
                 return LoadBoardScene(sceneName);
             }
 
+            // 目标为探索：走“棋盘常驻 + 叠加探索”逻辑
             return LoadExplorationScene(sceneName);
         }
 
+        /// <summary>
+        /// 返回棋盘入口：
+        /// 不销毁棋盘场景，仅卸载探索场景并恢复棋盘根物体。
+        /// </summary>
         public void ReturnToBoard()
         {
             if (_lastBoardNodeIndex < 0)
@@ -114,6 +144,9 @@ namespace IndieGame.Core
             LoadBoardScene(_payload.SceneName);
         }
 
+        /// <summary>
+        /// 清空跨场景载荷。
+        /// </summary>
         public void ClearPayload()
         {
             _hasPayload = false;
@@ -136,12 +169,14 @@ namespace IndieGame.Core
                 _currentExplorationScene = null;
                 _boardScene = default;
             }
+            // 广播场景模式变化
             EventBus.Raise(new GameModeChangedEvent
             {
                 SceneName = scene.name,
                 Mode = modeResult
             });
 
+            // 若无载荷，不触发场景过渡事件
             if (!_hasPayload) return;
             EventBus.Raise(new SceneTransitionEvent
             {
@@ -162,11 +197,18 @@ namespace IndieGame.Core
                     _lastBoardSceneName = currentScene;
                 }
             }
+            // 从棋盘控制器读取当前节点，保存以便返回时复位
             var board = Gameplay.Board.Runtime.BoardGameManager.Instance;
             if (board == null || board.movementController == null) return;
             _lastBoardNodeIndex = board.movementController.CurrentNodeId;
         }
 
+        /// <summary>
+        /// 加载/恢复棋盘场景：
+        /// - 若当前叠加了探索，则先卸载探索，再显示棋盘
+        /// - 若已经在棋盘，则仅恢复根物体
+        /// - 否则 Single 方式切换到棋盘
+        /// </summary>
         private AsyncOperation LoadBoardScene(string sceneName)
         {
             Scene activeScene = SceneManager.GetActiveScene();
@@ -180,6 +222,7 @@ namespace IndieGame.Core
                     {
                         unloadOp.completed += _ =>
                         {
+                            // 卸载完成后恢复棋盘显示并激活
                             _currentExplorationScene = null;
                             SetBoardSceneRootsActive(true);
                             ActivateBoardScene();
@@ -193,14 +236,22 @@ namespace IndieGame.Core
 
             if (IsBoardScene(activeScene))
             {
+                // 已经在棋盘场景，只需恢复根物体
                 SetBoardSceneRootsActive(true);
                 RaiseBoardModeChanged();
                 return null;
             }
 
+            // 从菜单等场景进入棋盘，直接 Single 加载
             return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
         }
 
+        /// <summary>
+        /// 加载探索场景：
+        /// - 若当前是菜单：先 Single 加载棋盘，再 Additive 叠加探索
+        /// - 若当前是探索：先卸载旧探索，再叠加新探索
+        /// - 若当前是棋盘：隐藏棋盘根物体，再叠加探索
+        /// </summary>
         private AsyncOperation LoadExplorationScene(string sceneName)
         {
             GameMode activeMode = GetModeForScene(SceneManager.GetActiveScene().name);
@@ -211,6 +262,7 @@ namespace IndieGame.Core
                 {
                     loadBoardOp.completed += _ =>
                     {
+                        // 先让棋盘常驻，再叠加探索
                         _boardScene = SceneManager.GetSceneByName(GetBoardSceneName());
                         SetBoardSceneRootsActive(false);
                         LoadExplorationAdditive(sceneName);
@@ -227,6 +279,7 @@ namespace IndieGame.Core
                     AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(currentExploration);
                     if (unloadOp != null)
                     {
+                        // 卸载旧探索后再加载新探索
                         unloadOp.completed += _ => LoadExplorationAdditive(sceneName);
                     }
                     return unloadOp;
@@ -235,12 +288,16 @@ namespace IndieGame.Core
 
             if (IsBoardScene(SceneManager.GetActiveScene()))
             {
+                // 从棋盘进入探索时先隐藏棋盘根物体
                 SetBoardSceneRootsActive(false);
             }
 
             return LoadExplorationAdditive(sceneName);
         }
 
+        /// <summary>
+        /// 以 Additive 方式叠加探索场景，并设置为 ActiveScene。
+        /// </summary>
         private AsyncOperation LoadExplorationAdditive(string sceneName)
         {
             AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
@@ -251,6 +308,7 @@ namespace IndieGame.Core
                     Scene loadedScene = SceneManager.GetSceneByName(sceneName);
                     if (loadedScene.IsValid() && loadedScene.isLoaded)
                     {
+                        // 切换活动场景，确保灯光/摄像机等生效
                         SceneManager.SetActiveScene(loadedScene);
                         _currentExplorationScene = sceneName;
                     }
@@ -262,22 +320,32 @@ namespace IndieGame.Core
             }
             if (GameManager.Instance != null)
             {
+                // 进入探索时同步游戏状态
                 GameManager.Instance.ChangeState(GameState.FreeRoam);
             }
             return op;
         }
 
+        /// <summary>
+        /// 获取棋盘场景名（优先使用最后记录的棋盘场景）。
+        /// </summary>
         private string GetBoardSceneName()
         {
             return string.IsNullOrEmpty(_lastBoardSceneName) ? boardSceneName : _lastBoardSceneName;
         }
 
+        /// <summary>
+        /// 获取棋盘 Scene 对象（优先使用缓存）。
+        /// </summary>
         private Scene GetBoardScene()
         {
             if (_boardScene.IsValid() && _boardScene.isLoaded) return _boardScene;
             return SceneManager.GetSceneByName(GetBoardSceneName());
         }
 
+        /// <summary>
+        /// 判断给定场景是否为棋盘场景。
+        /// </summary>
         private bool IsBoardScene(Scene scene)
         {
             if (!scene.IsValid()) return false;
@@ -288,6 +356,9 @@ namespace IndieGame.Core
             return scene.name == GetBoardSceneName();
         }
 
+        /// <summary>
+        /// 将棋盘场景设为 ActiveScene，确保其光照/相机生效。
+        /// </summary>
         private void ActivateBoardScene()
         {
             Scene boardScene = GetBoardScene();
@@ -301,6 +372,10 @@ namespace IndieGame.Core
             }
         }
 
+        /// <summary>
+        /// 切换棋盘场景根物体的激活状态：
+        /// 用于“隐藏棋盘但保留状态”。
+        /// </summary>
         private void SetBoardSceneRootsActive(bool active)
         {
             Scene boardScene = GetBoardScene();
@@ -310,11 +385,15 @@ namespace IndieGame.Core
             {
                 GameObject root = roots[i];
                 if (root == null) continue;
+                // 不影响 DontDestroyOnLoad 根节点上的全局单例
                 if (root.scene.name == "DontDestroyOnLoad") continue;
                 root.SetActive(active);
             }
         }
 
+        /// <summary>
+        /// 广播“棋盘模式”并同步 GameManager 状态。
+        /// </summary>
         private void RaiseBoardModeChanged()
         {
             if (GameManager.Instance != null)
@@ -329,6 +408,9 @@ namespace IndieGame.Core
             });
         }
 
+        /// <summary>
+        /// 获取场景模式（若未配置则默认 Exploration）。
+        /// </summary>
         private GameMode GetModeForScene(string sceneName)
         {
             return sceneRegistry != null ? sceneRegistry.GetGameMode(sceneName) : GameMode.Exploration;

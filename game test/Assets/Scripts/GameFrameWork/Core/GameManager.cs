@@ -7,25 +7,35 @@ using IndieGame.UI;
 
 namespace IndieGame.Core
 {
+    /// <summary>
+    /// 游戏核心管理器（单例）：
+    /// 负责全局初始化流程、玩家对象生成、游戏状态切换与核心系统联动。
+    /// </summary>
     public class GameManager : MonoSingleton<GameManager>
     {
+        // GameManager 作为全局管理器需常驻，不随场景切换销毁
         protected override bool DestroyOnLoad => false;
+        // 当前游戏状态（由本类统一维护）
         public GameState CurrentState { get; private set; } = GameState.Initialization;
 
         // 是否已初始化
         public bool IsInitialized { get; private set; } = false;
 
+        // 玩家预制体（由 GameBootstrapper 或外部设置）
         private GameObject playerPrefab;
 
+        // 当前玩家实例（运行时生成）
         public GameObject CurrentPlayer { get; private set; }
 
         private void OnEnable()
         {
+            // 监听场景模式变化，驱动 GameState
             EventBus.Subscribe<GameModeChangedEvent>(OnGameModeChanged);
         }
 
         private void OnDisable()
         {
+            // 退订事件，避免生命周期结束后仍被触发
             EventBus.Unsubscribe<GameModeChangedEvent>(OnGameModeChanged);
         }
 
@@ -42,13 +52,17 @@ namespace IndieGame.Core
             }
         }
 
+        /// <summary>
+        /// 设置玩家预制体（通常由 GameBootstrapper 调用）。
+        /// </summary>
         public void SetPlayerPrefab(GameObject prefab)
         {
             playerPrefab = prefab;
         }
 
         /// <summary>
-        /// 游戏唯一的启动入口
+        /// 游戏唯一的启动入口：
+        /// 按顺序初始化各系统，确保依赖关系正确。
         /// </summary>
         public void InitGame()
         {
@@ -86,6 +100,9 @@ namespace IndieGame.Core
             IsInitialized = true;
         }
 
+        /// <summary>
+        /// 切换游戏状态并广播事件。
+        /// </summary>
         public void ChangeState(GameState newState)
         {
             if (CurrentState == newState) return;
@@ -98,6 +115,9 @@ namespace IndieGame.Core
             EventBus.Raise(new GameStateChangedEvent { NewState = newState });
         }
 
+        /// <summary>
+        /// 确保玩家对象存在（首次进入时会实例化并设为常驻）。
+        /// </summary>
         private void EnsurePlayer()
         {
             if (CurrentPlayer != null) return;
@@ -109,6 +129,7 @@ namespace IndieGame.Core
 
             GameObject player = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
             CurrentPlayer = player;
+            // 玩家常驻于所有场景
             DontDestroyOnLoad(player);
         }
         
