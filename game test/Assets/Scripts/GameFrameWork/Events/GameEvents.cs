@@ -201,4 +201,42 @@ namespace IndieGame.Core
     public struct InputJumpEvent
     {
     }
+
+    public struct SaveStartedEvent
+    {
+        // 槽位索引
+        public int SlotIndex;
+    }
+
+    public struct SaveCompletedEvent
+    {
+        // 槽位索引
+        public int SlotIndex;
+        // 是否成功
+        public bool Success;
+        // 失败原因（成功时为空）
+        public string Error;
+    }
+
+    public struct LoadStartedEvent
+    {
+        // 槽位索引
+        public int SlotIndex;
+    }
+
+    public struct LoadCompletedEvent
+    {
+        // 槽位索引
+        public int SlotIndex;
+        // 是否成功
+        public bool Success;
+    }
+
+    public struct LoadFailedEvent
+    {
+        // 槽位索引
+        public int SlotIndex;
+        // 失败原因
+        public string Error;
+    }
 }
