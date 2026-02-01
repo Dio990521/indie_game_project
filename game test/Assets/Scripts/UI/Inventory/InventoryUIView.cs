@@ -13,12 +13,16 @@ namespace IndieGame.UI.Inventory
     {
         [Header("Binder")]
         // 绑定器：集中持有 UI 引用
+        // Inspector 配置指南：
+        // - 在 InventoryUIView 的 Binder 字段中拖拽 InventoryUIBinder
+        // - 在 InventoryUIBinder 中设置 SlotPrefab（InventorySlotUI 预制体）
+        // - ContentRoot 用于承载动态生成的槽位实例
         [SerializeField] private InventoryUIBinder binder;
 
         // 对外事件：关闭请求（可由上层监听）
         public event Action OnCloseRequested;
         // 对外事件：槽位点击（可由上层监听）
-        public event Action<ItemSO> OnSlotClicked;
+        public event Action<InventorySlot> OnSlotClicked;
 
         // --- 内部缓存 ---
         private readonly List<InventorySlotUI> _slots = new List<InventorySlotUI>();
@@ -71,10 +75,10 @@ namespace IndieGame.UI.Inventory
         /// <summary>
         /// 显示背包并刷新槽位内容。
         /// </summary>
-        public void Show(List<ItemSO> items)
+        public void Show(List<InventorySlot> slots)
         {
             SetVisible(true);
-            Rebuild(items);
+            Rebuild(slots);
         }
 
         /// <summary>
@@ -97,34 +101,34 @@ namespace IndieGame.UI.Inventory
         /// <summary>
         /// 根据物品列表重建槽位。
         /// </summary>
-        private void Rebuild(List<ItemSO> items)
+        private void Rebuild(List<InventorySlot> slots)
         {
             ClearSlots();
-            if (items == null || binder.SlotPrefab == null || binder.ContentRoot == null) return;
+            if (slots == null || binder.SlotPrefab == null || binder.ContentRoot == null) return;
 
-            for (int i = 0; i < items.Count; i++)
+            for (int i = 0; i < slots.Count; i++)
             {
                 InventorySlotUI slot = Instantiate(binder.SlotPrefab, binder.ContentRoot);
-                slot.Setup(items[i], HandleSlotClicked);
+                slot.Setup(slots[i], HandleSlotClicked);
                 _slots.Add(slot);
             }
         }
 
-        private void HandleSlotClicked(ItemSO item)
+        private void HandleSlotClicked(InventorySlot slot)
         {
             // 对外广播点击事件
-            OnSlotClicked?.Invoke(item);
+            OnSlotClicked?.Invoke(slot);
             // 直接调用背包管理器使用道具
             InventoryManager inv = InventoryManager.Instance;
-            if (inv != null) inv.UseItem(item);
+            if (inv != null && slot != null) inv.UseItem(slot.Item);
         }
 
         /// <summary>
         /// 背包内容更新回调。
         /// </summary>
-        private void HandleRefresh(List<ItemSO> items)
+        private void HandleRefresh(List<InventorySlot> slots)
         {
-            Rebuild(items);
+            Rebuild(slots);
         }
 
         /// <summary>

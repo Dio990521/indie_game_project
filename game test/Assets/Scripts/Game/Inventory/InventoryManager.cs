@@ -19,13 +19,16 @@ namespace IndieGame.Gameplay.Inventory
         protected override bool DestroyOnLoad => true;
 
         [Header("数据")]
-        [Tooltip("当前背包中的物品列表。ItemSO 是基于 ScriptableObject 的物品配置文件。")]
-        public List<ItemSO> items = new List<ItemSO>();
+        [Tooltip("背包最大容量（槽位数）。")]
+        public int maxCapacity = 30;
+
+        [Tooltip("当前背包槽位列表。每个槽位包含道具与数量。")]
+        public List<InventorySlot> slots = new List<InventorySlot>();
 
         // --- 事件回调 ---
 
-        /// <summary> 当背包内容发生变化（或初次打开同步数据）时触发，传递最新的物品列表 </summary>
-        public static event Action<List<ItemSO>> OnInventoryUpdated;
+        /// <summary> 当背包内容发生变化（或初次打开同步数据）时触发，传递最新的槽位列表 </summary>
+        public static event Action<List<InventorySlot>> OnInventoryUpdated;
 
         /// <summary> 当背包界面被请求打开时触发 </summary>
         public static event Action OnInventoryOpened;
@@ -71,8 +74,8 @@ namespace IndieGame.Gameplay.Inventory
         /// </summary>
         public void OpenInventory()
         {
-            // 1. 发送物品数据同步事件，UI 将根据 items 列表渲染图标
-            OnInventoryUpdated?.Invoke(items);
+            // 1. 发送槽位数据同步事件，UI 将根据 slots 列表渲染
+            OnInventoryUpdated?.Invoke(slots);
             // 2. 发送打开指令，触发 UI 动画或显示 Canvas
             OnInventoryOpened?.Invoke();
         }
@@ -98,7 +101,121 @@ namespace IndieGame.Gameplay.Inventory
             item.Use();
 
             // 注意：此处代码目前没有包含“消耗”逻辑。
-            // 如果物品是消耗品，通常需在此处执行 items.Remove(item) 并再次调用 OnInventoryUpdated。
+            // 如果需要消耗，请调用 RemoveItem(item, amount)。
+        }
+
+        /// <summary>
+        /// 添加道具：
+        /// - 先尝试堆叠（填满已有槽位）
+        /// - 再尝试新建槽位
+        /// - 超出容量时返回 false
+        /// </summary>
+        public bool AddItem(ItemSO item, int amount = 1)
+        {
+            if (item == null || amount <= 0) return false;
+
+            int remaining = amount;
+
+            // 1) 尝试堆叠到已有槽位
+            if (item.isStackable)
+            {
+                for (int i = 0; i < slots.Count; i++)
+                {
+                    InventorySlot slot = slots[i];
+                    if (slot == null || slot.Item != item) continue;
+                    if (slot.Count >= item.maxStack) continue;
+
+                    int space = Mathf.Max(0, item.maxStack - slot.Count);
+                    int add = Mathf.Min(space, remaining);
+                    slot.Count += add;
+                    remaining -= add;
+                    if (remaining <= 0) break;
+                }
+            }
+
+            // 2) 新建槽位
+            while (remaining > 0)
+            {
+                if (slots.Count >= maxCapacity)
+                {
+                    // 容量不足
+                    OnInventoryUpdated?.Invoke(slots);
+                    return false;
+                }
+
+                int addCount = item.isStackable ? Mathf.Min(item.maxStack, remaining) : 1;
+                slots.Add(new InventorySlot(item, addCount));
+                remaining -= addCount;
+            }
+
+            OnInventoryUpdated?.Invoke(slots);
+            return true;
+        }
+
+        /// <summary>
+        /// 移除道具：
+        /// 按数量扣减，扣完后清理空槽位。
+        /// </summary>
+        public bool RemoveItem(ItemSO item, int amount)
+        {
+            if (item == null || amount <= 0) return false;
+
+            int remaining = amount;
+            for (int i = slots.Count - 1; i >= 0; i--)
+            {
+                InventorySlot slot = slots[i];
+                if (slot == null || slot.Item != item) continue;
+
+                if (slot.Count > remaining)
+                {
+                    slot.Count -= remaining;
+                    remaining = 0;
+                    break;
+                }
+                else
+                {
+                    remaining -= slot.Count;
+                    slots.RemoveAt(i);
+                    if (remaining <= 0) break;
+                }
+            }
+
+            OnInventoryUpdated?.Invoke(slots);
+            return remaining == 0;
+        }
+
+        /// <summary>
+        /// 按分类排序。
+        /// </summary>
+        public void SortByCategory()
+        {
+            slots.Sort((a, b) =>
+            {
+                ItemSO itemA = a != null ? a.Item : null;
+                ItemSO itemB = b != null ? b.Item : null;
+                int catA = itemA != null ? (int)itemA.Category : int.MaxValue;
+                int catB = itemB != null ? (int)itemB.Category : int.MaxValue;
+                int cmp = catA.CompareTo(catB);
+                if (cmp != 0) return cmp;
+                string idA = itemA != null ? itemA.ID : string.Empty;
+                string idB = itemB != null ? itemB.ID : string.Empty;
+                return string.Compare(idA, idB, StringComparison.Ordinal);
+            });
+            OnInventoryUpdated?.Invoke(slots);
+        }
+
+        /// <summary>
+        /// 按 ID 排序。
+        /// </summary>
+        public void SortByID()
+        {
+            slots.Sort((a, b) =>
+            {
+                string idA = a != null && a.Item != null ? a.Item.ID : string.Empty;
+                string idB = b != null && b.Item != null ? b.Item.ID : string.Empty;
+                return string.Compare(idA, idB, StringComparison.Ordinal);
+            });
+            OnInventoryUpdated?.Invoke(slots);
         }
     }
 }
