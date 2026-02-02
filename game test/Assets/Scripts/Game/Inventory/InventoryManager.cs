@@ -100,8 +100,11 @@ namespace IndieGame.Gameplay.Inventory
             // 例如：加血、增加棋盘移动步数、或者触发特定的 BoardEvent。
             item.Use();
 
-            // 注意：此处代码目前没有包含“消耗”逻辑。
-            // 如果需要消耗，请调用 RemoveItem(item, amount)。
+            // 消耗品使用后扣减数量
+            if (item.Category == ItemCategory.Consumable)
+            {
+                RemoveItem(item, 1);
+            }
         }
 
         /// <summary>
