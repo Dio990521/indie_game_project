@@ -20,4 +20,4 @@ MonoBehaviour:
   - SceneName: Town
     Mode: 2
   - SceneName: Camp
-    Mode: 0
+    Mode: 3

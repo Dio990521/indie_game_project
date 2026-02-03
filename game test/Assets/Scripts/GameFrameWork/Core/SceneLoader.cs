@@ -118,6 +118,12 @@ namespace IndieGame.Core
                 return LoadBoardScene(sceneName);
             }
 
+            if (targetMode == GameMode.Camp)
+            {
+                // 露营场景：视为 Additive 叠加场景处理
+                return LoadExplorationScene(sceneName);
+            }
+
             // 目标为探索：走“棋盘常驻 + 叠加探索”逻辑
             return LoadExplorationScene(sceneName);
         }
@@ -159,8 +165,13 @@ namespace IndieGame.Core
             if (modeResult == GameMode.Board)
             {
                 _boardScene = scene;
+                // 进入棋盘场景时确保玩家可见
+                if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+                {
+                    GameManager.Instance.CurrentPlayer.SetActive(true);
+                }
             }
-            else if (modeResult == GameMode.Exploration)
+            else if (modeResult == GameMode.Exploration || modeResult == GameMode.Camp)
             {
                 _currentExplorationScene = scene.name;
             }
@@ -168,6 +179,11 @@ namespace IndieGame.Core
             {
                 _currentExplorationScene = null;
                 _boardScene = default;
+            }
+            if (modeResult == GameMode.Camp && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+            {
+                // 进入露营场景时隐藏玩家（避免与 Camp UI/场景冲突）
+                GameManager.Instance.CurrentPlayer.SetActive(false);
             }
             // 广播场景模式变化
             EventBus.Raise(new GameModeChangedEvent
@@ -225,6 +241,11 @@ namespace IndieGame.Core
                             // 卸载完成后恢复棋盘显示并激活
                             _currentExplorationScene = null;
                             SetBoardSceneRootsActive(true);
+                            // 返回棋盘时重新显示玩家
+                            if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+                            {
+                                GameManager.Instance.CurrentPlayer.SetActive(true);
+                            }
                             ActivateBoardScene();
                             RaiseBoardModeChanged();
                         };
@@ -238,6 +259,11 @@ namespace IndieGame.Core
             {
                 // 已经在棋盘场景，只需恢复根物体
                 SetBoardSceneRootsActive(true);
+                // 返回棋盘时重新显示玩家
+                if (GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+                {
+                    GameManager.Instance.CurrentPlayer.SetActive(true);
+                }
                 RaiseBoardModeChanged();
                 return null;
             }
@@ -271,7 +297,7 @@ namespace IndieGame.Core
                 return loadBoardOp;
             }
 
-            if (activeMode == GameMode.Exploration && !string.IsNullOrEmpty(_currentExplorationScene))
+            if ((activeMode == GameMode.Exploration || activeMode == GameMode.Camp) && !string.IsNullOrEmpty(_currentExplorationScene))
             {
                 Scene currentExploration = SceneManager.GetSceneByName(_currentExplorationScene);
                 if (currentExploration.IsValid() && currentExploration.isLoaded && _currentExplorationScene != sceneName)

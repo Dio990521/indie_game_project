@@ -23,17 +23,6 @@ namespace IndieGame.Gameplay.Camp
     }
 
     /// <summary>
-    /// 时间消耗类型：
-    /// 用于描述不同操作对时间的影响程度。
-    /// </summary>
-    public enum TimeCostType
-    {
-        None,
-        Small,
-        Large
-    }
-
-    /// <summary>
     /// 露营动作配置（ScriptableObject）：
     /// 提供 UI 显示信息与逻辑类型。
     /// </summary>
@@ -50,8 +39,5 @@ namespace IndieGame.Gameplay.Camp
         // 图标
         public Sprite Icon;
 
-        [Header("Time Cost")]
-        // 时间消耗类型
-        public TimeCostType TimeCostType = TimeCostType.None;
     }
 }

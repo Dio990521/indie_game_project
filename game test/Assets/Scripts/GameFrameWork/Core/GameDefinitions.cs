@@ -31,6 +31,8 @@ namespace IndieGame.Core
         // 棋盘场景
         Board,
         // 探索场景
-        Exploration
+        Exploration,
+        // 露营场景（Additive 叠加）
+        Camp
     }
 }

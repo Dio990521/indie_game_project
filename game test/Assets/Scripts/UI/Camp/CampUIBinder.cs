@@ -1,8 +1,10 @@
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using IndieGame.Gameplay.Camp;
+using IndieGame.Core;
 
 namespace IndieGame.UI.Camp
 {
@@ -17,6 +19,8 @@ namespace IndieGame.UI.Camp
         [SerializeField] private VerticalLayoutGroup menuContainer;
         // 按钮预制体（建议包含 Button + TMP_Text）
         [SerializeField] private GameObject actionButtonPrefab;
+        // 协程宿主（用于 Sleep 的延迟逻辑）
+        private MonoBehaviour _coroutineHost;
 
         /// <summary>
         /// 动态初始化菜单：
@@ -25,6 +29,7 @@ namespace IndieGame.UI.Camp
         public void InitializeMenu(List<CampActionSO> unlockedActions)
         {
             if (menuContainer == null || actionButtonPrefab == null) return;
+            if (_coroutineHost == null) _coroutineHost = this;
 
             // 清空旧按钮
             for (int i = menuContainer.transform.childCount - 1; i >= 0; i--)
@@ -83,7 +88,23 @@ namespace IndieGame.UI.Camp
                     break;
                 case CampActionID.Sleep:
                     Debug.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
+                    if (_coroutineHost != null)
+                    {
+                        _coroutineHost.StartCoroutine(SleepRoutine());
+                    }
                     break;
+            }
+        }
+
+        private IEnumerator SleepRoutine()
+        {
+            // 1) 黑屏淡入
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = 1f });
+            // 2) 延迟 1 秒后返回棋盘
+            yield return new WaitForSeconds(1f);
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.ReturnToBoard();
             }
         }
     }
