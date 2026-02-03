@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using IndieGame.Core;
+using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Gameplay.Board.Runtime.States;
 
 namespace IndieGame.UI
 {
@@ -26,6 +28,8 @@ namespace IndieGame.UI
         [Header("Dependencies")]
         // 追踪目标（菜单会围绕该目标投影位置展示，通常为玩家）
         public Transform target;
+        [Tooltip("露营场景对应的 LocationID（在 Inspector 中配置）")]
+        [SerializeField] private LocationID campingLocationId;
 
         [Header("Layout")]
         // 按钮半径（围绕目标点的距离）
@@ -296,7 +300,15 @@ namespace IndieGame.UI
                     Hide();
                     break;
                 case BoardActionId.Camp:
-                    Debug.Log("[BoardActionMenuView] Camp clicked.");
+                    if (campingLocationId == null)
+                    {
+                        Debug.LogWarning("[BoardActionMenuView] Missing campingLocationId.");
+                        break;
+                    }
+                    if (BoardGameManager.Instance != null)
+                    {
+                        BoardGameManager.Instance.ChangeState(new CampingState(campingLocationId));
+                    }
                     break;
             }
         }

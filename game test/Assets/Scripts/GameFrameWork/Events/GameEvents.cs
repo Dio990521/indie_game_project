@@ -239,4 +239,16 @@ namespace IndieGame.Core
         // 失败原因
         public string Error;
     }
+
+    /// <summary>
+    /// 屏幕淡入/淡出请求事件：
+    /// 由状态机或系统发起，UI 层监听后执行黑屏渐变。
+    /// </summary>
+    public struct FadeRequestedEvent
+    {
+        // true = 淡入到黑屏，false = 从黑屏淡出
+        public bool FadeIn;
+        // 渐变时长（秒）
+        public float Duration;
+    }
 }

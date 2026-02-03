@@ -40,12 +40,15 @@ namespace IndieGame.UI
         [SerializeField] private Inventory.InventoryUIView inventoryPrefab;
         // 确认弹窗
         [SerializeField] private Confirmation.ConfirmationPopupView confirmationPrefab;
+        // 露营 UI
+        [SerializeField] private Camp.CampUIView campUIPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
         public BoardActionMenuView BoardActionMenuInstance { get; private set; }
         public Inventory.InventoryUIView InventoryInstance { get; private set; }
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
+        public Camp.CampUIView CampUIInstance { get; private set; }
 
         // UI 准备完成事件（供外部监听）
         public static event Action OnUIReady;
@@ -155,6 +158,12 @@ namespace IndieGame.UI
             {
                 ConfirmationInstance = SpawnOnLayer(confirmationPrefab, UILayerPriority.Top75);
                 if (ConfirmationInstance != null) ConfirmationInstance.gameObject.SetActive(true);
+            }
+
+            if (campUIPrefab != null && CampUIInstance == null)
+            {
+                CampUIInstance = SpawnOnLayer(campUIPrefab, UILayerPriority.Top75);
+                if (CampUIInstance != null) CampUIInstance.gameObject.SetActive(true);
             }
 
             // 通知外部 UI 已准备完毕

@@ -67,9 +67,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.BoardActionMenuView
   binder: {fileID: 4418980510375909799}
-  layer: 1
-  inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
   target: {fileID: 0}
+  campingLocationId: {fileID: 11400000, guid: 8af5bc471d543450c9a7f4c7b3f933d7, type: 2}
   radius: 120
   arcAngle: 90
   offset: {x: 120, y: 40}

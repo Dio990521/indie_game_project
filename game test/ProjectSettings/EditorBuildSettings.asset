@@ -14,6 +14,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Town.unity
     guid: dc6608afb67634a07ad2198f253313ae
+  - enabled: 1
+    path: Assets/Scenes/Camp.unity
+    guid: ca9b8759124564cfea96873b9e893beb
   m_configObjects:
     com.unity.addressableassets: {fileID: 11400000, guid: 6f75c5171c6c4454b931a885910e937a, type: 2}
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
