@@ -156,15 +156,25 @@ namespace IndieGame.UI.Camp
 
         private IEnumerator SleepRoutine()
         {
-            // 1) 黑屏淡出
-            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = 1f });
-            // 2) 延迟 0.5 秒后返回棋盘
-            yield return new WaitForSeconds(0.5f);
+            float fadeDuration = 1f;
+            // 1) 黑屏淡入
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
+            yield return new WaitForSeconds(fadeDuration);
+
+            // 2) 执行数值结算（占位）
+            // TODO: 在此加入睡觉结算逻辑（时间推进/状态恢复等）
+
+            // 3) 关闭露营 UI（避免与棋盘 UI 叠加）
             Hide();
+
+            // 4) 返回棋盘（不重复触发淡入淡出）
             if (SceneLoader.Instance != null)
             {
-                SceneLoader.Instance.ReturnToBoard();
+                yield return SceneLoader.Instance.ReturnToBoardRoutine(false, fadeDuration);
             }
+
+            // 5) 黑屏淡出（等待棋盘加载完成后执行）
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
         }
     }
 }

@@ -1,8 +1,5 @@
-using System.Collections;
 using UnityEngine;
 using IndieGame.Core;
-using IndieGame.UI;
-using IndieGame.UI.Camp;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
 {
@@ -15,7 +12,6 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     {
         private readonly LocationID _campingLocationId;
         private readonly string _campingSceneName;
-        private Coroutine _routine;
 
         public CampingState(LocationID campingLocationId, string campingSceneName = "Camp")
         {
@@ -26,32 +22,17 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         public override void OnEnter(BoardGameManager context)
         {
             if (context == null || !context.isActiveAndEnabled) return;
-            // 进入露营：仅触发黑屏淡入并请求加载 Camp（Additive）
-            _routine = context.StartCoroutine(EnterRoutine(context));
+            // 进入露营：交由 SceneLoader 负责淡入淡出与加载流程
+            if (SceneLoader.Instance != null)
+            {
+                SceneLoader.Instance.LoadScene(_campingSceneName, _campingLocationId, 1f);
+            }
         }
 
         public override void OnExit(BoardGameManager context)
         {
             if (context == null || !context.isActiveAndEnabled) return;
-            // 按需求：仅清理协程，不做场景跳转
-            if (_routine != null)
-            {
-                context.StopCoroutine(_routine);
-                _routine = null;
-            }
-        }
-
-        private IEnumerator EnterRoutine(BoardGameManager context)
-        {
-            // 1) 黑屏淡入
-            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = 1f });
-            yield return new WaitForSeconds(1f);
-            // 2) 请求加载 Camp 场景（Additive）
-            if (SceneLoader.Instance != null)
-            {
-                SceneLoader.Instance.LoadScene(_campingSceneName, _campingLocationId);
-            }
-            yield return null;
+            // 按需求：不做场景跳转
         }
     }
 }

@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using IndieGame.Core.Utilities;
@@ -42,10 +43,12 @@ namespace IndieGame.Core
         private Scene _boardScene;
         // 当前叠加的探索场景名
         private string _currentExplorationScene;
-        // 是否等待在场景加载/卸载完成后执行淡出
-        private bool _pendingFadeOut;
-        // 淡出时长（与淡入保持一致）
-        private float _pendingFadeOutDuration = 1f;
+        // 转场协程的 Token（用于等待异步加载完成）
+        private int _transitionToken;
+        // 当前转场是否完成
+        private bool _transitionCompleted;
+        // 当前活跃的转场 Token
+        private int _activeTransitionToken = -1;
 
         // --- 载荷读取接口 ---
         public bool HasPayload => _hasPayload;
@@ -94,46 +97,20 @@ namespace IndieGame.Core
         /// 通用场景加载入口：
         /// 根据目标场景的 GameMode 决定 Single / Additive / 先加载棋盘再叠加等策略。
         /// </summary>
-        public AsyncOperation LoadScene(string sceneName, LocationID targetID)
+        public Coroutine LoadScene(string sceneName, LocationID targetID, float fadeDuration = 1f)
         {
             if (string.IsNullOrEmpty(sceneName)) return null;
-            // 进入探索场景前，缓存棋盘位置
-            CacheBoardNodeIndex();
-            GameMode targetMode = GetModeForScene(sceneName);
-            _payload = new TransitionPayload
-            {
-                SceneName = sceneName,
-                TargetLocation = targetID,
-                WaypointIndex = -1,
-                ReturnToBoard = false
-            };
-            _hasPayload = true;
+            return StartCoroutine(LoadSceneRoutine(sceneName, targetID, fadeDuration));
+        }
 
-            if (targetMode == GameMode.Title)
-            {
-                // 菜单场景：完全切换，清理叠加状态
-                _currentExplorationScene = null;
-                _boardScene = default;
-                return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
-            }
-
-            if (targetMode == GameMode.Board)
-            {
-                // 目标为棋盘：走“回棋盘”逻辑
-                return LoadBoardScene(sceneName);
-            }
-
-            if (targetMode == GameMode.Camp)
-            {
-                // 露营场景：视为 Additive 叠加场景处理
-                // 进入 Camp 时需要在加载完成后淡出
-                _pendingFadeOut = true;
-                _pendingFadeOutDuration = 1f;
-                return LoadExplorationScene(sceneName);
-            }
-
-            // 目标为探索：走“棋盘常驻 + 叠加探索”逻辑
-            return LoadExplorationScene(sceneName);
+        /// <summary>
+        /// 用于加载进度条的原始加载接口（不触发淡入淡出）。
+        /// 注意：仅建议在 Title 场景加载主棋盘时使用。
+        /// </summary>
+        public AsyncOperation LoadSceneAsyncRaw(string sceneName, LocationID targetID)
+        {
+            if (string.IsNullOrEmpty(sceneName)) return null;
+            return LoadSceneInternal(sceneName, targetID, -1);
         }
 
         /// <summary>
@@ -141,6 +118,15 @@ namespace IndieGame.Core
         /// 不销毁棋盘场景，仅卸载探索场景并恢复棋盘根物体。
         /// </summary>
         public void ReturnToBoard()
+        {
+            StartCoroutine(ReturnToBoardRoutine(true, 1f));
+        }
+
+        /// <summary>
+        /// 返回棋盘的协程流程：
+        /// 可选择是否执行淡入淡出，便于外部自行控制（如 Sleep）。
+        /// </summary>
+        public IEnumerator ReturnToBoardRoutine(bool useFade, float fadeDuration = 1f)
         {
             if (_lastBoardNodeIndex < 0)
             {
@@ -154,11 +140,25 @@ namespace IndieGame.Core
                 ReturnToBoard = true
             };
             _hasPayload = true;
-            // 返回棋盘后执行淡出（配合 Sleep 的黑屏淡入）
-            _pendingFadeOut = true;
-            _pendingFadeOutDuration = 1f;
 
-            LoadBoardScene(_payload.SceneName);
+            if (useFade)
+            {
+                EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
+                yield return new WaitForSeconds(fadeDuration);
+            }
+
+            int token = BeginTransition();
+            LoadBoardScene(_payload.SceneName, token);
+
+            while (!_transitionCompleted)
+            {
+                yield return null;
+            }
+
+            if (useFade)
+            {
+                EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+            }
         }
 
         /// <summary>
@@ -201,11 +201,6 @@ namespace IndieGame.Core
                 // Camp 场景加载完成后显示露营 UI
                 UIManager.Instance.CampUIInstance.Show();
             }
-            if (modeResult == GameMode.Camp)
-            {
-                // Camp 场景加载完成后执行黑屏淡出
-                TryFadeOut();
-            }
             // 广播场景模式变化
             EventBus.Raise(new GameModeChangedEvent
             {
@@ -246,7 +241,7 @@ namespace IndieGame.Core
         /// - 若已经在棋盘，则仅恢复根物体
         /// - 否则 Single 方式切换到棋盘
         /// </summary>
-        private AsyncOperation LoadBoardScene(string sceneName)
+        private AsyncOperation LoadBoardScene(string sceneName, int transitionToken)
         {
             Scene activeScene = SceneManager.GetActiveScene();
             if (!string.IsNullOrEmpty(_currentExplorationScene))
@@ -269,9 +264,12 @@ namespace IndieGame.Core
                             }
                             ActivateBoardScene();
                             RaiseBoardModeChanged();
-                            // 返回棋盘后执行黑屏淡出
-                            TryFadeOut();
+                            CompleteTransition(transitionToken);
                         };
+                    }
+                    else
+                    {
+                        CompleteTransition(transitionToken);
                     }
                     return unloadOp;
                 }
@@ -288,13 +286,21 @@ namespace IndieGame.Core
                     GameManager.Instance.CurrentPlayer.SetActive(true);
                 }
                 RaiseBoardModeChanged();
-                // 返回棋盘后执行黑屏淡出
-                TryFadeOut();
+                CompleteTransition(transitionToken);
                 return null;
             }
 
             // 从菜单等场景进入棋盘，直接 Single 加载
-            return SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+            AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+            if (op != null)
+            {
+                op.completed += _ => CompleteTransition(transitionToken);
+            }
+            else
+            {
+                CompleteTransition(transitionToken);
+            }
+            return op;
         }
 
         /// <summary>
@@ -303,7 +309,7 @@ namespace IndieGame.Core
         /// - 若当前是探索：先卸载旧探索，再叠加新探索
         /// - 若当前是棋盘：隐藏棋盘根物体，再叠加探索
         /// </summary>
-        private AsyncOperation LoadExplorationScene(string sceneName)
+        private AsyncOperation LoadExplorationScene(string sceneName, int transitionToken)
         {
             GameMode activeMode = GetModeForScene(SceneManager.GetActiveScene().name);
             if (activeMode == GameMode.Title)
@@ -316,7 +322,7 @@ namespace IndieGame.Core
                         // 先让棋盘常驻，再叠加探索
                         _boardScene = SceneManager.GetSceneByName(GetBoardSceneName());
                         SetBoardSceneRootsActive(false);
-                        LoadExplorationAdditive(sceneName);
+                        LoadExplorationAdditive(sceneName, transitionToken);
                     };
                 }
                 return loadBoardOp;
@@ -331,7 +337,7 @@ namespace IndieGame.Core
                     if (unloadOp != null)
                     {
                         // 卸载旧探索后再加载新探索
-                        unloadOp.completed += _ => LoadExplorationAdditive(sceneName);
+                        unloadOp.completed += _ => LoadExplorationAdditive(sceneName, transitionToken);
                     }
                     return unloadOp;
                 }
@@ -343,13 +349,13 @@ namespace IndieGame.Core
                 SetBoardSceneRootsActive(false);
             }
 
-            return LoadExplorationAdditive(sceneName);
+            return LoadExplorationAdditive(sceneName, transitionToken);
         }
 
         /// <summary>
         /// 以 Additive 方式叠加探索场景，并设置为 ActiveScene。
         /// </summary>
-        private AsyncOperation LoadExplorationAdditive(string sceneName)
+        private AsyncOperation LoadExplorationAdditive(string sceneName, int transitionToken)
         {
             AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Additive);
             if (op != null)
@@ -362,12 +368,18 @@ namespace IndieGame.Core
                         // 切换活动场景，确保灯光/摄像机等生效
                         SceneManager.SetActiveScene(loadedScene);
                         _currentExplorationScene = sceneName;
+                        CompleteTransition(transitionToken);
                     }
                     else
                     {
                         Debug.LogWarning($"[SceneLoader] Additive scene '{sceneName}' did not load correctly.");
+                        CompleteTransition(transitionToken);
                     }
                 };
+            }
+            else
+            {
+                CompleteTransition(transitionToken);
             }
             if (GameManager.Instance != null)
             {
@@ -395,17 +407,89 @@ namespace IndieGame.Core
         }
 
         /// <summary>
-        /// 若存在待执行的淡出请求，则触发并清理。
+        /// 协程入口：场景加载 + 黑屏淡入淡出。
         /// </summary>
-        private void TryFadeOut()
+        private IEnumerator LoadSceneRoutine(string sceneName, LocationID targetID, float fadeDuration)
         {
-            if (!_pendingFadeOut) return;
-            _pendingFadeOut = false;
-            EventBus.Raise(new FadeRequestedEvent
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
+            yield return new WaitForSeconds(fadeDuration);
+
+            int token = BeginTransition();
+            LoadSceneInternal(sceneName, targetID, token);
+
+            while (!_transitionCompleted)
             {
-                FadeIn = false,
-                Duration = _pendingFadeOutDuration
-            });
+                yield return null;
+            }
+
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+        }
+
+        /// <summary>
+        /// 场景加载内部逻辑（不包含淡入淡出）。
+        /// </summary>
+        private AsyncOperation LoadSceneInternal(string sceneName, LocationID targetID, int transitionToken)
+        {
+            // 进入探索场景前，缓存棋盘位置
+            CacheBoardNodeIndex();
+            GameMode targetMode = GetModeForScene(sceneName);
+            _payload = new TransitionPayload
+            {
+                SceneName = sceneName,
+                TargetLocation = targetID,
+                WaypointIndex = -1,
+                ReturnToBoard = false
+            };
+            _hasPayload = true;
+
+            if (targetMode == GameMode.Title)
+            {
+                // 菜单场景：完全切换，清理叠加状态
+                _currentExplorationScene = null;
+                _boardScene = default;
+                AsyncOperation op = SceneManager.LoadSceneAsync(sceneName, LoadSceneMode.Single);
+                if (op != null && transitionToken >= 0)
+                {
+                    op.completed += _ => CompleteTransition(transitionToken);
+                }
+                return op;
+            }
+
+            if (targetMode == GameMode.Board)
+            {
+                // 目标为棋盘：走“回棋盘”逻辑
+                return LoadBoardScene(sceneName, transitionToken);
+            }
+
+            if (targetMode == GameMode.Camp)
+            {
+                // 露营场景：视为 Additive 叠加场景处理
+                return LoadExplorationScene(sceneName, transitionToken);
+            }
+
+            // 目标为探索：走“棋盘常驻 + 叠加探索”逻辑
+            return LoadExplorationScene(sceneName, transitionToken);
+        }
+
+        /// <summary>
+        /// 开始一个转场流程，返回 Token。
+        /// </summary>
+        private int BeginTransition()
+        {
+            _transitionToken++;
+            _activeTransitionToken = _transitionToken;
+            _transitionCompleted = false;
+            return _activeTransitionToken;
+        }
+
+        /// <summary>
+        /// 标记转场完成（仅当前 Token 生效）。
+        /// </summary>
+        private void CompleteTransition(int token)
+        {
+            if (token < 0) return;
+            if (token != _activeTransitionToken) return;
+            _transitionCompleted = true;
         }
 
         /// <summary>

@@ -113,9 +113,8 @@ namespace IndieGame.UI
             // --- 第二阶段：加载场景 (权重分配：占总进度的 80%) ---
             if (SceneLoader.Instance != null)
             {
-                // 调用封装好的场景加载器加载 "World" 场景
-                // 这里期望 LoadScene 方法返回的是原生 Unity 的 AsyncOperation
-                AsyncOperation sceneOp = SceneLoader.Instance.LoadScene("World", null);
+                // 调用场景加载器的原始加载接口，获取 AsyncOperation 以驱动进度条
+                AsyncOperation sceneOp = SceneLoader.Instance.LoadSceneAsyncRaw("World", null);
 
                 if (sceneOp != null)
                 {
