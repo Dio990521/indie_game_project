@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using IndieGame.Core.Utilities;
+using IndieGame.UI;
 
 namespace IndieGame.Core
 {
@@ -184,6 +185,11 @@ namespace IndieGame.Core
             {
                 // 进入露营场景时隐藏玩家（避免与 Camp UI/场景冲突）
                 GameManager.Instance.CurrentPlayer.SetActive(false);
+            }
+            if (modeResult == GameMode.Camp && UIManager.Instance != null && UIManager.Instance.CampUIInstance != null)
+            {
+                // Camp 场景加载完成后显示露营 UI
+                UIManager.Instance.CampUIInstance.Show();
             }
             // 广播场景模式变化
             EventBus.Raise(new GameModeChangedEvent

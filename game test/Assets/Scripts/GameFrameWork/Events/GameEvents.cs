@@ -185,6 +185,33 @@ namespace IndieGame.Core
         public int Index;
     }
 
+    /// <summary>
+    /// 露营动作按钮 Hover 事件：
+    /// 由 CampActionButton 在鼠标进入时触发。
+    /// </summary>
+    public struct CampActionButtonHoverEvent
+    {
+        public int Index;
+    }
+
+    /// <summary>
+    /// 露营动作按钮 Click 事件：
+    /// 由 CampActionButton 在点击时触发。
+    /// </summary>
+    public struct CampActionButtonClickEvent
+    {
+        public int Index;
+    }
+
+    /// <summary>
+    /// 露营动作按钮 Exit 事件：
+    /// 由 CampActionButton 在鼠标移出时触发。
+    /// </summary>
+    public struct CampActionButtonExitEvent
+    {
+        public int Index;
+    }
+
     public struct InputMoveEvent
     {
         public UnityEngine.Vector2 Value;

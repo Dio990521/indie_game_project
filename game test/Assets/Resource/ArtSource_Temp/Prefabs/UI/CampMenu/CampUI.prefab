@@ -73,6 +73,7 @@ GameObject:
   - component: {fileID: 8636947338845188686}
   - component: {fileID: 1043081701424219412}
   - component: {fileID: 9122202908034962345}
+  - component: {fileID: 6639361712042982410}
   m_Layer: 0
   m_Name: CampUI
   m_TagString: Untagged
@@ -128,5 +129,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: f905e0cb2db1e4a06b1b54d1b45ac214, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Camp.CampUIBinder
-  menuContainer: {fileID: 1939573600286388917}
-  actionButtonPrefab: {fileID: 6711848045523580676, guid: 643a676b633b7480eb872fd23ecf50ad, type: 3}
+  rootRect: {fileID: 5174456594503919440}
+  menuContainer: {fileID: 5174456594503919440}
+  buttonPrefab: {fileID: 3872505519217320410, guid: 643a676b633b7480eb872fd23ecf50ad, type: 3}
+  canvasGroup: {fileID: 6639361712042982410}
+--- !u!225 &6639361712042982410
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7209752545887478414}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0

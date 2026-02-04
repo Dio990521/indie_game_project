@@ -223,6 +223,7 @@ GameObject:
   - component: {fileID: 7356735272804430469}
   - component: {fileID: 3853841429586834656}
   - component: {fileID: 3708256454742495080}
+  - component: {fileID: 3872505519217320410}
   m_Layer: 5
   m_Name: CampMenuButton
   m_TagString: Untagged
@@ -289,3 +290,17 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
+--- !u!114 &3872505519217320410
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6711848045523580676}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0971be6aba6684853a1f8858c740a71b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Camp.CampActionButton
+  iconImage: {fileID: 6833359433157906295}
+  label: {fileID: 6188299158294840518}
