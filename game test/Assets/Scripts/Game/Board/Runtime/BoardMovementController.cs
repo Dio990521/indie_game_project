@@ -126,7 +126,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             MapWaypoint node = BoardMapManager.Instance != null ? BoardMapManager.Instance.GetNode(nodeId) : null;
             if (node == null) return;
 
-            _playerEntity.SetCurrentNode(node, true);
+            // 从 Camp 返回时需要保留 LastWaypoint，避免被误判为分叉
+            _playerEntity.SetCurrentNode(node, true, false);
         }
 
         /// <summary>
