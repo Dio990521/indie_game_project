@@ -3,6 +3,7 @@ using UnityEngine;
 using IndieGame.Core.Utilities;
 using UnityEngine.SceneManagement;
 using IndieGame.Core;
+using DG.Tweening;
 
 namespace IndieGame.UI
 {
@@ -34,6 +35,8 @@ namespace IndieGame.UI
         [Header("UI Prefabs")]
         // UI Canvas 预制体
         [SerializeField] private GameObject uiCanvasPrefab;
+        // 全屏黑屏遮罩预制体（CanvasGroup，用于转场淡入淡出）
+        [SerializeField] private CanvasGroup fullscreenFadePrefab;
         // 棋盘操作菜单
         [SerializeField] private BoardActionMenuView boardActionMenuPrefab;
         // 背包 UI
@@ -49,6 +52,8 @@ namespace IndieGame.UI
         public Inventory.InventoryUIView InventoryInstance { get; private set; }
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
         public Camp.CampUIView CampUIInstance { get; private set; }
+        // 全屏黑屏遮罩实例
+        public CanvasGroup FullscreenFadeInstance { get; private set; }
 
         // UI 准备完成事件（供外部监听）
         public static event Action OnUIReady;
@@ -83,6 +88,7 @@ namespace IndieGame.UI
             // 监听场景加载与游戏状态变化
             SceneManager.sceneLoaded += HandleSceneLoaded;
             EventBus.Subscribe<GameStateChangedEvent>(HandleGameStateChanged);
+            EventBus.Subscribe<FadeRequestedEvent>(HandleFadeRequested);
         }
 
         private void OnDisable()
@@ -90,6 +96,7 @@ namespace IndieGame.UI
             // 退订事件，避免生命周期结束后被调用
             SceneManager.sceneLoaded -= HandleSceneLoaded;
             EventBus.Unsubscribe<GameStateChangedEvent>(HandleGameStateChanged);
+            EventBus.Unsubscribe<FadeRequestedEvent>(HandleFadeRequested);
         }
 
         /// <summary>
@@ -142,6 +149,7 @@ namespace IndieGame.UI
         /// </summary>
         private void SpawnUI()
         {
+
             if (boardActionMenuPrefab != null && BoardActionMenuInstance == null)
             {
                 BoardActionMenuInstance = SpawnOnLayer(boardActionMenuPrefab, UILayerPriority.Top75);
@@ -164,6 +172,19 @@ namespace IndieGame.UI
             {
                 CampUIInstance = SpawnOnLayer(campUIPrefab, UILayerPriority.Top75);
                 if (CampUIInstance != null) CampUIInstance.gameObject.SetActive(true);
+            }
+
+            // 生成全屏遮罩，确保始终在 UI 最上层
+            if (fullscreenFadePrefab != null && FullscreenFadeInstance == null)
+            {
+                FullscreenFadeInstance = SpawnOnLayer(fullscreenFadePrefab, UILayerPriority.Top75);
+                if (FullscreenFadeInstance != null)
+                {
+                    FullscreenFadeInstance.gameObject.SetActive(true);
+                    FullscreenFadeInstance.alpha = 0f;
+                    FullscreenFadeInstance.blocksRaycasts = false;
+                    FullscreenFadeInstance.interactable = false;
+                }
             }
 
             // 通知外部 UI 已准备完毕
@@ -245,6 +266,34 @@ namespace IndieGame.UI
                 // 添加 DontDestroyRoot 组件
                 target.AddComponent<DontDestroyRoot>();
             }
+        }
+
+        /// <summary>
+        /// 处理全屏淡入淡出事件：
+        /// 通过 DOTween 改变 CanvasGroup.alpha 实现黑屏转场。
+        /// </summary>
+        private void HandleFadeRequested(FadeRequestedEvent evt)
+        {
+            if (FullscreenFadeInstance == null)
+            {
+                Debug.LogWarning("[UIManager] Missing fullscreenFade CanvasGroup.");
+                return;
+            }
+
+            // 防止重入动画叠加
+            FullscreenFadeInstance.DOKill();
+            FullscreenFadeInstance.blocksRaycasts = true;
+            FullscreenFadeInstance.interactable = false;
+
+            float targetAlpha = evt.FadeIn ? 1f : 0f;
+            FullscreenFadeInstance.DOFade(targetAlpha, evt.Duration).OnComplete(() =>
+            {
+                // 淡出完成后解除遮挡
+                if (!evt.FadeIn)
+                {
+                    FullscreenFadeInstance.blocksRaycasts = false;
+                }
+            });
         }
     }
 }

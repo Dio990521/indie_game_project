@@ -149,7 +149,6 @@ namespace IndieGame.UI.Camp
                     break;
                 case CampActionID.Sleep:
                     Debug.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
-                    Hide();
                     StartCoroutine(SleepRoutine());
                     break;
             }
@@ -157,10 +156,11 @@ namespace IndieGame.UI.Camp
 
         private IEnumerator SleepRoutine()
         {
-            // 1) 黑屏淡入
+            // 1) 黑屏淡出
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = 1f });
-            // 2) 延迟 1 秒后返回棋盘
-            yield return new WaitForSeconds(1f);
+            // 2) 延迟 0.5 秒后返回棋盘
+            yield return new WaitForSeconds(0.5f);
+            Hide();
             if (SceneLoader.Instance != null)
             {
                 SceneLoader.Instance.ReturnToBoard();

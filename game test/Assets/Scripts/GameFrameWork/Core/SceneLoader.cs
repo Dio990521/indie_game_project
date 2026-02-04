@@ -42,6 +42,10 @@ namespace IndieGame.Core
         private Scene _boardScene;
         // 当前叠加的探索场景名
         private string _currentExplorationScene;
+        // 是否等待在场景加载/卸载完成后执行淡出
+        private bool _pendingFadeOut;
+        // 淡出时长（与淡入保持一致）
+        private float _pendingFadeOutDuration = 1f;
 
         // --- 载荷读取接口 ---
         public bool HasPayload => _hasPayload;
@@ -122,6 +126,9 @@ namespace IndieGame.Core
             if (targetMode == GameMode.Camp)
             {
                 // 露营场景：视为 Additive 叠加场景处理
+                // 进入 Camp 时需要在加载完成后淡出
+                _pendingFadeOut = true;
+                _pendingFadeOutDuration = 1f;
                 return LoadExplorationScene(sceneName);
             }
 
@@ -147,6 +154,9 @@ namespace IndieGame.Core
                 ReturnToBoard = true
             };
             _hasPayload = true;
+            // 返回棋盘后执行淡出（配合 Sleep 的黑屏淡入）
+            _pendingFadeOut = true;
+            _pendingFadeOutDuration = 1f;
 
             LoadBoardScene(_payload.SceneName);
         }
@@ -190,6 +200,11 @@ namespace IndieGame.Core
             {
                 // Camp 场景加载完成后显示露营 UI
                 UIManager.Instance.CampUIInstance.Show();
+            }
+            if (modeResult == GameMode.Camp)
+            {
+                // Camp 场景加载完成后执行黑屏淡出
+                TryFadeOut();
             }
             // 广播场景模式变化
             EventBus.Raise(new GameModeChangedEvent
@@ -254,6 +269,8 @@ namespace IndieGame.Core
                             }
                             ActivateBoardScene();
                             RaiseBoardModeChanged();
+                            // 返回棋盘后执行黑屏淡出
+                            TryFadeOut();
                         };
                     }
                     return unloadOp;
@@ -271,6 +288,8 @@ namespace IndieGame.Core
                     GameManager.Instance.CurrentPlayer.SetActive(true);
                 }
                 RaiseBoardModeChanged();
+                // 返回棋盘后执行黑屏淡出
+                TryFadeOut();
                 return null;
             }
 
@@ -373,6 +392,20 @@ namespace IndieGame.Core
         {
             if (_boardScene.IsValid() && _boardScene.isLoaded) return _boardScene;
             return SceneManager.GetSceneByName(GetBoardSceneName());
+        }
+
+        /// <summary>
+        /// 若存在待执行的淡出请求，则触发并清理。
+        /// </summary>
+        private void TryFadeOut()
+        {
+            if (!_pendingFadeOut) return;
+            _pendingFadeOut = false;
+            EventBus.Raise(new FadeRequestedEvent
+            {
+                FadeIn = false,
+                Duration = _pendingFadeOutDuration
+            });
         }
 
         /// <summary>

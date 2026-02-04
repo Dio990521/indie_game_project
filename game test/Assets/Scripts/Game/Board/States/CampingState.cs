@@ -45,6 +45,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         {
             // 1) 黑屏淡入
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = 1f });
+            yield return new WaitForSeconds(1f);
             // 2) 请求加载 Camp 场景（Additive）
             if (SceneLoader.Instance != null)
             {
