@@ -27,7 +27,7 @@ namespace IndieGame.Core
     public enum GameMode
     {
         // 菜单场景
-        Menu,
+        Title,
         // 棋盘场景
         Board,
         // 探索场景

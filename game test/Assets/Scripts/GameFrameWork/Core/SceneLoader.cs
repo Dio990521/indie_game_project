@@ -104,7 +104,7 @@ namespace IndieGame.Core
             };
             _hasPayload = true;
 
-            if (targetMode == GameMode.Menu)
+            if (targetMode == GameMode.Title)
             {
                 // 菜单场景：完全切换，清理叠加状态
                 _currentExplorationScene = null;
@@ -175,7 +175,7 @@ namespace IndieGame.Core
             {
                 _currentExplorationScene = scene.name;
             }
-            else if (modeResult == GameMode.Menu)
+            else if (modeResult == GameMode.Title)
             {
                 _currentExplorationScene = null;
                 _boardScene = default;
@@ -281,7 +281,7 @@ namespace IndieGame.Core
         private AsyncOperation LoadExplorationScene(string sceneName)
         {
             GameMode activeMode = GetModeForScene(SceneManager.GetActiveScene().name);
-            if (activeMode == GameMode.Menu)
+            if (activeMode == GameMode.Title)
             {
                 AsyncOperation loadBoardOp = SceneManager.LoadSceneAsync(GetBoardSceneName(), LoadSceneMode.Single);
                 if (loadBoardOp != null)
