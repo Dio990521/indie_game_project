@@ -75,7 +75,6 @@ namespace IndieGame.UI.Camp
 
         public override void Hide()
         {
-            StopAllCoroutines();
             _canvasGroup.alpha = 0f;
             _canvasGroup.blocksRaycasts = false;
             _canvasGroup.interactable = false;
