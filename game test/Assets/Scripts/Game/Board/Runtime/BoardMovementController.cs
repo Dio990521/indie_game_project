@@ -309,6 +309,15 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
+        /// 立即停止移动并清空剩余步数（用于弹窗/切场景等非阻塞交互）。
+        /// </summary>
+        public void StopMoveImmediate()
+        {
+            _stepsRemaining = 0;
+            FinishMove();
+        }
+
+        /// <summary>
         /// 结束整个移动流程：清理状态、发送事件、重置动画。
         /// </summary>
         private void FinishMove()

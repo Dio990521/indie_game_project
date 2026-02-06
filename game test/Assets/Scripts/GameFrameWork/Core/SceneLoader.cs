@@ -119,15 +119,20 @@ namespace IndieGame.Core
         /// </summary>
         public void ReturnToBoard()
         {
-            StartCoroutine(ReturnToBoardRoutine(true, 1f));
+            StartCoroutine(ReturnToBoardRoutine(true, 1f, true));
         }
 
         /// <summary>
         /// 返回棋盘的协程流程：
         /// 可选择是否执行淡入淡出，便于外部自行控制（如 Sleep）。
         /// </summary>
-        public IEnumerator ReturnToBoardRoutine(bool useFade, float fadeDuration = 1f)
+        public IEnumerator ReturnToBoardRoutine(bool useFade, float fadeDuration = 1f, bool endLoadingWhenDone = true)
         {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.BeginLoading();
+            }
+
             if (_lastBoardNodeIndex < 0)
             {
                 Debug.LogWarning("[SceneLoader] Saved board node index is invalid, will fallback to start node.");
@@ -158,6 +163,10 @@ namespace IndieGame.Core
             if (useFade)
             {
                 EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+            }
+            if (endLoadingWhenDone && GameManager.Instance != null)
+            {
+                GameManager.Instance.EndLoading();
             }
         }
 
@@ -411,6 +420,11 @@ namespace IndieGame.Core
         /// </summary>
         private IEnumerator LoadSceneRoutine(string sceneName, LocationID targetID, float fadeDuration)
         {
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.BeginLoading();
+            }
+
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
             yield return new WaitForSeconds(fadeDuration);
 
@@ -423,6 +437,10 @@ namespace IndieGame.Core
             }
 
             EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.EndLoading();
+            }
         }
 
         /// <summary>

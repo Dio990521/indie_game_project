@@ -169,11 +169,15 @@ namespace IndieGame.UI.Camp
             // 4) 返回棋盘（不重复触发淡入淡出）
             if (SceneLoader.Instance != null)
             {
-                yield return SceneLoader.Instance.ReturnToBoardRoutine(false, fadeDuration);
+                yield return SceneLoader.Instance.ReturnToBoardRoutine(false, fadeDuration, false);
             }
 
             // 5) 黑屏淡出（等待棋盘加载完成后执行）
             EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+            if (GameManager.Instance != null)
+            {
+                GameManager.Instance.EndLoading();
+            }
         }
     }
 }

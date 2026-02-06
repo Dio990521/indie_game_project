@@ -30,6 +30,8 @@ namespace IndieGame.Core.Input
 
         private InputSystem_Actions _gameInput;
         private InputMode _currentMode = InputMode.Gameplay;
+        private int _inputLockCount;
+        private InputMode _modeBeforeLock = InputMode.Gameplay;
 
         private void OnEnable()
         {
@@ -43,10 +45,12 @@ namespace IndieGame.Core.Input
             
             // 默认开启输入
             EnableGameplayInput();
+            EventBus.Subscribe<InputLockRequestedEvent>(HandleInputLockRequested);
         }
 
         private void OnDisable()
         {
+            EventBus.Unsubscribe<InputLockRequestedEvent>(HandleInputLockRequested);
             DisableAllInput();
         }
 
@@ -85,6 +89,28 @@ namespace IndieGame.Core.Input
                     CurrentMoveInput = Vector2.zero;
                     EventBus.Raise(new InputMoveEvent { Value = Vector2.zero });
                     break;
+            }
+        }
+
+        private void HandleInputLockRequested(InputLockRequestedEvent evt)
+        {
+            if (evt.Locked)
+            {
+                // 允许嵌套锁（多处同时触发加载/遮罩）
+                if (_inputLockCount == 0)
+                {
+                    _modeBeforeLock = _currentMode;
+                    SetInputMode(InputMode.Disabled);
+                }
+                _inputLockCount++;
+                return;
+            }
+
+            if (_inputLockCount <= 0) return;
+            _inputLockCount--;
+            if (_inputLockCount == 0)
+            {
+                SetInputMode(_modeBeforeLock);
             }
         }
 

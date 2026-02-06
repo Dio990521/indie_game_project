@@ -278,4 +278,14 @@ namespace IndieGame.Core
         // 渐变时长（秒）
         public float Duration;
     }
+
+    /// <summary>
+    /// 输入锁定事件：
+    /// 在加载或关键过渡期间禁用输入，避免误操作。
+    /// </summary>
+    public struct InputLockRequestedEvent
+    {
+        // true = 锁定输入，false = 解锁输入
+        public bool Locked;
+    }
 }

@@ -79,6 +79,13 @@ namespace IndieGame.Gameplay.Board.Data
                 Message = message,       // 确认框显示的文本
                 OnConfirm = () =>        // 玩家点击“确认”后的操作
                 {
+                    // 弹窗为非阻塞：此处强制停止棋盘移动，避免协程继续消耗步数
+                    var board = Gameplay.Board.Runtime.BoardGameManager.Instance;
+                    if (board != null && board.movementController != null)
+                    {
+                        board.movementController.StopMoveImmediate();
+                    }
+
                     // 获取场景加载单例
                     SceneLoader loader = SceneLoader.Instance;
                     if (loader == null) return;

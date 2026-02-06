@@ -20,6 +20,11 @@ namespace IndieGame.Core
 
         // 是否已初始化
         public bool IsInitialized { get; private set; } = false;
+        // 是否处于加载锁定中
+        private bool _isLoading;
+        // 加载期间缓存的目标状态（由 GameModeChanged 触发）
+        private GameState _pendingState = GameState.FreeRoam;
+        private bool _hasPendingState;
 
         // 玩家预制体（由 GameBootstrapper 或外部设置）
         private GameObject playerPrefab;
@@ -42,6 +47,12 @@ namespace IndieGame.Core
         private void OnGameModeChanged(GameModeChangedEvent evt)
         {
             // 根据事件传来的 Mode 切换状态
+            if (_isLoading)
+            {
+                _pendingState = evt.Mode == GameMode.Board ? GameState.BoardMode : GameState.FreeRoam;
+                _hasPendingState = true;
+                return;
+            }
             if (evt.Mode == GameMode.Board)
             {
                 ChangeState(GameState.BoardMode);
@@ -113,6 +124,45 @@ namespace IndieGame.Core
             CurrentState = newState;
             Debug.Log($"[GameManager] State Changed to: {newState}");
             EventBus.Raise(new GameStateChangedEvent { NewState = newState });
+
+            // Loading 状态负责统一锁定/解锁输入
+            if (newState == GameState.Loading)
+            {
+                EventBus.Raise(new InputLockRequestedEvent { Locked = true });
+            }
+            else if (_isLoading && newState != GameState.Loading)
+            {
+                EventBus.Raise(new InputLockRequestedEvent { Locked = false });
+            }
+        }
+
+        /// <summary>
+        /// 进入加载状态：锁定输入并阻止 GameModeChanged 直接切状态。
+        /// </summary>
+        public void BeginLoading()
+        {
+            if (_isLoading) return;
+            _isLoading = true;
+            _hasPendingState = false;
+            ChangeState(GameState.Loading);
+        }
+
+        /// <summary>
+        /// 退出加载状态：应用缓存的场景模式状态并解锁输入。
+        /// </summary>
+        public void EndLoading()
+        {
+            if (!_isLoading) return;
+            if (_hasPendingState)
+            {
+                ChangeState(_pendingState);
+                _hasPendingState = false;
+                _isLoading = false;
+                return;
+            }
+            // 若没有缓存状态，默认回到自由探索
+            ChangeState(GameState.FreeRoam);
+            _isLoading = false;
         }
 
         /// <summary>

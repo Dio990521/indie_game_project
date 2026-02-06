@@ -10,6 +10,8 @@ namespace IndieGame.Core
         Initialization, // ⚡ 新增：初始化阶段
         // 主菜单阶段：不进入游戏逻辑
         MainMenu,       // ⚡ 新增：主菜单
+        // 加载阶段：场景切换/资源加载中
+        Loading,
         // 自由探索阶段（非棋盘）
         FreeRoam,       
         // 棋盘模式阶段
