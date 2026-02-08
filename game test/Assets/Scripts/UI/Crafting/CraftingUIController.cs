@@ -256,18 +256,35 @@ namespace IndieGame.UI.Crafting
         private void BuildReplicationList(CraftingSystem craftingSystem)
         {
             craftingSystem.GetCraftHistory(_historyCache);
+            // 复现列表去重集合：
+            // 目的：CraftingSystem 历史会记录“每一次制造行为”，其中可能出现完全相同的
+            //      BlueprintID + CustomName 组合。这里用 HashSet 做一次 UI 层去重，
+            //      保证左侧仅展示“不重复的配方+命名组合”。
+            // 说明：键格式固定为 "BlueprintID|CustomName"（按需求定义）。
+            HashSet<string> dedupeKeys = new HashSet<string>(StringComparer.Ordinal);
 
             for (int i = 0; i < _historyCache.Count; i++)
             {
                 CraftHistoryEntry history = _historyCache[i];
                 if (history == null || string.IsNullOrWhiteSpace(history.BlueprintID)) continue;
 
+                // 自定义名用于去重时做 Trim 归一化，避免仅因首尾空格不同而被视为不同条目。
+                string normalizedCustomName = string.IsNullOrWhiteSpace(history.CustomName)
+                    ? string.Empty
+                    : history.CustomName.Trim();
+                string dedupeKey = history.BlueprintID + "|" + normalizedCustomName;
+                if (!dedupeKeys.Add(dedupeKey))
+                {
+                    // 已存在同组合，直接跳过，不再生成重复 Slot。
+                    continue;
+                }
+
                 BlueprintSO blueprint = craftingSystem.GetBlueprint(history.BlueprintID);
                 if (blueprint == null) continue;
 
                 string entryKey = $"R:{i}";
                 string fallbackName = craftingSystem.GetOriginalProductName(blueprint);
-                string displayName = string.IsNullOrWhiteSpace(history.CustomName) ? fallbackName : history.CustomName;
+                string displayName = string.IsNullOrWhiteSpace(normalizedCustomName) ? fallbackName : normalizedCustomName;
 
                 CraftListEntry entry = new CraftListEntry
                 {
@@ -398,7 +415,8 @@ namespace IndieGame.UI.Crafting
 
         /// <summary>
         /// 制造按钮点击逻辑：
-        /// 需求变更后这里不再直接 ExecuteCraft，改为“先请求输入弹窗”。
+        /// - Prototype（原型制造）：先请求输入弹窗，确认后再制造。
+        /// - Replication（复现制造）：跳过弹窗，直接用历史条目的 SuggestedName 执行制造。
         /// </summary>
         private void HandleCraftButtonClicked()
         {
@@ -410,6 +428,25 @@ namespace IndieGame.UI.Crafting
 
             CraftingSystem craftingSystem = CraftingSystem.Instance;
             if (craftingSystem == null) return;
+
+            // 复现制造分支：
+            // 直接读取当前选中条目里的 SuggestedName（历史中记录的名称），
+            // 不再弹输入框，立即执行制造。
+            if (_currentTab == CraftTab.Replication)
+            {
+                string replicationName = GetSelectedSuggestedName();
+                if (string.IsNullOrWhiteSpace(replicationName))
+                {
+                    // 理论上复现条目应始终有名称，这里做兜底防御，
+                    // 若异常为空则回退成品原始名称，避免传入空名。
+                    BlueprintSO fallbackBlueprint = craftingSystem.GetBlueprint(blueprintId);
+                    if (fallbackBlueprint == null) return;
+                    replicationName = craftingSystem.GetOriginalProductName(fallbackBlueprint);
+                }
+
+                craftingSystem.ExecuteCraft(blueprintId, replicationName);
+                return;
+            }
 
             BlueprintSO blueprint = craftingSystem.GetBlueprint(blueprintId);
             if (blueprint == null) return;
@@ -522,12 +559,13 @@ namespace IndieGame.UI.Crafting
 
         /// <summary>
         /// 制造历史新增事件：
-        /// 当处于复现 Tab 且界面可见时，实时刷新列表以显示新增记录。
+        /// 重要约束：在复现 Tab 下直接忽略该事件，避免“复现制造成功后”把新记录再次
+        /// 回灌到左侧列表导致重复 Slot。
         /// </summary>
         private void HandleCraftHistoryRecorded(CraftHistoryRecordedEvent evt)
         {
             if (!_isVisible) return;
-            if (_currentTab != CraftTab.Replication) return;
+            if (_currentTab == CraftTab.Replication) return;
 
             RebuildCraftList();
             // 新记录追加在末尾，刷新后默认选中末尾更符合“刚刚制造成功”的反馈预期
