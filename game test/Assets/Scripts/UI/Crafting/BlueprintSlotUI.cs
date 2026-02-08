@@ -3,7 +3,6 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
 using IndieGame.Core;
-using IndieGame.Gameplay.Crafting;
 
 namespace IndieGame.UI.Crafting
 {
@@ -21,29 +20,36 @@ namespace IndieGame.UI.Crafting
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text nameText;
 
-        // 当前槽位绑定的图纸 ID（点击时通过 EventBus 广播）
+        // 当前槽位绑定的“列表条目唯一键”（不是蓝图 ID）
+        // 设计原因：
+        // - 原型 Tab 一般是 1 蓝图 = 1 条目
+        // - 复现 Tab 可能出现同一蓝图的多条历史记录（名称不同）
+        // 因此点击事件不能只传蓝图 ID，必须传条目键来精确定位。
+        private string _entryKey;
+        // 当前条目对应的蓝图 ID（用于点击事件携带）
         private string _blueprintId;
 
         /// <summary>
         /// 设置列表项显示内容：
-        /// - 图标来自 BlueprintSO（通常是成品图标）
-        /// - 名称固定来自 BlueprintSO.DefaultName（图纸不支持自定义命名）
+        /// - entryKey：UI 列表中的唯一条目标识
+        /// - blueprintId：对应配方 ID
+        /// - icon：显示图标（一般使用成品图标）
+        /// - displayName：显示名称（原型 Tab 用原始名，复现 Tab 用自定义名）
         /// </summary>
-        public void Setup(BlueprintRecord record, BlueprintSO data)
+        public void Setup(string entryKey, string blueprintId, Sprite icon, string displayName)
         {
-            _blueprintId = record != null && !string.IsNullOrWhiteSpace(record.ID)
-                ? record.ID
-                : (data != null ? data.ID : string.Empty);
+            _entryKey = string.IsNullOrWhiteSpace(entryKey) ? string.Empty : entryKey;
+            _blueprintId = string.IsNullOrWhiteSpace(blueprintId) ? string.Empty : blueprintId;
 
             if (iconImage != null)
             {
-                iconImage.sprite = data != null ? data.GetDisplayIcon() : null;
+                iconImage.sprite = icon;
                 iconImage.enabled = iconImage.sprite != null;
             }
 
             if (nameText != null)
             {
-                nameText.text = data != null ? data.DefaultName : "Unnamed Blueprint";
+                nameText.text = string.IsNullOrWhiteSpace(displayName) ? "Unnamed Blueprint" : displayName;
             }
         }
 
@@ -53,9 +59,10 @@ namespace IndieGame.UI.Crafting
         /// </summary>
         public void OnPointerClick(PointerEventData eventData)
         {
-            if (string.IsNullOrWhiteSpace(_blueprintId)) return;
+            if (string.IsNullOrWhiteSpace(_entryKey)) return;
             EventBus.Raise(new CraftBlueprintSlotClickedEvent
             {
+                EntryKey = _entryKey,
                 BlueprintID = _blueprintId
             });
         }

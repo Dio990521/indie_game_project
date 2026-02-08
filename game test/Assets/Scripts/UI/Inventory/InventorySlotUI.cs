@@ -38,7 +38,7 @@ namespace IndieGame.UI.Inventory
             _slot = slot;
             _onClick = onClick;
             if (nameLabel == null) return;
-            if (slot == null || slot.Item == null || slot.Item.ItemName == null)
+            if (slot == null || slot.Item == null)
             {
                 if (emptyLabel == null)
                 {
@@ -57,13 +57,26 @@ namespace IndieGame.UI.Inventory
                 return;
             }
 
-            // 异步读取物品名称（本地化）
-            var handle = slot.Item.ItemName.GetLocalizedStringAsync();
-            handle.Completed += op =>
+            // 优先显示槽位实例名（用于支持制造时的自定义命名）
+            if (!string.IsNullOrWhiteSpace(slot.CustomName))
             {
-                if (_slot != slot) return;
-                nameLabel.text = op.Result;
-            };
+                nameLabel.text = slot.CustomName;
+            }
+            // 若没有实例名，则回退到 ItemSO 原始名称
+            else if (slot.Item.ItemName != null)
+            {
+                // 异步读取物品名称（本地化）
+                var handle = slot.Item.ItemName.GetLocalizedStringAsync();
+                handle.Completed += op =>
+                {
+                    if (_slot != slot) return;
+                    nameLabel.text = op.Result;
+                };
+            }
+            else
+            {
+                nameLabel.text = string.IsNullOrWhiteSpace(slot.Item.ID) ? "Unknown Item" : slot.Item.ID;
+            }
 
             // 数量显示：当数量 > 1 时显示数字，否则清空
             if (countLabel != null)

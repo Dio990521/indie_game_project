@@ -115,11 +115,18 @@ namespace IndieGame.Gameplay.Inventory
         /// - 再尝试新建槽位
         /// - 超出容量时返回 false
         /// </summary>
-        public bool AddItem(ItemSO item, int amount = 1)
+        /// <param name="customName">
+        /// 物品实例自定义名称：
+        /// - null/空：使用道具原始名称（可与同类默认名称堆叠）
+        /// - 非空：作为实例名写入槽位，仅与“同名同类”槽位堆叠
+        /// </param>
+        public bool AddItem(ItemSO item, int amount = 1, string customName = null)
         {
             if (item == null || amount <= 0) return false;
 
             int remaining = amount;
+            // 先做一次标准化，避免循环里重复 Trim
+            string normalizedCustomName = string.IsNullOrWhiteSpace(customName) ? string.Empty : customName.Trim();
 
             // 1) 尝试堆叠到已有槽位
             if (item.isStackable)
@@ -127,7 +134,7 @@ namespace IndieGame.Gameplay.Inventory
                 for (int i = 0; i < slots.Count; i++)
                 {
                     InventorySlot slot = slots[i];
-                    if (slot == null || slot.Item != item) continue;
+                    if (slot == null || !slot.CanStackWith(item, normalizedCustomName)) continue;
                     if (slot.Count >= item.maxStack) continue;
 
                     int space = Mathf.Max(0, item.maxStack - slot.Count);
@@ -149,7 +156,7 @@ namespace IndieGame.Gameplay.Inventory
                 }
 
                 int addCount = item.isStackable ? Mathf.Min(item.maxStack, remaining) : 1;
-                slots.Add(new InventorySlot(item, addCount));
+                slots.Add(new InventorySlot(item, addCount, normalizedCustomName));
                 remaining -= addCount;
             }
 

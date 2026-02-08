@@ -12,18 +12,47 @@ namespace IndieGame.UI.Crafting
     /// <summary>
     /// 打造界面控制器（核心 UI 逻辑层）：
     ///
-    /// 架构职责边界：
-    /// - CraftUIBinder：只提供引用（不写逻辑）
-    /// - CraftingUIController：负责列表生成、选中切换、按钮状态刷新、输入关闭
-    /// - CraftingSystem：负责制造规则与数据
+    /// 设计目标：
+    /// 1) 通过 EventBus 驱动界面开关与交互，避免 UI 与业务系统直接耦合。
+    /// 2) 在同一套“左侧列表 + 右侧详情”布局上，复用实现两个 Tab：
+    ///    - 原型制造（Prototype）
+    ///    - 复现制造（Replication）
+    /// 3) 点击制造后先弹“自定义名称输入弹窗”，确认后才真正执行制造。
     ///
-    /// 刷新规则（本类严格执行）：
-    /// 1) 左侧列表：显示图纸图标 + 图纸固定名称（名称来自 BlueprintSO.DefaultName）
-    /// 2) 右侧详情：只显示“成品图标 + 材料清单 + 制造按钮”
-    ///    不显示成品名称文本（按需求明确移除）
+    /// 架构边界：
+    /// - CraftUIBinder：只保存引用，不写逻辑。
+    /// - CraftingUIController：处理交互、列表、Tab、弹窗流程。
+    /// - CraftingSystem：只负责规则与数据（扣料、产出、历史、存档）。
     /// </summary>
     public class CraftingUIController : MonoBehaviour
     {
+        /// <summary>
+        /// Tab 类型定义：
+        /// Prototype：原型制造，显示尚未消耗的蓝图条目。
+        /// Replication：复现制造，显示制造历史条目（名称使用玩家自定义名）。
+        /// </summary>
+        private enum CraftTab
+        {
+            Prototype,
+            Replication
+        }
+
+        /// <summary>
+        /// 左侧列表运行时条目模型：
+        /// 该结构体是 UI 适配层，不直接落盘，仅用于把不同数据源统一映射到同一 UI 组件。
+        /// </summary>
+        private struct CraftListEntry
+        {
+            // 列表条目唯一键（必须唯一；用于点击后精确定位）
+            public string EntryKey;
+            // 对应蓝图 ID（用于右侧配方查询与制造执行）
+            public string BlueprintID;
+            // 左侧列表显示名称
+            public string DisplayName;
+            // 本条目在“弹窗默认名称”场景下建议使用的默认值
+            public string SuggestedName;
+        }
+
         [Header("References")]
         [SerializeField] private CraftUIBinder binder;
         [SerializeField] private GameInputReader inputReader;
@@ -31,36 +60,41 @@ namespace IndieGame.UI.Crafting
         [Header("Pool Settings")]
         [Tooltip("左侧图纸列表对象池预热数量")]
         [SerializeField] private int slotPoolWarmup = 8;
-
         [Tooltip("右侧材料列表对象池预热数量")]
         [SerializeField] private int requirementPoolWarmup = 10;
 
-        // 左侧图纸 Slot 对象池
+        // 对象池：减少频繁 Instantiate/Destroy 带来的 GC 与 CPU 抖动
         private GameObjectPool _slotPool;
-        // 右侧材料条目对象池
         private GameObjectPool _requirementPool;
 
-        // 当前激活的左侧 Slot 实例（用于回收）
+        // 当前激活的 UI 实例缓存（用于回收）
         private readonly List<BlueprintSlotUI> _activeBlueprintSlots = new List<BlueprintSlotUI>();
-        // 当前激活的右侧材料行实例（用于回收）
         private readonly List<RequirementSlotUI> _activeRequirementSlots = new List<RequirementSlotUI>();
 
-        // BlueprintID -> SlotUI 的快速映射，支持 O(1) 删除
-        private readonly Dictionary<string, BlueprintSlotUI> _slotByBlueprintId = new Dictionary<string, BlueprintSlotUI>(StringComparer.Ordinal);
-        // 保留左侧顺序，便于“移除后自动选中第一个”
-        private readonly List<string> _blueprintOrder = new List<string>();
+        // 左侧条目索引：
+        // EntryKey -> 列表项 UI
+        private readonly Dictionary<string, BlueprintSlotUI> _slotByEntryKey = new Dictionary<string, BlueprintSlotUI>(StringComparer.Ordinal);
+        // EntryKey -> 列表数据
+        private readonly Dictionary<string, CraftListEntry> _entryByKey = new Dictionary<string, CraftListEntry>(StringComparer.Ordinal);
+        // 列表顺序（用于自动选中第 0 项、删除后回退等）
+        private readonly List<string> _entryOrder = new List<string>();
 
-        // 临时缓存：可用图纸记录列表（避免重复 new）
+        // 临时缓存（避免每次刷新都 new）
         private readonly List<BlueprintRecord> _availableRecordsCache = new List<BlueprintRecord>();
-        // 临时缓存：背包数量统计（ItemSO -> 拥有数量）
+        private readonly List<CraftHistoryEntry> _historyCache = new List<CraftHistoryEntry>();
         private readonly Dictionary<ItemSO, int> _inventoryCountCache = new Dictionary<ItemSO, int>();
 
-        // 当前选中的图纸 ID（右侧详情绑定该 ID）
-        private string _selectedBlueprintId;
-        // 当前界面是否处于显示状态（由本 Controller 通过 EventBus 控制）
+        // 当前 UI 状态
+        private CraftTab _currentTab = CraftTab.Prototype;
+        private string _selectedEntryKey;
         private bool _isVisible;
-        // 用于软显示/软隐藏的 CanvasGroup（避免用 SetActive 导致监听失效）
         private CanvasGroup _canvasGroup;
+
+        // 弹窗请求上下文（通过 RequestId 匹配响应，避免多次点击串线）
+        private int _popupRequestSeed;
+        private int _pendingPopupRequestId = -1;
+        private string _pendingBlueprintId;
+        private string _pendingDefaultName;
 
         private void Awake()
         {
@@ -77,13 +111,23 @@ namespace IndieGame.UI.Crafting
             {
                 binder.CraftButton.onClick.AddListener(HandleCraftButtonClicked);
             }
+            if (binder.PrototypeTabButton != null)
+            {
+                binder.PrototypeTabButton.onClick.AddListener(HandlePrototypeTabClicked);
+            }
+            if (binder.ReplicationTabButton != null)
+            {
+                binder.ReplicationTabButton.onClick.AddListener(HandleReplicationTabClicked);
+            }
         }
 
         private void OnDestroy()
         {
-            if (binder != null && binder.CraftButton != null)
+            if (binder != null)
             {
-                binder.CraftButton.onClick.RemoveListener(HandleCraftButtonClicked);
+                if (binder.CraftButton != null) binder.CraftButton.onClick.RemoveListener(HandleCraftButtonClicked);
+                if (binder.PrototypeTabButton != null) binder.PrototypeTabButton.onClick.RemoveListener(HandlePrototypeTabClicked);
+                if (binder.ReplicationTabButton != null) binder.ReplicationTabButton.onClick.RemoveListener(HandleReplicationTabClicked);
             }
         }
 
@@ -91,7 +135,7 @@ namespace IndieGame.UI.Crafting
         {
             SubscribeEvents();
             SubscribeInput();
-            // 首次启用时默认隐藏，等待 OpenCraftingUIEvent 再显示
+            // 重要：默认隐藏，等待 OpenCraftingUIEvent 再显示
             SetVisible(false);
         }
 
@@ -100,17 +144,51 @@ namespace IndieGame.UI.Crafting
             UnsubscribeEvents();
             UnsubscribeInput();
 
-            // 关闭界面时回收所有动态对象，避免重复启用时出现旧残留
+            // 禁用时释放所有动态 UI，防止下次启用出现残留状态
             ReleaseAllBlueprintSlots();
             ReleaseAllRequirementSlots();
+            _selectedEntryKey = null;
+            ClearPendingPopupRequest();
         }
 
         /// <summary>
-        /// 从 CraftingSystem 读取“未消耗图纸”并重建左侧列表。
+        /// 原型 Tab 按钮回调。
         /// </summary>
-        private void RebuildBlueprintList()
+        private void HandlePrototypeTabClicked()
+        {
+            SwitchTab(CraftTab.Prototype);
+        }
+
+        /// <summary>
+        /// 复现 Tab 按钮回调。
+        /// </summary>
+        private void HandleReplicationTabClicked()
+        {
+            SwitchTab(CraftTab.Replication);
+        }
+
+        /// <summary>
+        /// 切换 Tab 并刷新左侧列表。
+        /// </summary>
+        private void SwitchTab(CraftTab tab)
+        {
+            if (_currentTab == tab) return;
+            _currentTab = tab;
+            if (!_isVisible) return;
+            RebuildCraftList();
+        }
+
+        /// <summary>
+        /// 重建左侧列表：
+        /// - Prototype：数据源为“未消耗蓝图记录”
+        /// - Replication：数据源为“制造历史记录”
+        ///
+        /// 两者共用同一个 Slot 预制体和同一套右侧详情面板。
+        /// </summary>
+        private void RebuildCraftList()
         {
             ReleaseAllBlueprintSlots();
+            _selectedEntryKey = null;
 
             CraftingSystem craftingSystem = CraftingSystem.Instance;
             if (craftingSystem == null)
@@ -119,31 +197,19 @@ namespace IndieGame.UI.Crafting
                 return;
             }
 
-            craftingSystem.GetAvailableBlueprintRecords(_availableRecordsCache);
-            for (int i = 0; i < _availableRecordsCache.Count; i++)
+            if (_currentTab == CraftTab.Prototype)
             {
-                BlueprintRecord record = _availableRecordsCache[i];
-                if (record == null || string.IsNullOrWhiteSpace(record.ID)) continue;
-
-                BlueprintSO data = craftingSystem.GetBlueprint(record.ID);
-                if (data == null) continue;
-
-                BlueprintSlotUI slotUI = SpawnBlueprintSlot(record, data);
-                if (slotUI == null) continue;
-
-                string blueprintId = record.ID;
-
-                _activeBlueprintSlots.Add(slotUI);
-                _slotByBlueprintId[blueprintId] = slotUI;
-                _blueprintOrder.Add(blueprintId);
+                BuildPrototypeList(craftingSystem);
+            }
+            else
+            {
+                BuildReplicationList(craftingSystem);
             }
 
-            // 自动选中逻辑：
-            // - 有图纸 -> 自动点亮第 0 个
-            // - 无图纸 -> 切换空状态
-            if (_blueprintOrder.Count > 0)
+            // 自动选中逻辑：有条目选第 0 条；无条目进入空态
+            if (_entryOrder.Count > 0)
             {
-                OnBlueprintSelected(_blueprintOrder[0]);
+                OnEntrySelected(_entryOrder[0]);
             }
             else
             {
@@ -152,11 +218,89 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 选中图纸后的统一刷新入口。
+        /// 构建“原型制造”列表。
+        /// 规则：显示产出物原始名称（不是自定义名）。
         /// </summary>
-        private void OnBlueprintSelected(string blueprintId)
+        private void BuildPrototypeList(CraftingSystem craftingSystem)
         {
-            if (string.IsNullOrWhiteSpace(blueprintId))
+            craftingSystem.GetAvailableBlueprintRecords(_availableRecordsCache);
+
+            for (int i = 0; i < _availableRecordsCache.Count; i++)
+            {
+                BlueprintRecord record = _availableRecordsCache[i];
+                if (record == null || string.IsNullOrWhiteSpace(record.ID)) continue;
+
+                BlueprintSO blueprint = craftingSystem.GetBlueprint(record.ID);
+                if (blueprint == null) continue;
+
+                string entryKey = $"P:{record.ID}";
+                string productOriginalName = craftingSystem.GetOriginalProductName(blueprint);
+                string displayName = string.IsNullOrWhiteSpace(productOriginalName) ? blueprint.DefaultName : productOriginalName;
+
+                CraftListEntry entry = new CraftListEntry
+                {
+                    EntryKey = entryKey,
+                    BlueprintID = blueprint.ID,
+                    DisplayName = displayName,
+                    SuggestedName = displayName
+                };
+
+                AddListEntry(entry, blueprint.GetDisplayIcon());
+            }
+        }
+
+        /// <summary>
+        /// 构建“复现制造”列表。
+        /// 规则：显示历史中的最终名称（玩家自定义名）。
+        /// </summary>
+        private void BuildReplicationList(CraftingSystem craftingSystem)
+        {
+            craftingSystem.GetCraftHistory(_historyCache);
+
+            for (int i = 0; i < _historyCache.Count; i++)
+            {
+                CraftHistoryEntry history = _historyCache[i];
+                if (history == null || string.IsNullOrWhiteSpace(history.BlueprintID)) continue;
+
+                BlueprintSO blueprint = craftingSystem.GetBlueprint(history.BlueprintID);
+                if (blueprint == null) continue;
+
+                string entryKey = $"R:{i}";
+                string fallbackName = craftingSystem.GetOriginalProductName(blueprint);
+                string displayName = string.IsNullOrWhiteSpace(history.CustomName) ? fallbackName : history.CustomName;
+
+                CraftListEntry entry = new CraftListEntry
+                {
+                    EntryKey = entryKey,
+                    BlueprintID = blueprint.ID,
+                    DisplayName = displayName,
+                    SuggestedName = displayName
+                };
+
+                AddListEntry(entry, blueprint.GetDisplayIcon());
+            }
+        }
+
+        /// <summary>
+        /// 添加单条列表项到 UI 与索引。
+        /// </summary>
+        private void AddListEntry(CraftListEntry entry, Sprite icon)
+        {
+            BlueprintSlotUI slotUI = SpawnBlueprintSlot(entry, icon);
+            if (slotUI == null) return;
+
+            _activeBlueprintSlots.Add(slotUI);
+            _slotByEntryKey[entry.EntryKey] = slotUI;
+            _entryByKey[entry.EntryKey] = entry;
+            _entryOrder.Add(entry.EntryKey);
+        }
+
+        /// <summary>
+        /// 选中列表条目后刷新右侧详情。
+        /// </summary>
+        private void OnEntrySelected(string entryKey)
+        {
+            if (!_entryByKey.TryGetValue(entryKey, out CraftListEntry entry))
             {
                 EnterEmptyState();
                 return;
@@ -169,30 +313,26 @@ namespace IndieGame.UI.Crafting
                 return;
             }
 
-            BlueprintSO data = craftingSystem.GetBlueprint(blueprintId);
-            if (data == null)
+            BlueprintSO blueprint = craftingSystem.GetBlueprint(entry.BlueprintID);
+            if (blueprint == null)
             {
                 EnterEmptyState();
                 return;
             }
 
-            _selectedBlueprintId = blueprintId;
+            _selectedEntryKey = entryKey;
 
-            // 选中后强制隐藏空状态
             if (binder.EmptyStateNode != null)
             {
                 binder.EmptyStateNode.SetActive(false);
             }
 
-            // 右侧详情显示规则（严格执行需求）：
-            // 1) 只刷新成品图标，不显示成品名称
-            // 2) 刷新材料清单
-            // 3) 刷新按钮可点击状态
             SetDetailPanelVisible(true);
 
+            // 右侧按需求只显示成品图标，不显示成品名称文本
             if (binder.ProductIcon != null)
             {
-                binder.ProductIcon.sprite = data.GetDisplayIcon();
+                binder.ProductIcon.sprite = blueprint.GetDisplayIcon();
                 binder.ProductIcon.enabled = binder.ProductIcon.sprite != null;
             }
 
@@ -201,24 +341,25 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 刷新“右侧材料清单”。
+        /// 刷新右侧材料列表（共享逻辑，两个 Tab 通用）。
         /// </summary>
         private void RefreshRequirementList()
         {
             ReleaseAllRequirementSlots();
 
-            if (string.IsNullOrWhiteSpace(_selectedBlueprintId)) return;
+            string blueprintId = GetSelectedBlueprintId();
+            if (string.IsNullOrWhiteSpace(blueprintId)) return;
 
             CraftingSystem craftingSystem = CraftingSystem.Instance;
             if (craftingSystem == null) return;
 
-            BlueprintSO data = craftingSystem.GetBlueprint(_selectedBlueprintId);
-            if (data == null) return;
+            BlueprintSO blueprint = craftingSystem.GetBlueprint(blueprintId);
+            if (blueprint == null) return;
             if (binder.RequirementsRoot == null) return;
 
             RebuildInventoryCountCache();
 
-            IReadOnlyList<BlueprintRequirement> requirements = data.Requirements;
+            IReadOnlyList<BlueprintRequirement> requirements = blueprint.Requirements;
             for (int i = 0; i < requirements.Count; i++)
             {
                 BlueprintRequirement requirement = requirements[i];
@@ -237,190 +378,210 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 刷新制造按钮状态：
-        /// - 材料不足 -> 不可点击
-        /// - 材料充足 -> 可点击
-        ///
-        /// 调用时机：
-        /// - 选中图纸后
-        /// - 收到 OnInventoryChanged 后
+        /// 刷新制造按钮可点击状态（共享逻辑，两个 Tab 通用）。
         /// </summary>
         private void RefreshButtonState()
         {
-            if (binder.CraftButton == null)
-            {
-                return;
-            }
+            if (binder.CraftButton == null) return;
 
-            if (string.IsNullOrWhiteSpace(_selectedBlueprintId))
+            string blueprintId = GetSelectedBlueprintId();
+            if (string.IsNullOrWhiteSpace(blueprintId))
             {
                 binder.CraftButton.interactable = false;
                 return;
             }
 
             CraftingSystem craftingSystem = CraftingSystem.Instance;
-            bool canCraft = craftingSystem != null && craftingSystem.CanCraft(_selectedBlueprintId);
+            bool canCraft = craftingSystem != null && craftingSystem.CanCraft(blueprintId);
             binder.CraftButton.interactable = canCraft;
         }
 
         /// <summary>
-        /// 制造按钮点击：
-        /// 只发起制造，不直接改 UI 列表；
-        /// UI 的移除由 OnBlueprintConsumed 事件统一驱动，保证解耦与一致性。
+        /// 制造按钮点击逻辑：
+        /// 需求变更后这里不再直接 ExecuteCraft，改为“先请求输入弹窗”。
         /// </summary>
         private void HandleCraftButtonClicked()
         {
             if (!_isVisible) return;
-            if (string.IsNullOrWhiteSpace(_selectedBlueprintId)) return;
+            if (_pendingPopupRequestId >= 0) return;
+
+            string blueprintId = GetSelectedBlueprintId();
+            if (string.IsNullOrWhiteSpace(blueprintId)) return;
+
             CraftingSystem craftingSystem = CraftingSystem.Instance;
             if (craftingSystem == null) return;
-            craftingSystem.ExecuteCraft(_selectedBlueprintId);
+
+            BlueprintSO blueprint = craftingSystem.GetBlueprint(blueprintId);
+            if (blueprint == null) return;
+
+            // 弹窗默认文本：
+            // - 原型 Tab：产出物原始名
+            // - 复现 Tab：当前历史条目的自定义名（或回退原始名）
+            string defaultName = GetSelectedSuggestedName();
+            if (string.IsNullOrWhiteSpace(defaultName))
+            {
+                defaultName = craftingSystem.GetOriginalProductName(blueprint);
+            }
+
+            // 记录请求上下文，等待弹窗响应事件
+            _pendingPopupRequestId = ++_popupRequestSeed;
+            _pendingBlueprintId = blueprintId;
+            _pendingDefaultName = defaultName;
+
+            // 若当前没有任何输入弹窗监听该事件，则给出明确警告并取消本次请求，
+            // 避免玩家点击制造后无反馈。
+            if (!EventBus.HasSubscribers<CraftNameInputPopupRequestEvent>())
+            {
+                Debug.LogWarning("[CraftingUIController] No listener for CraftNameInputPopupRequestEvent. Please add CraftNameInputPopupView.");
+                ClearPendingPopupRequest();
+                return;
+            }
+
+            EventBus.Raise(new CraftNameInputPopupRequestEvent
+            {
+                RequestId = _pendingPopupRequestId,
+                BlueprintID = blueprintId,
+                DefaultName = defaultName
+            });
         }
 
         /// <summary>
-        /// 背包变化事件处理：
-        /// 当材料数量变化时，刷新右侧材料拥有数与按钮状态。
+        /// 输入弹窗响应处理：
+        /// - 取消：直接结束，不扣材料
+        /// - 确认：执行制造，并把输入名称传给系统
+        /// </summary>
+        private void HandleCraftNamePopupResult(CraftNameInputPopupResultEvent evt)
+        {
+            // 只处理当前待确认请求，其他响应一律忽略
+            if (evt.RequestId != _pendingPopupRequestId) return;
+
+            string blueprintId = _pendingBlueprintId;
+            string defaultName = _pendingDefaultName;
+            ClearPendingPopupRequest();
+
+            if (!evt.Confirmed) return;
+            if (string.IsNullOrWhiteSpace(blueprintId)) return;
+
+            string finalName = string.IsNullOrWhiteSpace(evt.CustomName)
+                ? defaultName
+                : evt.CustomName.Trim();
+
+            CraftingSystem craftingSystem = CraftingSystem.Instance;
+            if (craftingSystem == null) return;
+            craftingSystem.ExecuteCraft(blueprintId, finalName);
+        }
+
+        /// <summary>
+        /// 背包变化时刷新右侧需求与按钮。
         /// </summary>
         private void HandleInventoryChanged(OnInventoryChanged evt)
         {
             if (!_isVisible) return;
-            if (string.IsNullOrWhiteSpace(_selectedBlueprintId)) return;
+            if (string.IsNullOrWhiteSpace(_selectedEntryKey)) return;
             RefreshRequirementList();
             RefreshButtonState();
         }
 
         /// <summary>
-        /// 图纸消耗事件处理：
-        /// - 移除左侧对应 Slot
-        /// - 若该图纸正被选中：自动选第一个；如果列表空则进入空状态
+        /// 图纸首次消耗事件：
+        /// 仅在原型 Tab 需要实时移除对应条目。
         /// </summary>
         private void HandleBlueprintConsumed(OnBlueprintConsumed evt)
         {
             if (!_isVisible) return;
+            if (_currentTab != CraftTab.Prototype) return;
             if (string.IsNullOrWhiteSpace(evt.BlueprintID)) return;
-            if (!_slotByBlueprintId.TryGetValue(evt.BlueprintID, out BlueprintSlotUI slotUI)) return;
 
-            // 从左侧列表移除对应图纸
-            RemoveBlueprintSlot(evt.BlueprintID, slotUI);
-
-            // 如果消耗的是当前选中图纸，按需求执行“自动选中第一个/空状态切换”
-            if (string.Equals(_selectedBlueprintId, evt.BlueprintID, StringComparison.Ordinal))
+            // 收集所有对应蓝图的条目键（理论上原型列表只会有 1 条，但此处写成通用逻辑）
+            List<string> toRemove = null;
+            for (int i = 0; i < _entryOrder.Count; i++)
             {
-                if (_blueprintOrder.Count > 0)
-                {
-                    OnBlueprintSelected(_blueprintOrder[0]);
-                }
-                else
-                {
-                    EnterEmptyState();
-                }
-                return;
+                string key = _entryOrder[i];
+                if (!_entryByKey.TryGetValue(key, out CraftListEntry entry)) continue;
+                if (!string.Equals(entry.BlueprintID, evt.BlueprintID, StringComparison.Ordinal)) continue;
+                if (toRemove == null) toRemove = new List<string>();
+                toRemove.Add(key);
             }
 
-            // 若当前选中未变化，也刷新一次按钮，确保状态与库存一致
-            RefreshButtonState();
+            if (toRemove == null || toRemove.Count == 0) return;
+
+            for (int i = 0; i < toRemove.Count; i++)
+            {
+                RemoveEntryByKey(toRemove[i]);
+            }
+
+            if (_entryOrder.Count > 0)
+            {
+                OnEntrySelected(_entryOrder[0]);
+            }
+            else
+            {
+                EnterEmptyState();
+            }
         }
 
         /// <summary>
-        /// 图纸槽位点击事件处理：
-        /// 由 BlueprintSlotUI 通过 EventBus 广播，控制器接收后执行选中刷新。
+        /// 制造历史新增事件：
+        /// 当处于复现 Tab 且界面可见时，实时刷新列表以显示新增记录。
+        /// </summary>
+        private void HandleCraftHistoryRecorded(CraftHistoryRecordedEvent evt)
+        {
+            if (!_isVisible) return;
+            if (_currentTab != CraftTab.Replication) return;
+
+            RebuildCraftList();
+            // 新记录追加在末尾，刷新后默认选中末尾更符合“刚刚制造成功”的反馈预期
+            if (_entryOrder.Count > 0)
+            {
+                OnEntrySelected(_entryOrder[_entryOrder.Count - 1]);
+            }
+        }
+
+        /// <summary>
+        /// 左侧槽位点击事件处理。
         /// </summary>
         private void HandleBlueprintSlotClicked(CraftBlueprintSlotClickedEvent evt)
         {
-            if (!isActiveAndEnabled) return;
-            if (!_isVisible) return;
-            if (string.IsNullOrWhiteSpace(evt.BlueprintID)) return;
-            if (!_slotByBlueprintId.ContainsKey(evt.BlueprintID)) return;
-            OnBlueprintSelected(evt.BlueprintID);
+            if (!isActiveAndEnabled || !_isVisible) return;
+            if (string.IsNullOrWhiteSpace(evt.EntryKey)) return;
+            if (!_entryByKey.ContainsKey(evt.EntryKey)) return;
+            OnEntrySelected(evt.EntryKey);
         }
 
         /// <summary>
-        /// 打开打造界面事件：
-        /// 由外部入口（如 Camp 按钮）通过 EventBus 广播。
+        /// 打开 Craft UI 事件：
+        /// 由外部入口（如 Camp 动作按钮）触发。
         /// </summary>
         private void HandleOpenCraftingUI(OpenCraftingUIEvent evt)
         {
             if (!isActiveAndEnabled) return;
-            RebuildBlueprintList();
+            RebuildCraftList();
             SetVisible(true);
         }
 
         /// <summary>
-        /// 关闭打造界面事件：
-        /// 统一收拢隐藏与清理逻辑。
+        /// 关闭 Craft UI 事件：
+        /// 统一隐藏并清理运行时状态。
         /// </summary>
         private void HandleCloseCraftingUI(CloseCraftingUIEvent evt)
         {
             if (!isActiveAndEnabled) return;
             if (!_isVisible) return;
+
             SetVisible(false);
             ReleaseAllBlueprintSlots();
             ReleaseAllRequirementSlots();
-            _selectedBlueprintId = null;
+            _selectedEntryKey = null;
+            ClearPendingPopupRequest();
         }
 
         /// <summary>
-        /// 进入空状态：
-        /// - 显示 emptyStateNode
-        /// - 隐藏右侧图标、材料区、按钮
-        /// </summary>
-        private void EnterEmptyState()
-        {
-            _selectedBlueprintId = null;
-
-            if (binder.EmptyStateNode != null)
-            {
-                binder.EmptyStateNode.SetActive(true);
-            }
-
-            SetDetailPanelVisible(false);
-
-            if (binder.ProductIcon != null)
-            {
-                binder.ProductIcon.sprite = null;
-                binder.ProductIcon.enabled = false;
-            }
-
-            ReleaseAllRequirementSlots();
-
-            if (binder.CraftButton != null)
-            {
-                binder.CraftButton.interactable = false;
-            }
-        }
-
-        /// <summary>
-        /// 统一切换右侧详情可见性。
-        ///
-        /// 说明：
-        /// 右侧不包含成品名称文本，仅包含成品图标 + 材料列表 + 按钮。
-        /// </summary>
-        private void SetDetailPanelVisible(bool visible)
-        {
-            if (binder.ProductIcon != null)
-            {
-                binder.ProductIcon.gameObject.SetActive(visible);
-            }
-
-            if (binder.RequirementsRoot != null)
-            {
-                binder.RequirementsRoot.gameObject.SetActive(visible);
-            }
-
-            if (binder.CraftButton != null)
-            {
-                binder.CraftButton.gameObject.SetActive(visible);
-            }
-        }
-
-        /// <summary>
-        /// ESC/UI Cancel 关闭界面。
+        /// ESC / Cancel 输入处理：
+        /// 不直接改 UI，统一转发为 CloseCraftingUIEvent。
         /// </summary>
         private void HandleUICancel()
         {
-            if (!isActiveAndEnabled) return;
-            if (!_isVisible) return;
-            // 关闭动作同样走 EventBus，保证显隐入口一致。
+            if (!isActiveAndEnabled || !_isVisible) return;
             EventBus.Raise(new CloseCraftingUIEvent());
         }
 
@@ -428,23 +589,27 @@ namespace IndieGame.UI.Crafting
         {
             EventBus.Subscribe<OnInventoryChanged>(HandleInventoryChanged);
             EventBus.Subscribe<OnBlueprintConsumed>(HandleBlueprintConsumed);
+            EventBus.Subscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
             EventBus.Subscribe<CraftBlueprintSlotClickedEvent>(HandleBlueprintSlotClicked);
             EventBus.Subscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
             EventBus.Subscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
+            EventBus.Subscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
         }
 
         private void UnsubscribeEvents()
         {
             EventBus.Unsubscribe<OnInventoryChanged>(HandleInventoryChanged);
             EventBus.Unsubscribe<OnBlueprintConsumed>(HandleBlueprintConsumed);
+            EventBus.Unsubscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
             EventBus.Unsubscribe<CraftBlueprintSlotClickedEvent>(HandleBlueprintSlotClicked);
             EventBus.Unsubscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
             EventBus.Unsubscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
+            EventBus.Unsubscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
         }
 
         /// <summary>
         /// 输入订阅安全：
-        /// 明确在 OnEnable/OnDisable 中成对订阅/注销 GameInputReader.UICancelEvent。
+        /// 必须在 OnEnable/OnDisable 成对订阅/注销。
         /// </summary>
         private void SubscribeInput()
         {
@@ -459,9 +624,9 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 创建左侧图纸项（对象池）。
+        /// 创建左侧条目 UI（对象池）。
         /// </summary>
-        private BlueprintSlotUI SpawnBlueprintSlot(BlueprintRecord record, BlueprintSO data)
+        private BlueprintSlotUI SpawnBlueprintSlot(CraftListEntry entry, Sprite icon)
         {
             if (_slotPool == null || binder.ListRoot == null) return null;
 
@@ -476,12 +641,12 @@ namespace IndieGame.UI.Crafting
                 return null;
             }
 
-            slotUI.Setup(record, data);
+            slotUI.Setup(entry.EntryKey, entry.BlueprintID, icon, entry.DisplayName);
             return slotUI;
         }
 
         /// <summary>
-        /// 创建右侧材料条目（对象池）。
+        /// 创建右侧材料条目 UI（对象池）。
         /// </summary>
         private RequirementSlotUI SpawnRequirementSlot()
         {
@@ -502,20 +667,29 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 删除单个左侧图纸项并回收。
+        /// 按条目键移除左侧条目并回收对象池。
         /// </summary>
-        private void RemoveBlueprintSlot(string blueprintId, BlueprintSlotUI slotUI)
+        private void RemoveEntryByKey(string entryKey)
         {
-            if (slotUI != null && _slotPool != null)
+            if (string.IsNullOrWhiteSpace(entryKey)) return;
+
+            if (_slotByEntryKey.TryGetValue(entryKey, out BlueprintSlotUI slotUI))
             {
-                _slotPool.Release(slotUI.gameObject);
+                if (slotUI != null && _slotPool != null)
+                {
+                    _slotPool.Release(slotUI.gameObject);
+                }
+                _activeBlueprintSlots.Remove(slotUI);
             }
 
-            _activeBlueprintSlots.Remove(slotUI);
-            _slotByBlueprintId.Remove(blueprintId);
-            _blueprintOrder.Remove(blueprintId);
+            _slotByEntryKey.Remove(entryKey);
+            _entryByKey.Remove(entryKey);
+            _entryOrder.Remove(entryKey);
         }
 
+        /// <summary>
+        /// 回收所有左侧条目。
+        /// </summary>
         private void ReleaseAllBlueprintSlots()
         {
             for (int i = 0; i < _activeBlueprintSlots.Count; i++)
@@ -529,10 +703,14 @@ namespace IndieGame.UI.Crafting
             }
 
             _activeBlueprintSlots.Clear();
-            _slotByBlueprintId.Clear();
-            _blueprintOrder.Clear();
+            _slotByEntryKey.Clear();
+            _entryByKey.Clear();
+            _entryOrder.Clear();
         }
 
+        /// <summary>
+        /// 回收所有右侧材料条目。
+        /// </summary>
         private void ReleaseAllRequirementSlots()
         {
             for (int i = 0; i < _activeRequirementSlots.Count; i++)
@@ -549,7 +727,7 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 重建背包数量缓存（用于右侧材料“拥有数”展示）。
+        /// 重建背包数量缓存（用于右侧需求显示：拥有/需求）。
         /// </summary>
         private void RebuildInventoryCountCache()
         {
@@ -575,6 +753,87 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
+        /// 进入空状态：
+        /// - 显示 emptyStateNode
+        /// - 隐藏右侧图标、材料、制造按钮
+        /// </summary>
+        private void EnterEmptyState()
+        {
+            _selectedEntryKey = null;
+
+            if (binder.EmptyStateNode != null)
+            {
+                binder.EmptyStateNode.SetActive(true);
+            }
+
+            SetDetailPanelVisible(false);
+
+            if (binder.ProductIcon != null)
+            {
+                binder.ProductIcon.sprite = null;
+                binder.ProductIcon.enabled = false;
+            }
+
+            ReleaseAllRequirementSlots();
+
+            if (binder.CraftButton != null)
+            {
+                binder.CraftButton.interactable = false;
+            }
+        }
+
+        /// <summary>
+        /// 统一切换右侧详情可见性。
+        /// </summary>
+        private void SetDetailPanelVisible(bool visible)
+        {
+            if (binder.ProductIcon != null)
+            {
+                binder.ProductIcon.gameObject.SetActive(visible);
+            }
+            if (binder.RequirementsRoot != null)
+            {
+                binder.RequirementsRoot.gameObject.SetActive(visible);
+            }
+            if (binder.CraftButton != null)
+            {
+                binder.CraftButton.gameObject.SetActive(visible);
+            }
+        }
+
+        /// <summary>
+        /// 获取当前选中条目对应的蓝图 ID。
+        /// </summary>
+        private string GetSelectedBlueprintId()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedEntryKey)) return string.Empty;
+            return _entryByKey.TryGetValue(_selectedEntryKey, out CraftListEntry entry)
+                ? entry.BlueprintID
+                : string.Empty;
+        }
+
+        /// <summary>
+        /// 获取当前选中条目的“建议默认名称”。
+        /// </summary>
+        private string GetSelectedSuggestedName()
+        {
+            if (string.IsNullOrWhiteSpace(_selectedEntryKey)) return string.Empty;
+            return _entryByKey.TryGetValue(_selectedEntryKey, out CraftListEntry entry)
+                ? entry.SuggestedName
+                : string.Empty;
+        }
+
+        /// <summary>
+        /// 清空弹窗待确认上下文。
+        /// </summary>
+        private void ClearPendingPopupRequest()
+        {
+            _pendingPopupRequestId = -1;
+            _pendingBlueprintId = string.Empty;
+            _pendingDefaultName = string.Empty;
+        }
+
+        /// <summary>
         /// 初始化对象池。
         /// </summary>
         private void EnsurePools()
@@ -594,7 +853,7 @@ namespace IndieGame.UI.Crafting
 
         /// <summary>
         /// 确保存在 CanvasGroup：
-        /// Craft UI 通过软显隐控制，不依赖 GameObject.SetActive。
+        /// 使用软显隐保持控制器始终激活，以持续监听 EventBus。
         /// </summary>
         private void EnsureCanvasGroup()
         {
@@ -606,19 +865,16 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 软显隐实现：
-        /// - visible = true：可见 + 可交互
-        /// - visible = false：透明 + 不可交互
+        /// 软显隐：
+        /// visible=true  时：显示并可交互
+        /// visible=false 时：隐藏且不可交互
         /// </summary>
         private void SetVisible(bool visible)
         {
             _isVisible = visible;
-            if (_canvasGroup == null)
-            {
-                EnsureCanvasGroup();
-            }
-
+            if (_canvasGroup == null) EnsureCanvasGroup();
             if (_canvasGroup == null) return;
+
             _canvasGroup.alpha = visible ? 1f : 0f;
             _canvasGroup.blocksRaycasts = visible;
             _canvasGroup.interactable = visible;

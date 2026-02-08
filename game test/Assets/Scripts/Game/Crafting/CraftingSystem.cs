@@ -9,6 +9,31 @@ using IndieGame.Gameplay.Inventory;
 namespace IndieGame.Gameplay.Crafting
 {
     /// <summary>
+    /// 制造历史条目：
+    /// 用于记录“某次成功制造”的关键信息，供复现制造 Tab 使用。
+    /// </summary>
+    [Serializable]
+    public class CraftHistoryEntry
+    {
+        // 对应蓝图 ID（静态配方入口）
+        public string BlueprintID;
+        // 玩家最终确认的名称（实例名）
+        public string CustomName;
+
+        public CraftHistoryEntry()
+        {
+            BlueprintID = string.Empty;
+            CustomName = string.Empty;
+        }
+
+        public CraftHistoryEntry(string blueprintId, string customName)
+        {
+            BlueprintID = blueprintId;
+            CustomName = string.IsNullOrWhiteSpace(customName) ? string.Empty : customName.Trim();
+        }
+    }
+
+    /// <summary>
     /// 打造系统核心单例：
     /// 架构定位：
     /// - 只负责“数据与规则”，不直接持有任何 UI 逻辑。
@@ -32,6 +57,8 @@ namespace IndieGame.Gameplay.Crafting
         private readonly Dictionary<string, BlueprintSO> _blueprintById = new Dictionary<string, BlueprintSO>(StringComparer.Ordinal);
         // 图纸记录：BlueprintID -> BlueprintRecord（动态进度数据）
         private readonly Dictionary<string, BlueprintRecord> _recordById = new Dictionary<string, BlueprintRecord>(StringComparer.Ordinal);
+        // 制造历史列表：按成功制造时间顺序追加
+        private readonly List<CraftHistoryEntry> _craftHistory = new List<CraftHistoryEntry>();
         // 材料统计缓存：ItemSO -> 当前背包总数量（用于 CanCraft 快速判断）
         private readonly Dictionary<ItemSO, int> _inventoryCounter = new Dictionary<ItemSO, int>();
 
@@ -106,6 +133,26 @@ namespace IndieGame.Gameplay.Crafting
         }
 
         /// <summary>
+        /// 对外查询：获取完整制造历史（按记录顺序）。
+        /// 说明：
+        /// - 该列表是“复现制造 Tab”的数据源。
+        /// - 输出为深拷贝，防止外部修改内部状态。
+        /// </summary>
+        public void GetCraftHistory(List<CraftHistoryEntry> output)
+        {
+            if (output == null) return;
+            output.Clear();
+
+            Initialize();
+            for (int i = 0; i < _craftHistory.Count; i++)
+            {
+                CraftHistoryEntry src = _craftHistory[i];
+                if (src == null) continue;
+                output.Add(new CraftHistoryEntry(src.BlueprintID, src.CustomName));
+            }
+        }
+
+        /// <summary>
         /// 可制造性检查：
         /// 仅做“规则判断”，不改任何状态。
         /// </summary>
@@ -115,8 +162,7 @@ namespace IndieGame.Gameplay.Crafting
 
             if (string.IsNullOrWhiteSpace(blueprintId)) return false;
             if (!_blueprintById.TryGetValue(blueprintId, out BlueprintSO blueprint)) return false;
-            if (!_recordById.TryGetValue(blueprintId, out BlueprintRecord record)) return false;
-            if (record.IsConsumed) return false;
+            if (!_recordById.ContainsKey(blueprintId)) return false;
 
             InventoryManager inventory = InventoryManager.Instance;
             if (inventory == null) return false;
@@ -141,12 +187,13 @@ namespace IndieGame.Gameplay.Crafting
         /// 执行制造：
         /// 按需求严格执行顺序：
         /// 1) 扣除材料
-        /// 2) 标记图纸 IsConsumed
-        /// 3) 发放成品
-        /// 4) 自动保存
-        /// 5) 发布 OnBlueprintConsumed
+        /// 2) 首次制造时标记图纸 IsConsumed（仅影响原型列表）
+        /// 3) 发放成品（写入自定义实例名）
+        /// 4) 追加制造历史
+        /// 5) 自动保存
+        /// 6) 发布事件（OnBlueprintConsumed / CraftHistoryRecordedEvent）
         /// </summary>
-        public bool ExecuteCraft(string blueprintId)
+        public bool ExecuteCraft(string blueprintId, string customName)
         {
             Initialize();
 
@@ -174,22 +221,43 @@ namespace IndieGame.Gameplay.Crafting
                 }
             }
 
-            // 2) 标记图纸消耗
-            record.IsConsumed = true;
+            // 2) 首次制造时才标记图纸消耗：
+            // 这样“原型制造”会移除该图纸，而“复现制造”仍然可继续生产。
+            bool consumedNow = !record.IsConsumed;
+            if (consumedNow)
+            {
+                record.IsConsumed = true;
+            }
+
+            // 规范化最终实例名（为空时回退原始名称）
+            string finalCustomName = NormalizeFinalCustomName(customName, blueprint);
 
             // 3) 发放成品（若配置缺失则仅跳过发放，不阻断流程）
             if (blueprint.ProductItem != null)
             {
-                inventory.AddItem(blueprint.ProductItem, blueprint.ProductAmount);
+                inventory.AddItem(blueprint.ProductItem, blueprint.ProductAmount, finalCustomName);
             }
 
-            // 4) 自动保存（无 SaveManager 时静默跳过）
+            // 4) 追加制造历史（无论是不是首次原型制造，都写入历史用于复现 Tab）
+            _craftHistory.Add(new CraftHistoryEntry(blueprintId, finalCustomName));
+
+            // 5) 自动保存（无 SaveManager 时静默跳过）
             TryAutoSave();
 
-            // 5) 广播“图纸已消耗”事件，UI 层据此移除左侧列表项
-            EventBus.Raise(new OnBlueprintConsumed
+            // 6-A) 若本次是“首次消耗图纸”，广播图纸消耗事件（用于原型列表移除）
+            if (consumedNow)
             {
-                BlueprintID = blueprintId
+                EventBus.Raise(new OnBlueprintConsumed
+                {
+                    BlueprintID = blueprintId
+                });
+            }
+
+            // 6-B) 广播历史新增事件（用于复现 Tab 动态刷新）
+            EventBus.Raise(new CraftHistoryRecordedEvent
+            {
+                BlueprintID = blueprintId,
+                CustomName = finalCustomName
             });
 
             return true;
@@ -213,6 +281,14 @@ namespace IndieGame.Gameplay.Crafting
                 {
                     IsConsumed = src.IsConsumed
                 });
+            }
+
+            // 额外保存制造历史（复现制造 Tab 数据源）
+            for (int i = 0; i < _craftHistory.Count; i++)
+            {
+                CraftHistoryEntry src = _craftHistory[i];
+                if (src == null) continue;
+                state.History.Add(new CraftHistoryEntry(src.BlueprintID, src.CustomName));
             }
             return state;
         }
@@ -245,6 +321,19 @@ namespace IndieGame.Gameplay.Crafting
 
             // 补全数据库新增图纸、清理无效旧 ID
             EnsureRecordMapConsistency();
+
+            // 恢复制造历史（只保留能映射到现有蓝图的条目）
+            _craftHistory.Clear();
+            if (state.History != null)
+            {
+                for (int i = 0; i < state.History.Count; i++)
+                {
+                    CraftHistoryEntry entry = state.History[i];
+                    if (entry == null || string.IsNullOrWhiteSpace(entry.BlueprintID)) continue;
+                    if (!_blueprintById.ContainsKey(entry.BlueprintID)) continue;
+                    _craftHistory.Add(new CraftHistoryEntry(entry.BlueprintID, entry.CustomName));
+                }
+            }
         }
 
         /// <summary>
@@ -354,6 +443,35 @@ namespace IndieGame.Gameplay.Crafting
         }
 
         /// <summary>
+        /// 规范化最终自定义名称：
+        /// - 玩家输入有效：使用输入
+        /// - 玩家输入为空：回退到“产出物原始名称”
+        /// </summary>
+        private string NormalizeFinalCustomName(string customName, BlueprintSO blueprint)
+        {
+            if (!string.IsNullOrWhiteSpace(customName))
+            {
+                return customName.Trim();
+            }
+            return GetOriginalProductName(blueprint);
+        }
+
+        /// <summary>
+        /// 获取产出物原始名称（用于输入框默认值与空名回退）。
+        /// </summary>
+        public string GetOriginalProductName(BlueprintSO blueprint)
+        {
+            if (blueprint == null) return "Unknown Product";
+            if (blueprint.ProductItem != null && blueprint.ProductItem.ItemName != null)
+            {
+                // 这里采用同步读取，适合业务逻辑层的默认值兜底
+                string localized = blueprint.ProductItem.ItemName.GetLocalizedString();
+                if (!string.IsNullOrWhiteSpace(localized)) return localized;
+            }
+            return blueprint.DefaultName;
+        }
+
+        /// <summary>
         /// 尝试自动保存：
         /// 没有 SaveManager 时静默返回，不影响制造主流程。
         /// </summary>
@@ -397,6 +515,7 @@ namespace IndieGame.Gameplay.Crafting
         private class CraftingSaveState
         {
             public List<BlueprintRecord> Records = new List<BlueprintRecord>();
+            public List<CraftHistoryEntry> History = new List<CraftHistoryEntry>();
         }
     }
 }

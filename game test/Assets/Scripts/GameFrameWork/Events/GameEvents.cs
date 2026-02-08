@@ -60,6 +60,8 @@ namespace IndieGame.Core
     /// </summary>
     public struct CraftBlueprintSlotClickedEvent
     {
+        // 被点击的列表条目唯一键（用于精确定位当前条目）
+        public string EntryKey;
         // 被点击的图纸 ID
         public string BlueprintID;
     }
@@ -78,6 +80,47 @@ namespace IndieGame.Core
     /// </summary>
     public struct CloseCraftingUIEvent
     {
+    }
+
+    /// <summary>
+    /// 请求打开“自定义成品名称”输入弹窗事件：
+    /// CraftingUIController 在点击制造按钮后发布该事件，
+    /// 由专门的输入弹窗 UI 监听并展示输入框。
+    /// </summary>
+    public struct CraftNameInputPopupRequestEvent
+    {
+        // 请求唯一 ID（用于响应时匹配，防止并发串线）
+        public int RequestId;
+        // 本次制造对应的图纸 ID（便于弹窗层按需展示额外信息）
+        public string BlueprintID;
+        // 输入框默认文本（通常是产出物原始名称）
+        public string DefaultName;
+    }
+
+    /// <summary>
+    /// “自定义成品名称”输入弹窗响应事件：
+    /// 输入弹窗点击确认/取消后，通过该事件把结果回传给 CraftingUIController。
+    /// </summary>
+    public struct CraftNameInputPopupResultEvent
+    {
+        // 对应请求 ID
+        public int RequestId;
+        // 是否确认
+        public bool Confirmed;
+        // 用户输入的自定义名称（取消时可为空）
+        public string CustomName;
+    }
+
+    /// <summary>
+    /// 制造历史新增事件：
+    /// 每次成功制造后，CraftingSystem 广播该事件，供 UI（复现 Tab）刷新列表。
+    /// </summary>
+    public struct CraftHistoryRecordedEvent
+    {
+        // 历史记录对应的图纸 ID
+        public string BlueprintID;
+        // 历史记录里的最终名称（玩家确认后的名称）
+        public string CustomName;
     }
 
     /// <summary>

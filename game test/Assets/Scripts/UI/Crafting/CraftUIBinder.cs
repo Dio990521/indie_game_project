@@ -23,6 +23,12 @@ namespace IndieGame.UI.Crafting
         [SerializeField] private Transform listRoot;
         [SerializeField] private GameObject slotPrefab;
 
+        [Header("Tabs")]
+        [Tooltip("原型制造 Tab 按钮")]
+        [SerializeField] private Button prototypeTabButton;
+        [Tooltip("复现制造 Tab 按钮")]
+        [SerializeField] private Button replicationTabButton;
+
         [Header("Requirement Item (Optional)")]
         [Tooltip("材料条目预制体（可选但推荐配置）。若未配置，右侧将无法生成材料列表。")]
         [SerializeField] private GameObject requirementSlotPrefab;
@@ -34,6 +40,8 @@ namespace IndieGame.UI.Crafting
 
         public Transform ListRoot => listRoot;
         public GameObject SlotPrefab => slotPrefab;
+        public Button PrototypeTabButton => prototypeTabButton;
+        public Button ReplicationTabButton => replicationTabButton;
 
         public GameObject RequirementSlotPrefab => requirementSlotPrefab;
     }
