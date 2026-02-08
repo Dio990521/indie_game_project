@@ -15,6 +15,12 @@ MonoBehaviour:
   m_GroupName: Localization-String-Tables-Chinese (Traditional) (zh-Hant)
   m_GUID: 4132303738ea64fd89f75e510c3e1bde
   m_SerializeEntries:
+  - m_GUID: 7abef384f303d44978d34fdc65069b8f
+    m_Address: Weapons_zh-Hant
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-zh-Hant
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b8fff12212e61412f9ec752185e5799b
     m_Address: Items_zh-Hant
     m_ReadOnly: 1

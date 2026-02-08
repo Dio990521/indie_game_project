@@ -4,6 +4,7 @@ using IndieGame.Core.Utilities;
 using UnityEngine.SceneManagement;
 using IndieGame.Core;
 using DG.Tweening;
+using IndieGame.UI.Crafting;
 
 namespace IndieGame.UI
 {
@@ -45,6 +46,8 @@ namespace IndieGame.UI
         [SerializeField] private Confirmation.ConfirmationPopupView confirmationPrefab;
         // 露营 UI
         [SerializeField] private Camp.CampUIView campUIPrefab;
+        // 打造 UI（仅由 UIManager 负责实例化）
+        [SerializeField] private CraftingUIController craftingUIPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -52,6 +55,7 @@ namespace IndieGame.UI
         public Inventory.InventoryUIView InventoryInstance { get; private set; }
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
         public Camp.CampUIView CampUIInstance { get; private set; }
+        public CraftingUIController CraftingUIInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -172,6 +176,17 @@ namespace IndieGame.UI
             {
                 CampUIInstance = SpawnOnLayer(campUIPrefab, UILayerPriority.Top75);
                 if (CampUIInstance != null) CampUIInstance.gameObject.SetActive(true);
+            }
+
+            if (craftingUIPrefab != null && CraftingUIInstance == null)
+            {
+                CraftingUIInstance = SpawnOnLayer(craftingUIPrefab, UILayerPriority.Top75);
+                if (CraftingUIInstance != null)
+                {
+                    // UIManager 仅负责“生成实例”：
+                    // 保持对象激活，让 CraftingUIController 能持续监听 EventBus 并自行控制 show/hide。
+                    CraftingUIInstance.gameObject.SetActive(true);
+                }
             }
 
             // 生成全屏遮罩，确保始终在 UI 最上层

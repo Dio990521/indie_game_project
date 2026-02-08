@@ -67,6 +67,8 @@ namespace IndieGame.Gameplay.Inventory
         {
             if (_isInitialized) return;
             _isInitialized = true;
+            // 初始化完成后主动广播一次背包快照，便于依赖系统（如打造 UI）即时同步按钮状态
+            NotifyInventoryChanged();
         }
 
         /// <summary>
@@ -75,7 +77,7 @@ namespace IndieGame.Gameplay.Inventory
         public void OpenInventory()
         {
             // 1. 发送槽位数据同步事件，UI 将根据 slots 列表渲染
-            OnInventoryUpdated?.Invoke(slots);
+            NotifyInventoryChanged();
             // 2. 发送打开指令，触发 UI 动画或显示 Canvas
             OnInventoryOpened?.Invoke();
         }
@@ -142,7 +144,7 @@ namespace IndieGame.Gameplay.Inventory
                 if (slots.Count >= maxCapacity)
                 {
                     // 容量不足
-                    OnInventoryUpdated?.Invoke(slots);
+                    NotifyInventoryChanged();
                     return false;
                 }
 
@@ -151,7 +153,7 @@ namespace IndieGame.Gameplay.Inventory
                 remaining -= addCount;
             }
 
-            OnInventoryUpdated?.Invoke(slots);
+            NotifyInventoryChanged();
             return true;
         }
 
@@ -183,7 +185,7 @@ namespace IndieGame.Gameplay.Inventory
                 }
             }
 
-            OnInventoryUpdated?.Invoke(slots);
+            NotifyInventoryChanged();
             return remaining == 0;
         }
 
@@ -204,7 +206,7 @@ namespace IndieGame.Gameplay.Inventory
                 string idB = itemB != null ? itemB.ID : string.Empty;
                 return string.Compare(idA, idB, StringComparison.Ordinal);
             });
-            OnInventoryUpdated?.Invoke(slots);
+            NotifyInventoryChanged();
         }
 
         /// <summary>
@@ -218,7 +220,22 @@ namespace IndieGame.Gameplay.Inventory
                 string idB = b != null && b.Item != null ? b.Item.ID : string.Empty;
                 return string.Compare(idA, idB, StringComparison.Ordinal);
             });
+            NotifyInventoryChanged();
+        }
+
+        /// <summary>
+        /// 统一背包变更通知出口：
+        /// 同时兼容旧版静态事件（OnInventoryUpdated）与新版 EventBus 事件（OnInventoryChanged）。
+        /// </summary>
+        private void NotifyInventoryChanged()
+        {
+            // 兼容已有背包 UI 监听逻辑
             OnInventoryUpdated?.Invoke(slots);
+            // 提供给新系统（如打造系统）做解耦监听
+            EventBus.Raise(new OnInventoryChanged
+            {
+                Slots = slots
+            });
         }
     }
 }

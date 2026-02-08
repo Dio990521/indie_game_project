@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Gameplay.Inventory;
 
 namespace IndieGame.Core
 {
@@ -29,6 +31,52 @@ namespace IndieGame.Core
     /// 由 UI 或输入系统触发，InventoryManager 监听。
     /// </summary>
     public struct OpenInventoryEvent
+    {
+    }
+
+    /// <summary>
+    /// 背包数据变更事件：
+    /// 约定用于“依赖背包数量的系统”（例如打造系统）刷新可执行状态。
+    /// </summary>
+    public struct OnInventoryChanged
+    {
+        // 当前背包槽位快照（引用类型；监听方只读使用，不应修改）
+        public IReadOnlyList<InventorySlot> Slots;
+    }
+
+    /// <summary>
+    /// 图纸消耗完成事件：
+    /// 打造系统在一次成功制造后广播，用于 UI 与其他系统解耦联动。
+    /// </summary>
+    public struct OnBlueprintConsumed
+    {
+        // 被消耗的图纸 ID
+        public string BlueprintID;
+    }
+
+    /// <summary>
+    /// 打造图纸槽位点击事件：
+    /// 由 BlueprintSlotUI 点击后广播，CraftingUIController 监听并切换选中态。
+    /// </summary>
+    public struct CraftBlueprintSlotClickedEvent
+    {
+        // 被点击的图纸 ID
+        public string BlueprintID;
+    }
+
+    /// <summary>
+    /// 打开打造界面事件：
+    /// 由业务入口（如 Camp 按钮）发起，CraftingUIController 监听后执行显示逻辑。
+    /// </summary>
+    public struct OpenCraftingUIEvent
+    {
+    }
+
+    /// <summary>
+    /// 关闭打造界面事件：
+    /// 由 ESC/Cancel 或外部系统发起，CraftingUIController 监听后执行隐藏逻辑。
+    /// </summary>
+    public struct CloseCraftingUIEvent
     {
     }
 

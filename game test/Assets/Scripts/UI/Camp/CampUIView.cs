@@ -132,7 +132,9 @@ namespace IndieGame.UI.Camp
             switch (action.ActionID)
             {
                 case CampActionID.Crafting:
-                    Debug.Log("Log: 消耗大量时间，开启制作...");
+                    // 打开打造界面：
+                    // 按架构要求通过 EventBus 通知，由 CraftingUIController 自行控制 show/hide。
+                    EventBus.Raise(new OpenCraftingUIEvent());
                     break;
                 case CampActionID.Inventory:
                     Debug.Log("Log: 打开已有 Inventory 界面...");

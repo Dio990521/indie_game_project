@@ -10,23 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 11f9122f2a8224cc79f1841c037768d3, type: 3}
-  m_Name: fuck
+  m_Name: axe
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.ItemSO
-  ID: fuck
+  ID: axe
   ItemName:
     m_TableReference:
-      m_TableCollectionName: GUID:57ad7574526394304ae0912a92023420
+      m_TableCollectionName: GUID:cb8bb582be2bd4be1be2c14dab98a63c
     m_TableEntryReference:
-      m_KeyId: 15710806016
+      m_KeyId: 43363852288
       m_Key: 
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
   Icon: {fileID: 0}
-  Description: ddd
-  Category: 2
-  isStackable: 1
-  maxStack: 99
+  Description: 
+  Category: 1
+  isStackable: 0
+  maxStack: 1
   references:
     version: 2
     RefIds: []

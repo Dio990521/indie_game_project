@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using IndieGame.Core;
@@ -10,7 +11,7 @@ namespace IndieGame.Core.Input
     /// 统一通过 EventBus 分发输入事件，避免模块直接耦合。
     /// </summary>
     [CreateAssetMenu(fileName = "GameInputReader", menuName = "IndieGame/Core/Input Reader")]
-    public class GameInputReader : ScriptableObject, InputSystem_Actions.IPlayerActions
+    public class GameInputReader : ScriptableObject, InputSystem_Actions.IPlayerActions, InputSystem_Actions.IUIActions
     {
         /// <summary>
         /// 输入模式：
@@ -28,6 +29,12 @@ namespace IndieGame.Core.Input
         // 缓存当前的移动输入，方便非事件驱动的逻辑（如每帧检测）读取
         public Vector2 CurrentMoveInput { get; private set; }
 
+        /// <summary>
+        /// UI 取消事件（通常由 ESC / 手柄 B / Cancel 输入触发）：
+        /// UI 控制器（如打造界面）应通过订阅/注销该事件来实现“安全关闭”。
+        /// </summary>
+        public event Action UICancelEvent;
+
         private InputSystem_Actions _gameInput;
         private InputMode _currentMode = InputMode.Gameplay;
         private int _inputLockCount;
@@ -39,8 +46,11 @@ namespace IndieGame.Core.Input
             {
                 _gameInput = new InputSystem_Actions();
                 
-                // 注册回调接口到 InputSystem
+                // 注册回调接口到 InputSystem：
+                // - Player Map 负责游戏内输入（移动、交互等）
+                // - UI Map 负责通用 UI 输入（特别是 Cancel）
                 _gameInput.Player.SetCallbacks(this);
+                _gameInput.UI.SetCallbacks(this);
             }
             
             // 默认开启输入
@@ -57,12 +67,21 @@ namespace IndieGame.Core.Input
         /// <summary>
         /// 开启 Gameplay 输入。
         /// </summary>
-        public void EnableGameplayInput() => _gameInput.Player.Enable();
+        public void EnableGameplayInput()
+        {
+            // Gameplay 模式下同时启用 UI Map，确保 ESC/Cancel 在任意 UI 中都能被捕获。
+            SetInputMode(InputMode.Gameplay);
+        }
 
         /// <summary>
         /// 禁用所有输入。
         /// </summary>
-        public void DisableAllInput() => _gameInput.Player.Disable();
+        public void DisableAllInput()
+        {
+            if (_gameInput == null) return;
+            _gameInput.Player.Disable();
+            _gameInput.UI.Disable();
+        }
 
         /// <summary>
         /// 设置输入模式：
@@ -74,18 +93,21 @@ namespace IndieGame.Core.Input
             switch (mode)
             {
                 case InputMode.Gameplay:
-                    // 允许游戏输入
+                    // Gameplay：允许玩家输入，同时保留 UI Cancel（ESC）监听能力
                     _gameInput.Player.Enable();
+                    _gameInput.UI.Enable();
                     break;
                 case InputMode.UIOnly:
-                    // 禁用游戏输入，并清空移动
+                    // UIOnly：禁用玩家输入，但保留 UI 输入（用于菜单导航/取消）
                     _gameInput.Player.Disable();
+                    _gameInput.UI.Enable();
                     CurrentMoveInput = Vector2.zero;
                     EventBus.Raise(new InputMoveEvent { Value = Vector2.zero });
                     break;
                 case InputMode.Disabled:
-                    // 完全禁用输入，并清空移动
+                    // Disabled：完全禁用输入（Player + UI）
                     _gameInput.Player.Disable();
+                    _gameInput.UI.Disable();
                     CurrentMoveInput = Vector2.zero;
                     EventBus.Raise(new InputMoveEvent { Value = Vector2.zero });
                     break;
@@ -156,6 +178,29 @@ namespace IndieGame.Core.Input
         public void OnPrevious(InputAction.CallbackContext context) { }
         public void OnNext(InputAction.CallbackContext context) { }
         public void OnSprint(InputAction.CallbackContext context) { }
+
+        // --- UI Map 回调 ---
+        // 目前打造系统只要求 Cancel（ESC）关闭能力，其他 UI 回调按需留空实现。
+        public void OnNavigate(InputAction.CallbackContext context) { }
+        public void OnSubmit(InputAction.CallbackContext context) { }
+        public void OnPoint(InputAction.CallbackContext context) { }
+        public void OnClick(InputAction.CallbackContext context) { }
+        public void OnRightClick(InputAction.CallbackContext context) { }
+        public void OnMiddleClick(InputAction.CallbackContext context) { }
+        public void OnScrollWheel(InputAction.CallbackContext context) { }
+        public void OnTrackedDevicePosition(InputAction.CallbackContext context) { }
+        public void OnTrackedDeviceOrientation(InputAction.CallbackContext context) { }
+
+        /// <summary>
+        /// UI Cancel 回调：
+        /// 通过 UI Action Map 的 Cancel 动作统一分发（键盘 ESC、手柄取消键等）。
+        /// </summary>
+        public void OnCancel(InputAction.CallbackContext context)
+        {
+            if (_currentMode == InputMode.Disabled) return;
+            if (context.phase != InputActionPhase.Performed) return;
+            UICancelEvent?.Invoke();
+        }
 
         #endregion
     }
