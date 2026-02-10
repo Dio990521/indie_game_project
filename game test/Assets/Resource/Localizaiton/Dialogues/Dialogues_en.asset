@@ -10,20 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
-  m_Name: Items_en
+  m_Name: Dialogues_en
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
   m_LocaleId:
     m_Code: en
-  m_SharedData: {fileID: 11400000, guid: b09628aa04d1b4078b1699ff9856e587, type: 2}
+  m_SharedData: {fileID: 11400000, guid: a370d1b39688947b9b9b56db9757d8d3, type: 2}
   m_Metadata:
     m_Items: []
   m_TableData:
-  - m_Id: 2195461234688
-    m_Localized: Shit
+  - m_Id: 100939063296
+    m_Localized: npc
     m_Metadata:
       m_Items: []
-  - m_Id: 5314499878838272
-    m_Localized: shit
+  - m_Id: 6151987200
+    m_Localized: Hello, this is a test dialogue.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 58928914432
+    m_Localized: This game is a shit 2.5D arpg.
+    m_Metadata:
+      m_Items: []
+  - m_Id: 76192669696
+    m_Localized: I am a piece of shit.
     m_Metadata:
       m_Items: []
   references:

@@ -51,3 +51,4 @@ MonoBehaviour:
   confirmationPrefab: {fileID: 8835836302094458256, guid: 9be6ab39f0a74491a87c7bcc2e9a9d2a, type: 3}
   campUIPrefab: {fileID: 1043081701424219412, guid: 58b8543f48a3049bdaec16797edb557b, type: 3}
   craftingUIPrefab: {fileID: 4154920919371586226, guid: 98303275d0c194441af20e4542919ff3, type: 3}
+  dialogueUIPrefab: {fileID: 7919900453157921880, guid: 9abcb250f448942ff8edc9e37687301e, type: 3}

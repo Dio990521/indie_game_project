@@ -10,20 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
-  m_Name: Items_en
+  m_Name: Dialogues_zh-Hant
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
   m_LocaleId:
-    m_Code: en
-  m_SharedData: {fileID: 11400000, guid: b09628aa04d1b4078b1699ff9856e587, type: 2}
+    m_Code: zh-Hant
+  m_SharedData: {fileID: 11400000, guid: a370d1b39688947b9b9b56db9757d8d3, type: 2}
   m_Metadata:
     m_Items: []
   m_TableData:
-  - m_Id: 2195461234688
-    m_Localized: Shit
+  - m_Id: 100939063296
+    m_Localized: "\u5F35\u4E09"
     m_Metadata:
       m_Items: []
-  - m_Id: 5314499878838272
-    m_Localized: shit
+  - m_Id: 6151987200
+    m_Localized: "\u4F60\u597D\uFF0C\u9019\u662F\u4E00\u500B\u6E2C\u8A66\u5C0D\u8A71\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 58928914432
+    m_Localized: "\u672C\u4F5C\u662F\u4E00\u6B3E2.5D\u4FEF\u8996\u89D2\u5927\u4E16\u754C\u63A2\u7D22\u904A\u6232\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 76192669696
+    m_Localized: "\u6211\u662F\u715E\u7B46\u3002"
     m_Metadata:
       m_Items: []
   references:

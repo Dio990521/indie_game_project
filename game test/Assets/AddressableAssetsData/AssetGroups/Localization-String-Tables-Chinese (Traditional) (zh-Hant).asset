@@ -33,6 +33,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Locale-zh-Hant
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: f686d01c964ab427283426f864b835c9
+    m_Address: Dialogues_zh-Hant
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-zh-Hant
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 1
   m_Settings: {fileID: 11400000, guid: 14c807768e9f74abcaa35fd1a73fde46, type: 2}
   m_SchemaSet:

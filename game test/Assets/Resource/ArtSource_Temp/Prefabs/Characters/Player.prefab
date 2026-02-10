@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 8397454419226806800}
   - component: {fileID: -3561589510990479297}
   - component: {fileID: -3269462684130208509}
+  - component: {fileID: 7463442206185927376}
+  - component: {fileID: 8770709943874566285}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -73,7 +75,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97ed31c521ae9413597f0aec1ddeaa60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Player.SimpleMover
-  inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
   moveSpeed: 5
   rotateSpeed: 10
   speedParamName: Speed
@@ -115,6 +116,45 @@ MonoBehaviour:
   currentHP: 0
   currentLevel: 1
   currentEXP: 0
+--- !u!114 &7463442206185927376
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9170140433642860262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1dff617584b97407e91f81eebd0c3449, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Dialogue.PlayerInteractionDetector
+  detectionOrigin: {fileID: 0}
+  detectionRadius: 2.4
+  scanInterval: 0.08
+  interactableMask:
+    serializedVersion: 2
+    m_Bits: 64
+  minForwardDot: 0.05
+  requireLineOfSight: 0
+  lineOfSightMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  drawGizmo: 1
+--- !u!114 &8770709943874566285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9170140433642860262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 665064c4317414142a071491fa9ae5fa, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Dialogue.PlayerInteractionController
+  detector: {fileID: 7463442206185927376}
+  onlyAllowInFreeRoam: 1
+  interactCooldown: 0.15
 --- !u!1001 &1409429107897280448
 PrefabInstance:
   m_ObjectHideFlags: 0

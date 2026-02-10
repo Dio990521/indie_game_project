@@ -5,6 +5,7 @@ using UnityEngine.SceneManagement;
 using IndieGame.Core;
 using DG.Tweening;
 using IndieGame.UI.Crafting;
+using IndieGame.UI.Dialogue;
 
 namespace IndieGame.UI
 {
@@ -48,6 +49,8 @@ namespace IndieGame.UI
         [SerializeField] private Camp.CampUIView campUIPrefab;
         // 打造 UI（仅由 UIManager 负责实例化）
         [SerializeField] private CraftingUIController craftingUIPrefab;
+        // 对话 UI（仅由 UIManager 负责实例化）
+        [SerializeField] private DialogueUIView dialogueUIPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -56,6 +59,7 @@ namespace IndieGame.UI
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
         public Camp.CampUIView CampUIInstance { get; private set; }
         public CraftingUIController CraftingUIInstance { get; private set; }
+        public DialogueUIView DialogueUIInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -186,6 +190,17 @@ namespace IndieGame.UI
                     // UIManager 仅负责“生成实例”：
                     // 保持对象激活，让 CraftingUIController 能持续监听 EventBus 并自行控制 show/hide。
                     CraftingUIInstance.gameObject.SetActive(true);
+                }
+            }
+
+            if (dialogueUIPrefab != null && DialogueUIInstance == null)
+            {
+                DialogueUIInstance = SpawnOnLayer(dialogueUIPrefab, UILayerPriority.Top75);
+                if (DialogueUIInstance != null)
+                {
+                    // 统一由 UIManager 生成并保持激活，
+                    // 具体显示/隐藏由 DialogueManager -> EventBus -> DialogueUIView 控制。
+                    DialogueUIInstance.gameObject.SetActive(true);
                 }
             }
 

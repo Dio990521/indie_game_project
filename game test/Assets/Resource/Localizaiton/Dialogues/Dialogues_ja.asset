@@ -10,20 +10,28 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e9620f8c34305754d8cc9a7e49e852d9, type: 3}
-  m_Name: Items_ja
+  m_Name: Dialogues_ja
   m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.StringTable
   m_LocaleId:
     m_Code: ja
-  m_SharedData: {fileID: 11400000, guid: b09628aa04d1b4078b1699ff9856e587, type: 2}
+  m_SharedData: {fileID: 11400000, guid: a370d1b39688947b9b9b56db9757d8d3, type: 2}
   m_Metadata:
     m_Items: []
   m_TableData:
-  - m_Id: 2195461234688
-    m_Localized: "\u3046\u3093\u3053"
+  - m_Id: 100939063296
+    m_Localized: "\u30E2\u30D6"
     m_Metadata:
       m_Items: []
-  - m_Id: 5314499878838272
-    m_Localized: "\u30D0\u30AB"
+  - m_Id: 6151987200
+    m_Localized: "\u3053\u3093\u306B\u3061\u306F\u3001\u3053\u308C\u306F\u30C6\u30B9\u30C8\u4F1A\u8A71\u3067\u3059\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 58928914432
+    m_Localized: "\u672C\u4F5C\u54C1\u306F\u3001\uFF12.\uFF15D\u306ERPG\u30B2\u30FC\u30E0\u306B\u306A\u308A\u307E\u3059\u3002"
+    m_Metadata:
+      m_Items: []
+  - m_Id: 76192669696
+    m_Localized: "\u79C1\u306F\u30D0\u30AB\u3067\u3059\u3002"
     m_Metadata:
       m_Items: []
   references:
