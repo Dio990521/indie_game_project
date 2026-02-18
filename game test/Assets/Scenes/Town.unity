@@ -1015,7 +1015,7 @@ MonoBehaviour:
     DefaultMode: 2
   DefaultBlend:
     Style: 1
-    Time: 2
+    Time: 0.6
     CustomCurve:
       serializedVersion: 2
       m_Curve: []
@@ -1108,7 +1108,7 @@ Camera:
     height: 1
   near clip plane: 0.01
   far clip plane: 1000
-  field of view: 25
+  field of view: 40
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -1134,8 +1134,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1450902271}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.38268343, y: 0, z: 0, w: 0.92387956}
-  m_LocalPosition: {x: 0, y: 15, z: -15}
+  m_LocalRotation: {x: 0.3252718, y: -0.39088395, z: 0.1499523, w: 0.84789294}
+  m_LocalPosition: {x: 4.797957, y: 6.2999997, z: -6.9386225}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1491,6 +1491,101 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1787297087
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1787297088}
+  - component: {fileID: 1787297090}
+  - component: {fileID: 1787297089}
+  m_Layer: 6
+  m_Name: CinemachineCamera
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1787297088
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787297087}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0.3252718, y: -0.39088395, z: 0.1499523, w: 0.84789294}
+  m_LocalPosition: {x: 6.36, y: 3.1, z: -4.92}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1955958676}
+  m_LocalEulerAnglesHint: {x: 41.976, y: -49.5, z: 0}
+--- !u!114 &1787297089
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787297087}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1aa2d3f4a208b4119ac0a27c63c596f8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.CameraSystem.DialogueCameraController
+  dialogueCamera: {fileID: 1787297090}
+  dialogueActivePriority: 50
+  dialogueInactivePriority: -2
+  autoAssignTargets: 1
+  fallbackFollowTarget: {fileID: 0}
+  fallbackLookAtTarget: {fileID: 0}
+  preferLookAtInteractor: 0
+--- !u!114 &1787297090
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1787297087}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9dfa5b682dcd46bda6128250e975f58, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Cinemachine::Unity.Cinemachine.CinemachineCamera
+  Priority:
+    Enabled: 0
+    m_Value: 0
+  OutputChannel: 1
+  StandbyUpdate: 2
+  m_StreamingVersion: 20241001
+  m_LegacyPriority: 0
+  Target:
+    TrackingTarget: {fileID: 0}
+    LookAtTarget: {fileID: 0}
+    CustomLookAtTarget: 0
+  Lens:
+    FieldOfView: 40
+    OrthographicSize: 5
+    NearClipPlane: 0.01
+    FarClipPlane: 1000
+    Dutch: 0
+    ModeOverride: 0
+    PhysicalProperties:
+      GateFit: 2
+      SensorSize: {x: 21.946, y: 16.002}
+      LensShift: {x: 0, y: 0}
+      FocusDistance: 10
+      Iso: 200
+      ShutterSpeed: 0.005
+      Aperture: 16
+      BladeCount: 5
+      Curvature: {x: 2, y: 11}
+      BarrelClipping: 0.25
+      Anamorphism: 0
+  BlendHint: 0
 --- !u!1001 &1955958673
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -1549,7 +1644,10 @@ PrefabInstance:
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
-    m_AddedGameObjects: []
+    m_AddedGameObjects:
+    - targetCorrespondingSourceObject: {fileID: 505379509940632690, guid: c814c3c312cfa40c9abc053435909a38, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 1787297088}
     m_AddedComponents:
     - targetCorrespondingSourceObject: {fileID: 8214930511699859061, guid: c814c3c312cfa40c9abc053435909a38, type: 3}
       insertIndex: -1
@@ -1573,6 +1671,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Dialogue.NPCInteractable
   dialogueData: {fileID: 11400000, guid: e9c3ed8113baa42259baa5d3749be608, type: 2}
+--- !u!4 &1955958676 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 505379509940632690, guid: c814c3c312cfa40c9abc053435909a38, type: 3}
+  m_PrefabInstance: {fileID: 1955958673}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
