@@ -23,9 +23,22 @@ namespace IndieGame.Core.SaveSystem
     [Serializable]
     public class SaveMetaData
     {
-        // 存档时间（UTC 字符串，便于跨时区显示）
+        // ---------------------------
+        // 兼容说明：
+        // 1) Timestamp / SceneName / PlayTime 是“标题读取列表”优先使用的新字段。
+        // 2) SavedAtUtc / Note 保留用于兼容旧存档与旧 UI 逻辑，避免历史数据读取失败。
+        // ---------------------------
+
+        // 存档时间（用于列表展示，建议写入本地时间可读字符串）
+        public string Timestamp;
+        // 存档时所在场景名（用于标题界面快速识别进度位置）
+        public string SceneName;
+        // 游戏时长（秒，浮点；UI 层可格式化为 hh:mm:ss）
+        public float PlayTime;
+
+        // 旧字段：保留兼容
         public string SavedAtUtc;
-        // 备注（可选）
+        // 旧字段：保留兼容
         public string Note;
     }
 

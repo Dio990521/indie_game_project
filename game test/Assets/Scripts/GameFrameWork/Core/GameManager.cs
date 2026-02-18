@@ -3,6 +3,7 @@ using IndieGame.Core.Utilities;
 using IndieGame.Core.CameraSystem;
 using IndieGame.Gameplay.Board.Runtime;
 using IndieGame.Gameplay.Inventory;
+using IndieGame.Gameplay.Stats;
 using IndieGame.UI;
 
 namespace IndieGame.Core
@@ -178,6 +179,14 @@ namespace IndieGame.Core
             }
 
             GameObject player = Instantiate(playerPrefab, Vector3.zero, Quaternion.identity);
+
+            // 自动挂载玩家属性存档模块：
+            // 这样即使玩家预制体忘记手动挂脚本，也能保证“睡觉自动存档 / 标题读档恢复”链路可用。
+            if (player.GetComponent<PlayerStatsSaveable>() == null)
+            {
+                player.AddComponent<PlayerStatsSaveable>();
+            }
+
             CurrentPlayer = player;
             // 玩家常驻于所有场景
             DontDestroyOnLoad(player);

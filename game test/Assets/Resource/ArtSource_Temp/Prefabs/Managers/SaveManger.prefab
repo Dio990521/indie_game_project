@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1472367028795037621}
   - component: {fileID: 2726935446601905628}
+  - component: {fileID: -8226448289273257064}
   m_Layer: 0
   m_Name: SaveManger
   m_TagString: Untagged
@@ -45,3 +46,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.SaveSystem.SaveManager
   saveFolderName: saves
+  maxSlotCount: 10
+--- !u!114 &-8226448289273257064
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6187469070569995621}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77aee3c6d14914d63a30bf81d1de48bd, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.SaveSystem.AutoSaveService
+  defaultAutoSaveSlotIndex: 0
+  defaultNotePrefix: AutoSave
+  reasonSlotPolicies: []

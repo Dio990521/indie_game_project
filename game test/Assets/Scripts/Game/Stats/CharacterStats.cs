@@ -32,6 +32,38 @@ namespace IndieGame.Gameplay.Stats
         // 最大生命值由基础值 + 成长曲线决定，至少为 1
         public int MaxHP => config != null ? Mathf.Max(1, Mathf.RoundToInt(GetBaseHP())) : 1;
 
+        /// <summary>
+        /// 应用“来自存档”的运行时属性状态：
+        /// 该方法是 PlayerStatsSaveable 的唯一写回入口，目的是把“恢复流程”收敛到一处，
+        /// 避免外部脚本直接改私有字段导致数值与事件通知不一致。
+        ///
+        /// 恢复顺序说明：
+        /// 1) 先恢复等级（影响基础属性与最大生命）；
+        /// 2) 再恢复经验；
+        /// 3) 最后按恢复后的 MaxHP 对当前生命做 Clamp；
+        /// 4) 统一广播一次全量事件，让 UI 与依赖系统同步。
+        /// </summary>
+        public void ApplySavedRuntimeState(int savedHP, int savedLevel, int savedEXP)
+        {
+            currentLevel = Mathf.Max(1, savedLevel);
+            currentEXP = Mathf.Max(0, savedEXP);
+
+            if (config != null)
+            {
+                // 有配置时，按恢复后的等级重算基础属性（攻击/防御/抗性/移速）。
+                ApplyBaseStatsForLevel(currentLevel);
+                // 恢复 HP 时必须使用“新等级对应的 MaxHP”做约束，避免越界。
+                currentHP = Mathf.Clamp(savedHP, 0, MaxHP);
+            }
+            else
+            {
+                // 无配置兜底：无法按等级重算成长，只能保守恢复为非负生命。
+                currentHP = Mathf.Max(0, savedHP);
+            }
+
+            NotifyAll();
+        }
+
         private void Awake()
         {
             // 初始化属性（从配置加载或使用默认值）

@@ -1,9 +1,12 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using IndieGame.Core;
+using IndieGame.Core.SaveSystem;
+using IndieGame.UI.TitleScreen;
 
 namespace IndieGame.UI
 {
@@ -16,13 +19,18 @@ namespace IndieGame.UI
     {
         [Header("UI 引用")]
         [SerializeField] private Button startButton;     // 开始游戏按钮
+        [SerializeField] private Button loadButton;      // 读取存档按钮
         [SerializeField] private Slider loadingSlider;   // 加载进度条
+        [SerializeField] private SaveLoadMenuView saveLoadMenuView; // 读档菜单视图（可选，通常由 EventBus 打开）
 
         [Header("Addressable 资源引用")]
         [Tooltip("玩家预制体的 Addressable 引用，在进入世界场景前预先加载到内存中。")]
         [SerializeField] private AssetReferenceGameObject playerPrefabReference;
 
         private bool _isLoading; // 状态锁：防止加载过程中重复点击按钮
+        // 是否处于“标题读档后应自动进游戏”的等待状态。
+        // 只有在收到 TitleLoadGameRequestedEvent 后才会置为 true。
+        private bool _pendingStartFromLoad;
 
         // 存储 Addressable 加载操作的句柄，用于跟踪进度和后续的手动释放
         private AsyncOperationHandle<GameObject> _playerHandle;
@@ -42,6 +50,32 @@ namespace IndieGame.UI
                 // 绑定点击事件
                 startButton.onClick.AddListener(HandleStartClicked);
             }
+
+            if (loadButton != null)
+            {
+                // 绑定读取按钮点击事件
+                loadButton.onClick.AddListener(HandleLoadClicked);
+            }
+
+            RefreshLoadButtonInteractivity();
+        }
+
+        private void OnEnable()
+        {
+            // 监听标题读档流程事件：
+            // 1) 用户确认读取（进入等待自动进游戏状态）；
+            // 2) 读档成功（触发进入游戏）；
+            // 3) 读档失败（取消等待状态）。
+            EventBus.Subscribe<TitleLoadGameRequestedEvent>(HandleTitleLoadGameRequestedEvent);
+            EventBus.Subscribe<LoadCompletedEvent>(HandleLoadCompletedEvent);
+            EventBus.Subscribe<LoadFailedEvent>(HandleLoadFailedEvent);
+        }
+
+        private void OnDisable()
+        {
+            EventBus.Unsubscribe<TitleLoadGameRequestedEvent>(HandleTitleLoadGameRequestedEvent);
+            EventBus.Unsubscribe<LoadCompletedEvent>(HandleLoadCompletedEvent);
+            EventBus.Unsubscribe<LoadFailedEvent>(HandleLoadFailedEvent);
         }
 
         private void OnDestroy()
@@ -50,6 +84,10 @@ namespace IndieGame.UI
             if (startButton != null)
             {
                 startButton.onClick.RemoveListener(HandleStartClicked);
+            }
+            if (loadButton != null)
+            {
+                loadButton.onClick.RemoveListener(HandleLoadClicked);
             }
 
             // [重要] 内存管理：如果 handle 是有效的，则释放 Addressable 资源引用
@@ -67,9 +105,105 @@ namespace IndieGame.UI
         {
             // 如果已经在加载中了，直接拦截
             if (_isLoading) return;
+            // 用户主动点“开始新游戏”时，明确取消“读档后自动进游戏”的等待状态。
+            _pendingStartFromLoad = false;
+
+            // New Game 语义：清理历史“读档快照缓存”，避免旧档状态误注入到新开局。
+            SaveManager saveManager = FindAnyObjectByType<SaveManager>();
+            if (saveManager != null)
+            {
+                saveManager.ClearLoadedStateCache();
+            }
 
             // 启动核心加载协程
             StartCoroutine(BeginGameRoutine());
+        }
+
+        /// <summary>
+        /// 点击“Load Game”入口：
+        /// 通过 EventBus 打开读档菜单（解耦 Title 与具体菜单实现）。
+        /// </summary>
+        private void HandleLoadClicked()
+        {
+            if (_isLoading) return;
+
+            if (EventBus.HasSubscribers<OpenSaveLoadMenuEvent>())
+            {
+                EventBus.Raise(new OpenSaveLoadMenuEvent());
+                return;
+            }
+
+            // 兜底：若未走事件订阅模式，则尝试直接调用引用。
+            if (saveLoadMenuView != null)
+            {
+                saveLoadMenuView.ShowSaveList();
+            }
+        }
+
+        /// <summary>
+        /// 收到“标题已确认读取存档”事件：
+        /// 仅标记状态，不立即开场景。
+        /// 这样能保证“先完成 LoadAsync（状态恢复）再进入 World”。
+        /// </summary>
+        private void HandleTitleLoadGameRequestedEvent(TitleLoadGameRequestedEvent evt)
+        {
+            _pendingStartFromLoad = true;
+        }
+
+        /// <summary>
+        /// 标题读档成功后的自动进游戏入口：
+        /// 只有在 _pendingStartFromLoad=true 时才触发，避免误响应其他 LoadCompletedEvent。
+        /// </summary>
+        private void HandleLoadCompletedEvent(LoadCompletedEvent evt)
+        {
+            if (!_pendingStartFromLoad) return;
+            if (_isLoading)
+            {
+                // 若标题已在进行其他加载流程，则丢弃这次“读档自动开局”请求，避免状态残留。
+                _pendingStartFromLoad = false;
+                return;
+            }
+
+            _pendingStartFromLoad = false;
+            StartCoroutine(BeginGameRoutine());
+        }
+
+        /// <summary>
+        /// 标题读档失败处理：
+        /// 取消“自动进游戏等待状态”，保留标题界面让玩家重新选择。
+        /// </summary>
+        private void HandleLoadFailedEvent(LoadFailedEvent evt)
+        {
+            if (!_pendingStartFromLoad) return;
+            _pendingStartFromLoad = false;
+            Debug.LogWarning($"[TitleScreenManager] Load failed for slot {evt.SlotIndex}: {evt.Error}");
+        }
+
+        /// <summary>
+        /// 刷新 Load 按钮可交互状态：
+        /// 若没有任何存档，则禁用按钮（可选需求）。
+        /// </summary>
+        private void RefreshLoadButtonInteractivity()
+        {
+            if (loadButton == null) return;
+            SaveManager saveManager = SaveManager.Instance;
+            if (saveManager == null)
+            {
+                // SaveManager 缺失时保守禁用，避免点了无反应。
+                loadButton.interactable = false;
+                return;
+            }
+
+            bool hasAnySave = false;
+            List<SaveMetaData> slots = saveManager.GetAllSaveSlots();
+            for (int i = 0; i < slots.Count; i++)
+            {
+                if (slots[i] == null) continue;
+                hasAnySave = true;
+                break;
+            }
+
+            loadButton.interactable = hasAnySave;
         }
 
         /// <summary>
@@ -81,6 +215,7 @@ namespace IndieGame.UI
 
             // 1. UI 反馈：禁用按钮并显示进度条
             if (startButton != null) startButton.interactable = false;
+            if (loadButton != null) loadButton.interactable = false;
             if (loadingSlider != null)
             {
                 loadingSlider.gameObject.SetActive(true);

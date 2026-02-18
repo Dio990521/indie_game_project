@@ -22,10 +22,34 @@ namespace IndieGame.UI.Camp
         [Tooltip("默认解锁的动作列表（可在 Inspector 配置）")]
         [SerializeField] private List<CampActionSO> defaultActions = new List<CampActionSO>();
 
+        [Header("Sleep Auto Save")]
+        [Tooltip("是否在执行 Sleep 时自动触发一次存档。")]
+        [SerializeField] private bool enableSleepAutoSave = true;
+
+        [Tooltip("Sleep 自动存档写入槽位。")]
+        [SerializeField] private int sleepAutoSaveSlotIndex = 0;
+
+        [Tooltip("Sleep 自动存档备注（用于标题读档列表识别该存档来源）。")]
+        [SerializeField] private string sleepAutoSaveNote = "AutoSave-Sleep";
+
+        [Tooltip("等待自动存档完成的超时时长（秒）。超时后会继续返回棋盘，避免流程卡死。")]
+        [SerializeField] private float sleepAutoSaveTimeoutSeconds = 8f;
+
         // CanvasGroup 控制淡入淡出
         private CanvasGroup _canvasGroup;
         // 当前解锁动作缓存（用于索引映射）
         private readonly List<CampActionSO> _currentActions = new List<CampActionSO>();
+
+        // 自动存档请求递增序号（静态）：用于把“本次 Sleep 请求”与“完成事件”精准匹配。
+        private static int _sleepAutoSaveRequestSerial;
+        // 当前 Sleep 流程正在等待的 RequestId（-1 表示当前没有等待中的自动存档）。
+        private int _pendingSleepAutoSaveRequestId = -1;
+        // 当前等待请求是否已收到 AutoSaveCompletedEvent 回调。
+        private bool _pendingSleepAutoSaveCompleted;
+        // 当前等待请求成功标记。
+        private bool _pendingSleepAutoSaveSuccess;
+        // 当前等待请求错误信息。
+        private string _pendingSleepAutoSaveError;
 
         private void Awake()
         {
@@ -45,11 +69,13 @@ namespace IndieGame.UI.Camp
         private void OnEnable()
         {
             EventBus.Subscribe<CampActionButtonClickEvent>(HandleButtonClickEvent);
+            EventBus.Subscribe<AutoSaveCompletedEvent>(HandleSleepAutoSaveCompletedEvent);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<CampActionButtonClickEvent>(HandleButtonClickEvent);
+            EventBus.Unsubscribe<AutoSaveCompletedEvent>(HandleSleepAutoSaveCompletedEvent);
         }
 
         /// <summary>
@@ -165,21 +191,91 @@ namespace IndieGame.UI.Camp
             // 2) 执行数值结算（占位）
             // TODO: 在此加入睡觉结算逻辑（时间推进/状态恢复等）
 
-            // 3) 关闭露营 UI（避免与棋盘 UI 叠加）
+            // 3) 在返回棋盘前执行一次自动存档：
+            //    注意这里不直接调用 SaveManager，而是通过 EventBus 请求全局 AutoSaveService 处理。
+            //    这样可保证 CampUIView 只负责编排流程，不承担存档策略与执行细节。
+            yield return RequestSleepAutoSaveRoutine();
+
+            // 4) 关闭露营 UI（避免与棋盘 UI 叠加）
             Hide();
 
-            // 4) 返回棋盘（不重复触发淡入淡出）
+            // 5) 返回棋盘（不重复触发淡入淡出）
             if (SceneLoader.Instance != null)
             {
                 yield return SceneLoader.Instance.ReturnToBoardRoutine(false, fadeDuration, false);
             }
 
-            // 5) 黑屏淡出（等待棋盘加载完成后执行）
+            // 6) 黑屏淡出（等待棋盘加载完成后执行）
             EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
             if (GameManager.Instance != null)
             {
                 GameManager.Instance.EndLoading();
             }
+        }
+
+        /// <summary>
+        /// 请求并等待“睡觉自动存档”完成：
+        /// - 若关闭自动存档：直接跳过；
+        /// - 若无监听方：记录警告并跳过；
+        /// - 若超时：记录警告并继续流程，避免卡死在黑屏。
+        /// </summary>
+        private IEnumerator RequestSleepAutoSaveRoutine()
+        {
+            if (!enableSleepAutoSave) yield break;
+
+            if (!EventBus.HasSubscribers<AutoSaveRequestedEvent>())
+            {
+                Debug.LogWarning("[CampUIView] Sleep auto-save skipped: no AutoSaveRequestedEvent subscriber.");
+                yield break;
+            }
+
+            _pendingSleepAutoSaveCompleted = false;
+            _pendingSleepAutoSaveSuccess = false;
+            _pendingSleepAutoSaveError = null;
+            _pendingSleepAutoSaveRequestId = ++_sleepAutoSaveRequestSerial;
+
+            EventBus.Raise(new AutoSaveRequestedEvent
+            {
+                RequestId = _pendingSleepAutoSaveRequestId,
+                Reason = AutoSaveReason.Sleep,
+                SlotIndex = sleepAutoSaveSlotIndex,
+                Note = sleepAutoSaveNote,
+                // Sleep 流程需要在黑屏阶段等待自动存档结果，再继续返回棋盘。
+                WaitForCompletion = true
+            });
+
+            float elapsed = 0f;
+            while (!_pendingSleepAutoSaveCompleted && elapsed < Mathf.Max(0.1f, sleepAutoSaveTimeoutSeconds))
+            {
+                elapsed += Time.unscaledDeltaTime;
+                yield return null;
+            }
+
+            if (!_pendingSleepAutoSaveCompleted)
+            {
+                Debug.LogWarning("[CampUIView] Sleep auto-save timed out. Continue return-to-board flow.");
+            }
+            else if (!_pendingSleepAutoSaveSuccess)
+            {
+                Debug.LogWarning($"[CampUIView] Sleep auto-save failed: {_pendingSleepAutoSaveError}");
+            }
+
+            _pendingSleepAutoSaveRequestId = -1;
+        }
+
+        /// <summary>
+        /// 接收自动存档完成事件：
+        /// 仅处理“当前 Sleep 流程等待中的 requestId”，避免其他系统的存档结果污染当前流程。
+        /// </summary>
+        private void HandleSleepAutoSaveCompletedEvent(AutoSaveCompletedEvent evt)
+        {
+            if (_pendingSleepAutoSaveRequestId < 0) return;
+            if (evt.RequestId != _pendingSleepAutoSaveRequestId) return;
+            if (evt.Reason != AutoSaveReason.Sleep) return;
+
+            _pendingSleepAutoSaveCompleted = true;
+            _pendingSleepAutoSaveSuccess = evt.Success;
+            _pendingSleepAutoSaveError = evt.Error;
         }
     }
 }

@@ -102,9 +102,18 @@ namespace IndieGame.Core
 
         private GameObject EnsureGameSystemRoot()
         {
-            // 统一使用固定名称的根对象存放所有管理器
-            GameObject root = new GameObject("[GameSystem]");
-            root.AddComponent<DontDestroyRoot>();
+            // 统一使用固定名称的根对象存放所有管理器。
+            // 若已经存在（例如由其他启动引导器提前创建），则直接复用，避免重复根节点。
+            GameObject root = GameObject.Find("[GameSystem]");
+            if (root == null)
+            {
+                root = new GameObject("[GameSystem]");
+            }
+
+            if (root.GetComponent<DontDestroyRoot>() == null)
+            {
+                root.AddComponent<DontDestroyRoot>();
+            }
             return root;
         }
 

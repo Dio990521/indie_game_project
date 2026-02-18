@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using IndieGame.Core.Utilities;
 
 namespace IndieGame.Core.SaveSystem
@@ -17,9 +18,15 @@ namespace IndieGame.Core.SaveSystem
     {
         // 存档文件夹相对路径
         [SerializeField] private string saveFolderName = "saves";
+        // 统一的槽位数量上限（用于标题界面遍历 slot_0 ~ slot_(N-1)）
+        [SerializeField] private int maxSlotCount = 10;
 
         // 当前已注册的存档模块
         private readonly List<ISaveable> _saveables = new List<ISaveable>();
+        // 最近一次成功读档的数据快照（用于“延迟注册模块”的补恢复）
+        private SaveData _lastLoadedData;
+        // 是否存在有效读档快照
+        private bool _hasLoadedData;
 
         /// <summary>
         /// 注册存档模块（建议在 OnEnable/Start 调用）。
@@ -29,6 +36,10 @@ namespace IndieGame.Core.SaveSystem
             if (saveable == null) return;
             if (_saveables.Contains(saveable)) return;
             _saveables.Add(saveable);
+
+            // 如果此前已经执行过 Load（例如标题界面先读档、随后才进入玩法场景注册模块），
+            // 则在注册瞬间尝试把该模块的状态补恢复，确保“先读档后初始化”也能连通。
+            TryRestoreSaveableFromLoadedData(saveable);
         }
 
         /// <summary>
@@ -43,9 +54,18 @@ namespace IndieGame.Core.SaveSystem
         /// <summary>
         /// 保存到指定槽位（异步 IO）。
         /// </summary>
-        public async Task SaveAsync(int slotIndex, string note = null)
+        /// <param name="sourceTag">
+        /// 保存来源标签（可选）：
+        /// - 用于事件监听方精准识别“这次 Save 是谁发起的”；
+        /// - 典型值：AutoSaveService:Sleep:Request42。
+        /// </param>
+        public async Task SaveAsync(int slotIndex, string note = null, string sourceTag = null)
         {
-            EventBus.Raise(new SaveStartedEvent { SlotIndex = slotIndex });
+            EventBus.Raise(new SaveStartedEvent
+            {
+                SlotIndex = slotIndex,
+                SourceTag = sourceTag
+            });
             try
             {
                 // 保证存档目录存在
@@ -59,7 +79,12 @@ namespace IndieGame.Core.SaveSystem
                 // 后台线程执行写入，避免阻塞主线程
                 await Task.Run(() => File.WriteAllText(path, json));
 
-                EventBus.Raise(new SaveCompletedEvent { SlotIndex = slotIndex, Success = true });
+                EventBus.Raise(new SaveCompletedEvent
+                {
+                    SlotIndex = slotIndex,
+                    Success = true,
+                    SourceTag = sourceTag
+                });
             }
             catch (Exception ex)
             {
@@ -68,7 +93,8 @@ namespace IndieGame.Core.SaveSystem
                 {
                     SlotIndex = slotIndex,
                     Success = false,
-                    Error = ex.Message
+                    Error = ex.Message,
+                    SourceTag = sourceTag
                 });
             }
         }
@@ -97,6 +123,11 @@ namespace IndieGame.Core.SaveSystem
                     EventBus.Raise(new LoadFailedEvent { SlotIndex = slotIndex, Error = "Invalid save data." });
                     return;
                 }
+
+                // 缓存本次成功解析的完整数据：
+                // 供后续“晚注册”的 ISaveable 模块在 Register 阶段自动补恢复。
+                _lastLoadedData = data;
+                _hasLoadedData = true;
 
                 // 在主线程恢复所有模块状态
                 RestoreAll(data);
@@ -131,6 +162,30 @@ namespace IndieGame.Core.SaveSystem
         }
 
         /// <summary>
+        /// 获取全部槽位元数据：
+        /// - 固定遍历 0 ~ (maxSlotCount - 1)
+        /// - 有存档返回对应 MetaData
+        /// - 无存档返回 null（调用方可据此显示 Empty）
+        ///
+        /// 返回约定：
+        /// - 返回列表长度恒定为 maxSlotCount
+        /// - 列表索引即槽位索引（index == slotIndex）
+        /// </summary>
+        public List<SaveMetaData> GetAllSaveSlots()
+        {
+            List<SaveMetaData> result = new List<SaveMetaData>(Mathf.Max(0, maxSlotCount));
+
+            for (int slotIndex = 0; slotIndex < Mathf.Max(0, maxSlotCount); slotIndex++)
+            {
+                // 直接复用已有单槽位读取入口，保持行为一致
+                SaveMetaData meta = GetSlotMeta(slotIndex);
+                result.Add(meta);
+            }
+
+            return result;
+        }
+
+        /// <summary>
         /// 判断槽位是否存在存档文件。
         /// </summary>
         public bool HasSlot(int slotIndex)
@@ -138,10 +193,30 @@ namespace IndieGame.Core.SaveSystem
             return File.Exists(GetSlotPath(slotIndex));
         }
 
+        /// <summary>
+        /// 清空“最近一次读档缓存”：
+        /// 典型用途是在标题界面点击 New Game 时调用，避免旧的读档快照在新游戏流程中被误应用。
+        /// </summary>
+        public void ClearLoadedStateCache()
+        {
+            _lastLoadedData = null;
+            _hasLoadedData = false;
+        }
+
         private SaveData CaptureAll(string note)
         {
             SaveData data = new SaveData();
-            data.MetaData.SavedAtUtc = DateTime.UtcNow.ToString("o");
+            // ---------------------------
+            // 元数据写入策略：
+            // 1) 新字段：用于标题列表展示
+            // 2) 旧字段：保留写入，兼容旧 UI / 旧存档读取逻辑
+            // ---------------------------
+            string nowLocalDisplay = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss");
+            string nowUtcIso = DateTime.UtcNow.ToString("o");
+            data.MetaData.Timestamp = nowLocalDisplay;
+            data.MetaData.SceneName = SceneManager.GetActiveScene().name;
+            data.MetaData.PlayTime = Time.realtimeSinceStartup;
+            data.MetaData.SavedAtUtc = nowUtcIso;
             data.MetaData.Note = note;
 
             // 遍历所有已注册模块，逐个捕获状态
@@ -192,6 +267,37 @@ namespace IndieGame.Core.SaveSystem
 
                 object state = JsonUtility.FromJson(entry.Json, type);
                 saveable.RestoreState(state);
+            }
+        }
+
+        /// <summary>
+        /// 尝试用最近一次读档缓存，恢复“刚注册进来”的单个模块。
+        /// 该能力用于解决读档时序问题：
+        /// - 标题界面先触发 LoadAsync；
+        /// - 玩法场景稍后初始化，ISaveable 才开始注册；
+        /// - 注册瞬间可根据缓存补恢复，避免状态丢失。
+        /// </summary>
+        private void TryRestoreSaveableFromLoadedData(ISaveable saveable)
+        {
+            if (saveable == null) return;
+            if (!_hasLoadedData || _lastLoadedData == null || _lastLoadedData.StateData == null) return;
+
+            for (int i = 0; i < _lastLoadedData.StateData.Count; i++)
+            {
+                SaveEntry entry = _lastLoadedData.StateData[i];
+                if (entry == null || string.IsNullOrEmpty(entry.SaveID)) continue;
+                if (!string.Equals(entry.SaveID, saveable.SaveID, StringComparison.Ordinal)) continue;
+
+                Type type = Type.GetType(entry.TypeName);
+                if (type == null)
+                {
+                    Debug.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");
+                    return;
+                }
+
+                object state = JsonUtility.FromJson(entry.Json, type);
+                saveable.RestoreState(state);
+                return;
             }
         }
 
