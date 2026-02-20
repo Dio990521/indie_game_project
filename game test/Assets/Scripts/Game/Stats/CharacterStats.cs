@@ -29,6 +29,11 @@ namespace IndieGame.Gameplay.Stats
         public int CurrentHP => currentHP;
         public int CurrentLevel => currentLevel;
         public int CurrentEXP => currentEXP;
+        /// <summary>
+        /// 当前等级到下一等级所需经验：
+        /// 对外暴露给 UI（如玩家 HUD）做经验进度显示，避免 UI 侧重复实现经验曲线计算逻辑。
+        /// </summary>
+        public int CurrentRequiredEXP => GetRequiredExp(currentLevel);
         // 最大生命值由基础值 + 成长曲线决定，至少为 1
         public int MaxHP => config != null ? Mathf.Max(1, Mathf.RoundToInt(GetBaseHP())) : 1;
 

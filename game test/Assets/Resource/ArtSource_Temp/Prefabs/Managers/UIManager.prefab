@@ -52,3 +52,4 @@ MonoBehaviour:
   campUIPrefab: {fileID: 1043081701424219412, guid: 58b8543f48a3049bdaec16797edb557b, type: 3}
   craftingUIPrefab: {fileID: 4154920919371586226, guid: 98303275d0c194441af20e4542919ff3, type: 3}
   dialogueUIPrefab: {fileID: 7919900453157921880, guid: 9abcb250f448942ff8edc9e37687301e, type: 3}
+  playerHudPrefab: {fileID: 5158511135100238901, guid: d553bc591ba004f1cbfe96f2bc1df2b4, type: 3}
