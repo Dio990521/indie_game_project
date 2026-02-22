@@ -588,4 +588,23 @@ namespace IndieGame.Core
         // true = 锁定输入，false = 解锁输入
         public bool Locked;
     }
+
+    /// <summary>
+    /// 金币变更事件：
+    /// 由 GoldSystem 在金币数值发生变化后广播，供 UI、商店、音效等系统监听。
+    ///
+    /// 设计说明：
+    /// 1) 事件只表达“结果状态”，不表达“如何处理”；
+    /// 2) 监听方应只读使用，不应尝试反向修改 GoldSystem；
+    /// 3) Delta 可为正（收入）或负（消费），便于 UI 做绿色/红色动画提示。
+    /// </summary>
+    public struct GoldChangedEvent
+    {
+        // 变化后的金币总量
+        public int CurrentGold;
+        // 本次变化量（正数=增加，负数=减少，0=仅同步）
+        public int Delta;
+        // 变化原因（可选：如 "QuestReward" / "ShopPurchase" / "LoadRestore"）
+        public string Reason;
+    }
 }

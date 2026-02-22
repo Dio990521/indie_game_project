@@ -2,6 +2,7 @@ using UnityEngine;
 using IndieGame.UI;
 using IndieGame.Gameplay.Board.Runtime;
 using IndieGame.Gameplay.Inventory;
+using IndieGame.Gameplay.Economy;
 using IndieGame.Core.CameraSystem;
 
 namespace IndieGame.Core
@@ -30,6 +31,7 @@ namespace IndieGame.Core
         [SerializeField] private GameObject sceneLoaderPrefab;
         [SerializeField] private GameObject boardMapManagerPrefab;
         [SerializeField] private GameObject boardEntityManagerPrefab;
+        [SerializeField] private GameObject goldSystemPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -42,6 +44,7 @@ namespace IndieGame.Core
         private SceneLoader _sceneLoaderInstance;
         private BoardMapManager _boardMapManagerInstance;
         private BoardEntityManager _boardEntityManagerInstance;
+        private GoldSystem _goldSystemInstance;
 
         private void Awake()
         {
@@ -72,6 +75,11 @@ namespace IndieGame.Core
             EnsureManagerFromPrefab(root, sceneLoaderPrefab, "SceneLoader", ref _sceneLoaderInstance);
             EnsureManagerFromPrefab(root, boardMapManagerPrefab, "BoardMapManager", ref _boardMapManagerInstance);
             EnsureManagerFromPrefab(root, boardEntityManagerPrefab, "BoardEntityManager", ref _boardEntityManagerInstance);
+            // 金币系统也纳入统一引导：
+            // 1) 优先复用已有实例；
+            // 2) 若未配置预制体则自动创建并挂载 GoldSystem 组件；
+            // 3) 与其他系统同级放在 [GameSystem] 根节点下，便于运维与排查。
+            EnsureManagerFromPrefab(root, goldSystemPrefab, "GoldSystem", ref _goldSystemInstance);
 
             // 2. 可以在这里查找场景里的其他依赖
             // var ui = FindObjectOfType<UIManager>();
