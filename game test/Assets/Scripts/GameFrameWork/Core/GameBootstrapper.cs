@@ -3,6 +3,7 @@ using IndieGame.UI;
 using IndieGame.Gameplay.Board.Runtime;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Economy;
+using IndieGame.Gameplay.Shop;
 using IndieGame.Core.CameraSystem;
 
 namespace IndieGame.Core
@@ -32,6 +33,7 @@ namespace IndieGame.Core
         [SerializeField] private GameObject boardMapManagerPrefab;
         [SerializeField] private GameObject boardEntityManagerPrefab;
         [SerializeField] private GameObject goldSystemPrefab;
+        [SerializeField] private GameObject shopSystemPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -45,6 +47,7 @@ namespace IndieGame.Core
         private BoardMapManager _boardMapManagerInstance;
         private BoardEntityManager _boardEntityManagerInstance;
         private GoldSystem _goldSystemInstance;
+        private ShopSystem _shopSystemInstance;
 
         private void Awake()
         {
@@ -80,6 +83,9 @@ namespace IndieGame.Core
             // 2) 若未配置预制体则自动创建并挂载 GoldSystem 组件；
             // 3) 与其他系统同级放在 [GameSystem] 根节点下，便于运维与排查。
             EnsureManagerFromPrefab(root, goldSystemPrefab, "GoldSystem", ref _goldSystemInstance);
+            // 商店系统统一纳入启动引导：
+            // 负责库存/限购动态状态与交易规则，要求常驻并参与存档。
+            EnsureManagerFromPrefab(root, shopSystemPrefab, "ShopSystem", ref _shopSystemInstance);
 
             // 2. 可以在这里查找场景里的其他依赖
             // var ui = FindObjectOfType<UIManager>();

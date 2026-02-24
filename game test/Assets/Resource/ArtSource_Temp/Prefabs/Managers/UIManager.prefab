@@ -53,3 +53,4 @@ MonoBehaviour:
   craftingUIPrefab: {fileID: 4154920919371586226, guid: 98303275d0c194441af20e4542919ff3, type: 3}
   dialogueUIPrefab: {fileID: 7919900453157921880, guid: 9abcb250f448942ff8edc9e37687301e, type: 3}
   playerHudPrefab: {fileID: 5158511135100238901, guid: d553bc591ba004f1cbfe96f2bc1df2b4, type: 3}
+  shopUIPrefab: {fileID: 5549291709720614763, guid: 362ad348136914466bb367a70aa3e4ed, type: 3}

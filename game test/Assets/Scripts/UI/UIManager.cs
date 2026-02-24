@@ -7,6 +7,7 @@ using DG.Tweening;
 using IndieGame.UI.Crafting;
 using IndieGame.UI.Dialogue;
 using IndieGame.UI.Hud;
+using IndieGame.UI.Shop;
 
 namespace IndieGame.UI
 {
@@ -54,6 +55,8 @@ namespace IndieGame.UI
         [SerializeField] private DialogueUIView dialogueUIPrefab;
         // 玩家 HUD（仅由 UIManager 负责实例化）
         [SerializeField] private PlayerHudController playerHudPrefab;
+        // 商店 UI（仅由 UIManager 负责实例化）
+        [SerializeField] private ShopUIController shopUIPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -64,6 +67,7 @@ namespace IndieGame.UI
         public CraftingUIController CraftingUIInstance { get; private set; }
         public DialogueUIView DialogueUIInstance { get; private set; }
         public PlayerHudController PlayerHudInstance { get; private set; }
+        public ShopUIController ShopUIInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -215,6 +219,18 @@ namespace IndieGame.UI
                 {
                     // UIManager 只负责实例化与激活，显示规则由 PlayerHudController 自行控制。
                     PlayerHudInstance.gameObject.SetActive(true);
+                }
+            }
+
+            if (shopUIPrefab != null && ShopUIInstance == null)
+            {
+                ShopUIInstance = SpawnOnLayer(shopUIPrefab, UILayerPriority.Top75);
+                if (ShopUIInstance != null)
+                {
+                    // 与 Craft/Dialogue 一致：
+                    // UIManager 只负责生成实例，不负责 Show/Hide。
+                    // 具体开关由 ShopUIController 监听 EventBus 自行处理。
+                    ShopUIInstance.gameObject.SetActive(true);
                 }
             }
 

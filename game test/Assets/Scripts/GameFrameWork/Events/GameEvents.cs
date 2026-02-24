@@ -84,6 +84,63 @@ namespace IndieGame.Core
     }
 
     /// <summary>
+    /// 打开商店界面请求事件：
+    /// 由“商人 NPC 交互入口”等业务层发起，ShopUIController 监听后执行显示与列表构建。
+    ///
+    /// 字段设计说明：
+    /// 1) ShopID：用于在 ShopSystem 中定位具体商店配置；
+    /// 2) Interactor：发起交互对象（通常是玩家），便于后续做镜头/朝向/音效扩展；
+    /// 3) Merchant：被交互的商人对象（可选），用于后续扩展“商人头像/名称”等 UI 信息。
+    /// </summary>
+    public struct OpenShopUIRequestEvent
+    {
+        // 商店唯一 ID（必须能映射到 ShopSO）
+        public string ShopID;
+        // 发起交互对象（通常是玩家）
+        public GameObject Interactor;
+        // 商人对象（可选）
+        public GameObject Merchant;
+    }
+
+    /// <summary>
+    /// 关闭商店界面请求事件：
+    /// 统一由 ESC/Cancel 或外部流程发起，ShopUIController 监听后执行收尾与隐藏。
+    /// </summary>
+    public struct CloseShopUIRequestEvent
+    {
+    }
+
+    /// <summary>
+    /// 商店列表项点击事件：
+    /// 由 ShopItemSlotUI 点击后广播，ShopUIController 监听并切换选中商品。
+    /// </summary>
+    public struct ShopItemSlotClickedEvent
+    {
+        // 被点击条目的唯一键（用于 UI 层精确定位）
+        public string EntryKey;
+        // 所属商店 ID
+        public string ShopID;
+        // 商店条目 ID（不是 ItemSO.ID，允许同物品多条不同定价/规则）
+        public string ShopEntryID;
+    }
+
+    /// <summary>
+    /// 商店购买成功事件：
+    /// 由 ShopSystem 在一次交易完成后广播，供提示 UI、音效、任务系统等解耦监听。
+    /// </summary>
+    public struct ShopPurchaseCompletedEvent
+    {
+        // 商店 ID
+        public string ShopID;
+        // 商店条目 ID
+        public string ShopEntryID;
+        // 实际购买数量
+        public int Quantity;
+        // 实际总花费
+        public int TotalCost;
+    }
+
+    /// <summary>
     /// 请求打开“自定义成品名称”输入弹窗事件：
     /// CraftingUIController 在点击制造按钮后发布该事件，
     /// 由专门的输入弹窗 UI 监听并展示输入框。

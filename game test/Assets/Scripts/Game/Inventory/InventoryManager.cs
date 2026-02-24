@@ -110,6 +110,64 @@ namespace IndieGame.Gameplay.Inventory
         }
 
         /// <summary>
+        /// 预测“是否可以完整加入指定数量的物品”：
+        /// 该方法不会修改任何背包状态，仅用于交易前校验（例如商店购买）。
+        ///
+        /// 设计目的：
+        /// 1) 让业务层先做“可完整放入”判断，避免发生“先扣钱后入包失败”；
+        /// 2) 与 AddItem 形成“先判断再执行”的安全组合；
+        /// 3) 保持与现有堆叠规则一致（同 ItemSO 且同 CustomName 才可堆叠）。
+        /// </summary>
+        /// <param name="item">目标物品</param>
+        /// <param name="amount">目标数量（必须 >0）</param>
+        /// <param name="customName">
+        /// 实例名称（可选）：
+        /// - 空字符串表示默认名；
+        /// - 非空时必须与槽位 CustomName 完全一致才可堆叠。
+        /// </param>
+        /// <returns>true=可完整加入；false=空间不足或参数非法</returns>
+        public bool CanAddItem(ItemSO item, int amount = 1, string customName = null)
+        {
+            if (item == null || amount <= 0) return false;
+
+            int freeSlotCount = Mathf.Max(0, maxCapacity - slots.Count);
+            string normalizedCustomName = string.IsNullOrWhiteSpace(customName) ? string.Empty : customName.Trim();
+
+            // 非堆叠物品：
+            // 每个数量都需要独立槽位，因此只要空槽数量 >= amount 即可。
+            if (!item.isStackable)
+            {
+                return freeSlotCount >= amount;
+            }
+
+            // 堆叠物品：
+            // 先统计“已有可堆叠槽位”的剩余空间，再计算还需要几个新槽位。
+            int stackMax = Mathf.Max(1, item.maxStack);
+            long remaining = amount;
+
+            for (int i = 0; i < slots.Count; i++)
+            {
+                InventorySlot slot = slots[i];
+                if (slot == null || !slot.CanStackWith(item, normalizedCustomName)) continue;
+                if (slot.Count >= stackMax) continue;
+
+                int space = stackMax - Mathf.Max(0, slot.Count);
+                if (space <= 0) continue;
+
+                remaining -= space;
+                if (remaining <= 0)
+                {
+                    return true;
+                }
+            }
+
+            // 现有堆叠空间不够，需要新建槽位。
+            // 需要槽位数 = ceil(remaining / stackMax)
+            int requiredNewSlots = (int)((remaining + stackMax - 1L) / stackMax);
+            return freeSlotCount >= requiredNewSlots;
+        }
+
+        /// <summary>
         /// 添加道具：
         /// - 先尝试堆叠（填满已有槽位）
         /// - 再尝试新建槽位

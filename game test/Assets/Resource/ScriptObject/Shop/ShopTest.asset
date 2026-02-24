@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5e25c461d324b4d67a606324be15dbf1, type: 3}
+  m_Name: ShopTest
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Shop.ShopSO
+  id: shop_test
+  displayName: Fucker Shop
+  entries:
+  - entryID: shop_axe
+    item: {fileID: 11400000, guid: f5f304d7cae5a481ebdf542f571e3381, type: 2}
+    unitPrice: 10
+    initialStock: 3
+    purchaseLimitPerSave: 3
+  - entryID: shop_sword
+    item: {fileID: 11400000, guid: 2c0468edccada4dfdab5d6f775ae2932, type: 2}
+    unitPrice: 5
+    initialStock: -1
+    purchaseLimitPerSave: -1
