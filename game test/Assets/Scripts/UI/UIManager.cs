@@ -144,7 +144,7 @@ namespace IndieGame.UI
         }
 
         /// <summary>
-        /// 将已有 UI 挂载到指定层级。
+        /// 将已有 UI 挂载到指定层级。1
         /// </summary>
         public void AttachToLayer(Transform uiRoot, UILayerPriority priority)
         {

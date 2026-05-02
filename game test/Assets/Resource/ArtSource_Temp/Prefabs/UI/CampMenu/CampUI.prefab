@@ -113,10 +113,13 @@ MonoBehaviour:
   defaultActions:
   - {fileID: 11400000, guid: 599733cae3a6546d39260acfb9a2f506, type: 2}
   - {fileID: 11400000, guid: 8448044e9403940b6b8dd5228b701fc5, type: 2}
-  - {fileID: 11400000, guid: ef547611e7049448a948648969c86434, type: 2}
   - {fileID: 11400000, guid: 57e40069adb1a43cfaaf0b0645a37d7e, type: 2}
   - {fileID: 11400000, guid: 095764c005baa47ea8e892ddd70a8ded, type: 2}
   - {fileID: 11400000, guid: 0ab9f979e648c4b4b8e634bd90de3486, type: 2}
+  enableSleepAutoSave: 1
+  sleepAutoSaveSlotIndex: 0
+  sleepAutoSaveNote: AutoSave-Sleep
+  sleepAutoSaveTimeoutSeconds: 8
 --- !u!114 &9122202908034962345
 MonoBehaviour:
   m_ObjectHideFlags: 0

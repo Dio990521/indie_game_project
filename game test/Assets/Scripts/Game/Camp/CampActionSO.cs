@@ -16,8 +16,6 @@ namespace IndieGame.Gameplay.Camp
         Memory,
         // 技能树
         SkillTree,
-        // 商铺管理
-        ShopManagement,
         // 睡觉
         Sleep
     }

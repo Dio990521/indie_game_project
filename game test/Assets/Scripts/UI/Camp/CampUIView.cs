@@ -171,9 +171,6 @@ namespace IndieGame.UI.Camp
                 case CampActionID.SkillTree:
                     Debug.Log("Log: 打开技能配置界面...");
                     break;
-                case CampActionID.ShopManagement:
-                    Debug.Log("Log: 极少量消耗时间，飞鸽传书远程管理...");
-                    break;
                 case CampActionID.Sleep:
                     Debug.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
                     StartCoroutine(SleepRoutine());
