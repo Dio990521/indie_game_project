@@ -4,6 +4,7 @@ using IndieGame.Gameplay.Board.Runtime;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Economy;
 using IndieGame.Gameplay.Shop;
+using IndieGame.Gameplay.ActionPoint;
 using IndieGame.Core.CameraSystem;
 
 namespace IndieGame.Core
@@ -34,6 +35,7 @@ namespace IndieGame.Core
         [SerializeField] private GameObject boardEntityManagerPrefab;
         [SerializeField] private GameObject goldSystemPrefab;
         [SerializeField] private GameObject shopSystemPrefab;
+        [SerializeField] private GameObject actionPointSystemPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -48,6 +50,7 @@ namespace IndieGame.Core
         private BoardEntityManager _boardEntityManagerInstance;
         private GoldSystem _goldSystemInstance;
         private ShopSystem _shopSystemInstance;
+        private ActionPointSystem _actionPointSystemInstance;
 
         private void Awake()
         {
@@ -86,6 +89,8 @@ namespace IndieGame.Core
             // 商店系统统一纳入启动引导：
             // 负责库存/限购动态状态与交易规则，要求常驻并参与存档。
             EnsureManagerFromPrefab(root, shopSystemPrefab, "ShopSystem", ref _shopSystemInstance);
+            // 行动点系统：控制每回合可投掷骰子次数，支持存档与培养提升上限。
+            EnsureManagerFromPrefab(root, actionPointSystemPrefab, "ActionPointSystem", ref _actionPointSystemInstance);
 
             // 2. 可以在这里查找场景里的其他依赖
             // var ui = FindObjectOfType<UIManager>();

@@ -12,8 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3eb9bec65a8e74483a1973e2a6194a66, type: 3}
   m_Name: Sleep
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Camp.CampActionSO
-  ActionID: 5
+  ActionID: 4
   DisplayName: Sleep
   Description: 
   Icon: {fileID: 0}
-  TimeCostType: 0

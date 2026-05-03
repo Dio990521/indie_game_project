@@ -24,6 +24,7 @@ namespace IndieGame.Gameplay.Stats
         public Stat Defense { get; private set; } = new Stat();
         public Stat Resistance { get; private set; } = new Stat();
         public Stat MoveSpeed { get; private set; } = new Stat();
+        public Stat Luck { get; private set; } = new Stat();
 
         // --- 对外只读的运行时数据 ---
         public int CurrentHP => currentHP;
@@ -85,6 +86,7 @@ namespace IndieGame.Gameplay.Stats
                 Defense.BaseValue = 0f;
                 Resistance.BaseValue = 0f;
                 MoveSpeed.BaseValue = 5f;
+                Luck.BaseValue = 5f;
                 currentHP = 1;
                 currentLevel = 1;
                 currentEXP = 0;
@@ -152,6 +154,7 @@ namespace IndieGame.Gameplay.Stats
             Defense.BaseValue = config.Defense + config.DefenseGrowth.Evaluate(level);
             Resistance.BaseValue = config.Resistance + config.ResistanceGrowth.Evaluate(level);
             MoveSpeed.BaseValue = config.MoveSpeed + config.MoveSpeedGrowth.Evaluate(level);
+            Luck.BaseValue = config.Luck + config.LuckGrowth.Evaluate(level);
         }
 
         private float GetBaseHP()

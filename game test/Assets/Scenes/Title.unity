@@ -1580,6 +1580,10 @@ PrefabInstance:
       propertyPath: loadingSlider
       value: 
       objectReference: {fileID: 1364067362}
+    - target: {fileID: 4559183686212421456, guid: 101a54d883cf747908ef48257aa26e22, type: 3}
+      propertyPath: saveLoadMenuView
+      value: 
+      objectReference: {fileID: 9037047296321566310}
     - target: {fileID: 9049977314227673875, guid: 101a54d883cf747908ef48257aa26e22, type: 3}
       propertyPath: m_Name
       value: TitleScreenManager
@@ -1686,6 +1690,17 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7f206a479bdb04b8c92d66cd02a0a3bc, type: 3}
+--- !u!114 &9037047296321566310 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 8621870439497032322, guid: 7f206a479bdb04b8c92d66cd02a0a3bc, type: 3}
+  m_PrefabInstance: {fileID: 9037047296321566309}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 90cca23bdf19b4527bb22e4efa4f404c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.TitleScreen.SaveLoadMenuView
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

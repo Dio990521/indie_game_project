@@ -2,6 +2,7 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.UI;
 using IndieGame.Gameplay.Inventory;
+using IndieGame.Gameplay.ActionPoint;
 using UnityEngine.Localization;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
@@ -86,6 +87,16 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             // 状态锁检查：如果控制器不存在或当前已经在位移中，则不响应
             if (context.movementController == null || context.movementController.IsMoving) return;
+
+            // 行动点检查：每次掷骰子消耗 1 点行动点
+            if (ActionPointSystem.Instance != null)
+            {
+                if (!ActionPointSystem.Instance.TryConsumeActionPoints(1, "RollDice"))
+                {
+                    Debug.Log("<color=orange>[行动点] 行动点不足，无法掷骰子。</color>");
+                    return;
+                }
+            }
 
             // --- 核心游戏逻辑：掷骰子 ---
             // 随机生成 1 到 6 之间的点数

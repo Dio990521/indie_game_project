@@ -12,6 +12,7 @@ namespace IndieGame.Gameplay.Stats
         [SerializeField] private float defense = 5f;
         [SerializeField] private float resistance = 3f;
         [SerializeField] private float moveSpeed = 5f;
+        [SerializeField] private float luck = 5f;
 
         [Header("Progression Curves")]
         // --- 成长曲线（根据等级叠加的增量） ---
@@ -21,6 +22,7 @@ namespace IndieGame.Gameplay.Stats
         [SerializeField] private AnimationCurve defenseGrowth = AnimationCurve.Linear(1f, 0f, 10f, 5f);
         [SerializeField] private AnimationCurve resistanceGrowth = AnimationCurve.Linear(1f, 0f, 10f, 3f);
         [SerializeField] private AnimationCurve moveSpeedGrowth = AnimationCurve.Linear(1f, 0f, 10f, 1f);
+        [SerializeField] private AnimationCurve luckGrowth = AnimationCurve.Linear(1f, 0f, 10f, 5f);
 
         /// <summary> 初始最大生命 </summary>
         public int MaxHP => maxHP;
@@ -32,6 +34,8 @@ namespace IndieGame.Gameplay.Stats
         public float Resistance => resistance;
         /// <summary> 初始移动速度 </summary>
         public float MoveSpeed => moveSpeed;
+        /// <summary> 初始幸运值 </summary>
+        public float Luck => luck;
         /// <summary> 升级所需经验曲线 </summary>
         public AnimationCurve ExpToNextLevel => expToNextLevel;
         /// <summary> 生命成长曲线 </summary>
@@ -44,5 +48,7 @@ namespace IndieGame.Gameplay.Stats
         public AnimationCurve ResistanceGrowth => resistanceGrowth;
         /// <summary> 移速成长曲线 </summary>
         public AnimationCurve MoveSpeedGrowth => moveSpeedGrowth;
+        /// <summary> 幸运成长曲线 </summary>
+        public AnimationCurve LuckGrowth => luckGrowth;
     }
 }
