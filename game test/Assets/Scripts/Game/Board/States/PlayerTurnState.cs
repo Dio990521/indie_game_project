@@ -28,6 +28,15 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         public override void OnEnter(BoardGameManager context)
         {
             _context = context;
+
+            // 行动点耗尽检测：若无法再行动，强制进入露营，不显示回合菜单
+            if (ActionPointSystem.Instance != null &&
+                ActionPointSystem.Instance.CurrentActionPoints <= 0)
+            {
+                context.ChangeState(new CampingState(context.campingLocationId));
+                return;
+            }
+
             // 1. 获取 UI 菜单实例：通过 UIManager 单例访问全局唯一的棋盘菜单
             _menu = UIManager.Instance != null ? UIManager.Instance.BoardActionMenuInstance : null;
 

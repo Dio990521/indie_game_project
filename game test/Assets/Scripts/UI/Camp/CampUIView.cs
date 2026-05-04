@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using IndieGame.Gameplay.Camp;
+using IndieGame.Gameplay.ActionPoint;
 using IndieGame.Core;
 
 namespace IndieGame.UI.Camp
@@ -185,8 +186,8 @@ namespace IndieGame.UI.Camp
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
             yield return new WaitForSeconds(fadeDuration);
 
-            // 2) 执行数值结算（占位）
-            // TODO: 在此加入睡觉结算逻辑（时间推进/状态恢复等）
+            // 2) 睡觉结算：恢复全部行动点
+            ActionPointSystem.Instance?.RefillActionPoints("Sleep");
 
             // 3) 在返回棋盘前执行一次自动存档：
             //    注意这里不直接调用 SaveManager，而是通过 EventBus 请求全局 AutoSaveService 处理。

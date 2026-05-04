@@ -49,6 +49,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardGameManager
   movementController: {fileID: 1063210582564695611}
+  campingLocationId: {fileID: 11400000, guid: 8af5bc471d543450c9a7f4c7b3f933d7, type: 2}
 --- !u!114 &3702525346231296957
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -116,3 +117,4 @@ MonoBehaviour:
   lineWidth: 0.3
   lineSegments: 20
   lineMaterial: {fileID: 0}
+  syncBidirectionalOffsets: 1

@@ -664,4 +664,25 @@ namespace IndieGame.Core
         // 变化原因（可选：如 "QuestReward" / "ShopPurchase" / "LoadRestore"）
         public string Reason;
     }
+
+    /// <summary>
+    /// 行动点变更事件：
+    /// 由 ActionPointSystem 在行动点数值发生变化后广播，供 UI、日志、技能系统等监听。
+    ///
+    /// 设计说明：
+    /// 1) Delta 为正表示恢复，为负表示消耗，为 0 表示仅同步（初始化/上限变更）；
+    /// 2) MaxPoints 同步携带，UI 可直接渲染进度条，无需额外查询；
+    /// 3) Reason 标明消耗/恢复来源，便于日志和未来的特效扩展。
+    /// </summary>
+    public struct ActionPointChangedEvent
+    {
+        // 变化后的剩余行动点
+        public int CurrentPoints;
+        // 当前行动点上限
+        public int MaxPoints;
+        // 本次变化量（正=恢复，负=消耗，0=仅同步）
+        public int Delta;
+        // 变化原因（如 "RollDice" / "SkillEffect" / "LoadRestore"）
+        public string Reason;
+    }
 }

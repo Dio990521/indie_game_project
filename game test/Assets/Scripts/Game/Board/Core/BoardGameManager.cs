@@ -17,6 +17,9 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Tooltip("负责具体位移逻辑和节点坐标转换的控制器")]
         public BoardMovementController movementController;
 
+        [Tooltip("行动点耗尽时强制进入露营的目标位置 ID")]
+        public LocationID campingLocationId;
+
         // --- 状态机相关 ---
         // 主状态机：控制游戏的主循环流程（如：初始化 -> 玩家回合 -> 移动中 -> 事件触发 -> 敌人回合）
         private readonly StateMachine<BoardGameManager> _stateMachine = new StateMachine<BoardGameManager>();
