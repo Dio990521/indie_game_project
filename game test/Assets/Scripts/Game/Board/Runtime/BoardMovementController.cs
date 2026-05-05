@@ -41,6 +41,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private BoardInteractionHandler _interactionHandler; // 专门处理抵达后的逻辑
         private int _stepsRemaining;            // 剩余步数（骰子点数消耗计数）
         private Coroutine _arrivalRoutine;      // 当前正在执行的抵达处理协程
+        // [掉头控制] 仅在 BeginMove 时检测到实体处于死胡同时置 true，消耗后立即清除，确保新回合首步允许掉头但途中不允许
+        private bool _allowFirstStepUTurn;
 
         private void OnDisable()
         {
@@ -94,7 +96,10 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             _isMoving = true;
 
-            // 订阅“路段完成”事件，用于在两点之间移动完后执行决策
+            // 检测当前实体是否停在死胡同。若是，允许本次移动的首步执行掉头（掉头机制）
+            _allowFirstStepUTurn = IsAtDeadEnd(entity);
+
+            // 订阅”路段完成”事件，用于在两点之间移动完后执行决策
             SubscribeSegmentEvent();
             // 开始推进第一步
             AdvanceToNextStep();
@@ -210,6 +215,25 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 FinishMove();
                 return;
+            }
+
+            // [即刻停止 / 掉头机制] 当唯一出口是原路返回（死胡同回退节点）时进行判断
+            // · 若是新回合在死胡同的首步（_allowFirstStepUTurn == true）：允许掉头，消耗许可后继续
+            // · 若是移动途中抵达死胡同：就地停止，丢弃剩余步数
+            bool isUTurnOnly = validNodes.Count == 1
+                && _activeEntity.LastWaypoint != null
+                && validNodes[0] == _activeEntity.LastWaypoint;
+            if (isUTurnOnly)
+            {
+                if (_allowFirstStepUTurn)
+                {
+                    _allowFirstStepUTurn = false; // 许可一次性消耗
+                }
+                else
+                {
+                    FinishMove(); // 即刻停止，丢弃剩余步数
+                    return;
+                }
             }
 
             // 3. 决策逻辑：
@@ -355,6 +379,17 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 简单的随机决策，未来可在此扩展复杂的 AI 权重计算
             int index = UnityEngine.Random.Range(0, validNodes.Count);
             return node.GetConnectionTo(validNodes[index]);
+        }
+
+        /// <summary>
+        /// 判断实体当前是否停在死胡同（唯一可走方向是原路返回）。
+        /// 用于 BeginMove 时决定是否允许首步掉头。
+        /// </summary>
+        private bool IsAtDeadEnd(BoardEntity entity)
+        {
+            if (entity == null || entity.CurrentNode == null) return false;
+            List<MapWaypoint> validNodes = entity.CurrentNode.GetValidNextNodes(entity.LastWaypoint);
+            return validNodes.Count == 1 && entity.LastWaypoint != null && validNodes[0] == entity.LastWaypoint;
         }
 
         /// <summary>
