@@ -367,118 +367,6 @@ MonoBehaviour:
   - targetNode: {fileID: 1239286138}
     controlPointOffset: {x: 0.715, y: 0, z: -1.04}
     events: []
---- !u!1 &121923778
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 121923779}
-  - component: {fileID: 121923782}
-  - component: {fileID: 121923781}
-  - component: {fileID: 121923780}
-  m_Layer: 0
-  m_Name: Event Cube
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &121923779
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 121923778}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.2142406, y: 0.010146475, z: 0.093565404, w: 0.9722364}
-  m_LocalPosition: {x: -0.983, y: 0, z: 0.334}
-  m_LocalScale: {x: 0.06, y: 1, z: 0.12}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1793533023}
-  m_LocalEulerAnglesHint: {x: 24.5, y: 3.769, z: 11.813}
---- !u!65 &121923780
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 121923778}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 1, y: 1, z: 1}
-  m_Center: {x: 0, y: 0, z: 0}
---- !u!23 &121923781
-MeshRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 121923778}
-  m_Enabled: 1
-  m_CastShadows: 1
-  m_ReceiveShadows: 1
-  m_DynamicOccludee: 1
-  m_StaticShadowCaster: 0
-  m_MotionVectors: 1
-  m_LightProbeUsage: 1
-  m_ReflectionProbeUsage: 1
-  m_RayTracingMode: 2
-  m_RayTraceProcedural: 0
-  m_RayTracingAccelStructBuildFlagsOverride: 0
-  m_RayTracingAccelStructBuildFlags: 1
-  m_SmallMeshCulling: 1
-  m_ForceMeshLod: -1
-  m_MeshLodSelectionBias: 0
-  m_RenderingLayerMask: 1
-  m_RendererPriority: 0
-  m_Materials:
-  - {fileID: 2100000, guid: 31321ba15b8f8eb4c954353edc038b1d, type: 2}
-  m_StaticBatchInfo:
-    firstSubMesh: 0
-    subMeshCount: 0
-  m_StaticBatchRoot: {fileID: 0}
-  m_ProbeAnchor: {fileID: 0}
-  m_LightProbeVolumeOverride: {fileID: 0}
-  m_ScaleInLightmap: 1
-  m_ReceiveGI: 1
-  m_PreserveUVs: 0
-  m_IgnoreNormalsForChartDetection: 0
-  m_ImportantGI: 0
-  m_StitchLightmapSeams: 1
-  m_SelectedEditorRenderState: 3
-  m_MinimumChartSize: 4
-  m_AutoUVMaxDistance: 0.5
-  m_AutoUVMaxAngle: 89
-  m_LightmapParameters: {fileID: 0}
-  m_GlobalIlluminationMeshLod: 0
-  m_SortingLayerID: 0
-  m_SortingLayer: 0
-  m_SortingOrder: 0
-  m_MaskInteraction: 0
-  m_AdditionalVertexStreams: {fileID: 0}
---- !u!33 &121923782
-MeshFilter:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 121923778}
-  m_Mesh: {fileID: 10202, guid: 0000000000000000e000000000000000, type: 0}
 --- !u!1 &301926481
 GameObject:
   m_ObjectHideFlags: 0
@@ -1628,7 +1516,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 11
-  tileData: {fileID: 11400000, guid: e60374a8a1bba4e43b1243725438d38a, type: 2}
+  tileData: {fileID: 11400000, guid: 023b982871242ac4eb9f9302f22c3544, type: 2}
   connections:
   - targetNode: {fileID: 1945238582}
     controlPointOffset: {x: 2.87, y: 0, z: -1.4799995}
@@ -1900,7 +1788,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 17
-  tileData: {fileID: 11400000, guid: e60374a8a1bba4e43b1243725438d38a, type: 2}
+  tileData: {fileID: 11400000, guid: c2a112add0b3fd44da2840b38d1c5fad, type: 2}
   connections:
   - targetNode: {fileID: 803951497}
     controlPointOffset: {x: -2.35, y: 0, z: 0.52999973}
@@ -2316,7 +2204,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 2
-  tileData: {fileID: 11400000, guid: 9a8a67d8d5b534d50822c403af46a32f, type: 2}
+  tileData: {fileID: 11400000, guid: c2a112add0b3fd44da2840b38d1c5fad, type: 2}
   connections:
   - targetNode: {fileID: 1464109575}
     controlPointOffset: {x: -1.7400002, y: 0, z: -0.5250001}
@@ -2545,7 +2433,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 20
-  tileData: {fileID: 11400000, guid: 9a8a67d8d5b534d50822c403af46a32f, type: 2}
+  tileData: {fileID: 11400000, guid: 023b982871242ac4eb9f9302f22c3544, type: 2}
   connections:
   - targetNode: {fileID: 401567712}
     controlPointOffset: {x: -0.120000124, y: 0, z: 2.005001}
@@ -3158,15 +3046,7 @@ MonoBehaviour:
   connections:
   - targetNode: {fileID: 1957126851}
     controlPointOffset: {x: -0.9200001, y: 0, z: -1.7950001}
-    events:
-    - progressPoint: 0.512
-      eventAction: {fileID: 11400000, guid: a7f44820c5f044540a20e975a19467e1, type: 2}
-      contextTarget: {fileID: 121923779}
-      hasTriggered: 0
-    - progressPoint: 0.94
-      eventAction: {fileID: 11400000, guid: dc6721bacad12460097585212cec6fa9, type: 2}
-      contextTarget: {fileID: 121923779}
-      hasTriggered: 0
+    events: []
   - targetNode: {fileID: 916751895}
     controlPointOffset: {x: 1.7399998, y: 0, z: 0.5250001}
     events: []
@@ -3421,7 +3301,6 @@ Transform:
   - {fileID: 1820840240}
   - {fileID: 1390950631}
   - {fileID: 1930707822}
-  - {fileID: 121923779}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &1820840239

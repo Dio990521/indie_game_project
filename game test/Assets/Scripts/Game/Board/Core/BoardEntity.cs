@@ -103,6 +103,21 @@ namespace IndieGame.Gameplay.Board.Runtime
             IsMoving = value;
         }
 
+        /// <summary>
+        /// 原地掉头：将行进方向反转，使后续移动朝当前来路的反方向行进。
+        /// 适用于后退格效果、掉头技能等场景。
+        /// 原理：将正向出口设为新"来路"，GetValidNextNodes 下次将返回反向节点。
+        /// </summary>
+        public void ReverseDirection()
+        {
+            if (CurrentNode == null) return;
+            // 获取正向可走节点（已排除来路，若为死胡同则返回来路本身）
+            var forwardNodes = CurrentNode.GetValidNextNodes(LastWaypoint);
+            if (forwardNodes.Count == 0) return;
+            // 将正向出口的第一个节点设为新"来路"，实现方向反转
+            LastWaypoint = forwardNodes[0];
+        }
+
         /// <summary> 更新动画控制器的速度参数 </summary>
         public void SetMoveAnimationSpeed(float value)
         {

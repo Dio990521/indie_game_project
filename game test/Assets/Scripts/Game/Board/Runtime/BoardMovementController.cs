@@ -43,6 +43,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private Coroutine _arrivalRoutine;      // 当前正在执行的抵达处理协程
         // [掉头控制] 仅在 BeginMove 时检测到实体处于死胡同时置 true，消耗后立即清除，确保新回合首步允许掉头但途中不允许
         private bool _allowFirstStepUTurn;
+        // [额外步数] 前进格/后退格通过 EventBus 写入，HandleSegmentCompleted 末尾统一消费；正数前进，负数后退
+        private int _pendingExtraSteps = 0;
 
         private void OnDisable()
         {
@@ -88,6 +90,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             _activeEntity = entity;
             _triggerNodeEvents = triggerNodeEvents;
             _stepsRemaining = totalSteps;
+            _pendingExtraSteps = 0;
 
             // 同步底层属性：实体在移动时是否检测路径上的事件（如连线中间的交互）
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
@@ -310,6 +313,33 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 消耗一步
             _stepsRemaining--;
 
+            // 消费格子请求的额外步数（前进格 / 后退格写入）
+            if (_pendingExtraSteps != 0)
+            {
+                int extra = _pendingExtraSteps;
+                _pendingExtraSteps = 0;
+                if (extra > 0)
+                {
+                    // 前进格：追加步数，自然向前继续移动
+                    _stepsRemaining += extra;
+                }
+                else
+                {
+                    // 后退格：重置为向后步数，然后通过原地掉头实现方向反转
+                    _stepsRemaining = -extra;
+                    if (IsAtDeadEnd(_activeEntity))
+                    {
+                        // 死胡同节点：正向出口即来路，沿用首步掉头机制原路返回
+                        _allowFirstStepUTurn = true;
+                    }
+                    else
+                    {
+                        // 普通节点：原地掉头，使 GetValidNextNodes 自然返回反向路径
+                        _activeEntity.ReverseDirection();
+                    }
+                }
+            }
+
             if (_stepsRemaining <= 0)
             {
                 FinishMove();
@@ -330,6 +360,23 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             // 将节点事件的触发逻辑外包给专门的 Handler，使 Controller 保持整洁
             yield return _interactionHandler.HandleArrival(_activeEntity, node, isFinalStep, _triggerNodeEvents);
+        }
+
+        /// <summary>
+        /// 原地掉头：反转玩家当前行进方向（供技能系统等外部逻辑复用）。
+        /// 调用后下一次移动将朝反方向行进；若当前在死胡同则等效于允许首步掉头。
+        /// </summary>
+        public void ReversePlayerDirection()
+        {
+            if (_playerEntity == null) return;
+            if (IsAtDeadEnd(_playerEntity))
+            {
+                _allowFirstStepUTurn = true;
+            }
+            else
+            {
+                _playerEntity.ReverseDirection();
+            }
         }
 
         /// <summary>
@@ -401,15 +448,25 @@ namespace IndieGame.Gameplay.Board.Runtime
             _interactionHandler = new BoardInteractionHandler();
         }
 
+        /// <summary>
+        /// 接收格子请求的额外步数事件（仅在移动期间订阅）。
+        /// </summary>
+        private void OnExtraMoveRequested(BoardExtraMoveRequestedEvent evt)
+        {
+            _pendingExtraSteps = evt.Steps;
+        }
+
         // --- 事件总线订阅管理 ---
         private void SubscribeSegmentEvent()
         {
             EventBus.Subscribe<BoardEntitySegmentCompletedEvent>(OnEntitySegmentCompleted);
+            EventBus.Subscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
         }
 
         private void UnsubscribeSegmentEvent()
         {
             EventBus.Unsubscribe<BoardEntitySegmentCompletedEvent>(OnEntitySegmentCompleted);
+            EventBus.Unsubscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
         }
     }
 }

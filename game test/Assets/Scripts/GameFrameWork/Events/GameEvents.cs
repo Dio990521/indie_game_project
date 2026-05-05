@@ -403,6 +403,16 @@ namespace IndieGame.Core
     }
 
     /// <summary>
+    /// 格子请求额外移动事件：
+    /// 前进格/后退格触发后广播，BoardMovementController 监听并追加步数。
+    /// Steps 为正 = 前进，为负 = 后退。
+    /// </summary>
+    public struct BoardExtraMoveRequestedEvent
+    {
+        public int Steps;
+    }
+
+    /// <summary>
     /// 掷骰子请求事件：
     /// 由棋盘菜单 UI 触发，PlayerTurnState 监听。
     /// </summary>
