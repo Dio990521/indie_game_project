@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Backward_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.BackwardTile
   tileName: Backward
-  gizmoColor: {r: 1, g: 1, b: 1, a: 1}
+  gizmoColor: {r: 0.9496855, g: 0.03882345, b: 0.03882345, a: 1}
   steps: 3

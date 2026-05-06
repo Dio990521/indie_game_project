@@ -13,5 +13,5 @@ MonoBehaviour:
   m_Name: Forward_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.ForwardTile
   tileName: Forward
-  gizmoColor: {r: 1, g: 1, b: 1, a: 1}
+  gizmoColor: {r: 0.59143144, g: 0.8742138, b: 0.2391716, a: 1}
   steps: 3

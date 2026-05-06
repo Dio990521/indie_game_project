@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find \"d:\\\\\\\\Games\\\\\\\\Unity Projects\\\\\\\\indie_game_project\\\\\\\\game test\\\\\\\\Assets\\\\\\\\Scripts\\\\\\\\Game\\\\\\\\Board\\\\\\\\\" -name \"*.cs\" -type f)"
+    ]
+  }
+}
