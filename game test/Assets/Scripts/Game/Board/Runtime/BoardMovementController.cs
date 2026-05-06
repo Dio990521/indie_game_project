@@ -45,6 +45,11 @@ namespace IndieGame.Gameplay.Board.Runtime
         private bool _allowFirstStepUTurn;
         // [额外步数] 前进格/后退格通过 EventBus 写入，HandleSegmentCompleted 末尾统一消费；正数前进，负数后退
         private int _pendingExtraSteps = 0;
+        // [扭曲格] 下一步强制走向的目标节点 ID；-1 表示无强制方向
+        // 由 WarpTile 通过 EventBus 写入，HandleSegmentCompleted 消费（追加步数），AdvanceToNextStep 最终使用
+        private int _pendingForcedNextNodeId = -1;
+        // [扭曲格] 下次分叉选择时需要过滤掉的被保护节点 ID；-1 表示无过滤
+        private int _pendingProtectedNodeId = -1;
 
         private void OnDisable()
         {
@@ -91,6 +96,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             _triggerNodeEvents = triggerNodeEvents;
             _stepsRemaining = totalSteps;
             _pendingExtraSteps = 0;
+            _pendingForcedNextNodeId = -1;
+            _pendingProtectedNodeId = -1;
 
             // 同步底层属性：实体在移动时是否检测路径上的事件（如连线中间的交互）
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
@@ -213,6 +220,16 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 2. 获取当前节点的所有有效出口（排除刚才进来的路，防止来回抽搐）
             List<MapWaypoint> validNodes = current.GetValidNextNodes(_activeEntity.LastWaypoint);
 
+            // [扭曲格] 路过时：从候选出口中移除被保护的路径
+            if (_pendingProtectedNodeId >= 0)
+            {
+                MapWaypoint protectedNode = BoardMapManager.Instance != null
+                    ? BoardMapManager.Instance.GetNode(_pendingProtectedNodeId)
+                    : null;
+                if (protectedNode != null) validNodes.Remove(protectedNode);
+                _pendingProtectedNodeId = -1;
+            }
+
             // 如果死路一条，则停止
             if (validNodes.Count == 0)
             {
@@ -240,6 +257,30 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             // 3. 决策逻辑：
+            // [扭曲格] 停下时：若有强制方向锁，跳过分叉UI直接走向指定节点
+            if (_pendingForcedNextNodeId >= 0)
+            {
+                int forcedId = _pendingForcedNextNodeId;
+                _pendingForcedNextNodeId = -1;
+                _pendingProtectedNodeId = -1; // 强制方向时无需过滤，同步清除
+
+                MapWaypoint forcedTarget = BoardMapManager.Instance != null
+                    ? BoardMapManager.Instance.GetNode(forcedId)
+                    : null;
+                WaypointConnection forcedConn = forcedTarget != null
+                    ? current.GetConnectionTo(forcedTarget)
+                    : null;
+
+                if (forcedConn != null)
+                {
+                    StartSegment(forcedConn);
+                    return;
+                }
+
+                // 目标节点不是当前路口的直接出口：打警告，回退到正常分叉逻辑
+                Debug.LogWarning($"[BoardMovementController] 扭曲格目标节点 ID={forcedId} 不是当前路口的直接出口，忽略方向锁。");
+            }
+
             // A. 如果只有一个出口：直接自动开始该路段的位移
             if (validNodes.Count == 1)
             {
@@ -312,6 +353,21 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             // 消耗一步
             _stepsRemaining--;
+
+            // [扭曲格] 强制滑行仅在最终落点时生效，路过时丢弃
+            if (_pendingForcedNextNodeId >= 0)
+            {
+                if (isFinalStep)
+                {
+                    // 最终落点：补充1步，方向锁留给 AdvanceToNextStep 读取
+                    if (_stepsRemaining <= 0) _stepsRemaining = 1;
+                }
+                else
+                {
+                    // 路过：丢弃强制滑行（分叉过滤仍有效）
+                    _pendingForcedNextNodeId = -1;
+                }
+            }
 
             // 消费格子请求的额外步数（前进格 / 后退格写入）
             if (_pendingExtraSteps != 0)
@@ -456,17 +512,37 @@ namespace IndieGame.Gameplay.Board.Runtime
             _pendingExtraSteps = evt.Steps;
         }
 
+        /// <summary>
+        /// 接收扭曲格的强制滑行请求（仅在移动期间订阅）。
+        /// </summary>
+        private void OnWarpSlideRequested(BoardWarpSlideRequestedEvent evt)
+        {
+            _pendingForcedNextNodeId = evt.ForcedNodeId;
+        }
+
+        /// <summary>
+        /// 接收扭曲格的路径过滤请求（仅在移动期间订阅）。
+        /// </summary>
+        private void OnWarpFilterPathRequested(BoardWarpFilterPathEvent evt)
+        {
+            _pendingProtectedNodeId = evt.ProtectedNodeId;
+        }
+
         // --- 事件总线订阅管理 ---
         private void SubscribeSegmentEvent()
         {
             EventBus.Subscribe<BoardEntitySegmentCompletedEvent>(OnEntitySegmentCompleted);
             EventBus.Subscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
+            EventBus.Subscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
+            EventBus.Subscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
         }
 
         private void UnsubscribeSegmentEvent()
         {
             EventBus.Unsubscribe<BoardEntitySegmentCompletedEvent>(OnEntitySegmentCompleted);
             EventBus.Unsubscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
+            EventBus.Unsubscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
+            EventBus.Unsubscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
         }
     }
 }

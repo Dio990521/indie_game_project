@@ -413,6 +413,28 @@ namespace IndieGame.Core
     }
 
     /// <summary>
+    /// 扭曲格强制滑行请求事件：
+    /// WarpTile 触发后广播，BoardMovementController 在最终落点时追加1步并锁定方向（跳过分叉UI）；
+    /// 路过时自动丢弃。
+    /// </summary>
+    public struct BoardWarpSlideRequestedEvent
+    {
+        /// <summary> 强制滑行目标节点的 nodeID（当前路口的直接出口之一） </summary>
+        public int ForcedNodeId;
+    }
+
+    /// <summary>
+    /// 扭曲格路径过滤请求事件：
+    /// WarpTile 触发后广播，BoardMovementController 在下次分叉选择时从候选出口中移除该节点，
+    /// 实现保护指定路径不被玩家选择的效果。
+    /// </summary>
+    public struct BoardWarpFilterPathEvent
+    {
+        /// <summary> 需要从分叉UI中隐藏的路径入口节点 nodeID </summary>
+        public int ProtectedNodeId;
+    }
+
+    /// <summary>
     /// 掷骰子请求事件：
     /// 由棋盘菜单 UI 触发，PlayerTurnState 监听。
     /// </summary>
