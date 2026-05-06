@@ -5,6 +5,7 @@ using IndieGame.Gameplay.Economy;
 using IndieGame.Gameplay.Inventory;
 using UnityEngine;
 
+
 namespace IndieGame.Gameplay.Board.Data
 {
     /// <summary>
@@ -20,7 +21,7 @@ namespace IndieGame.Gameplay.Board.Data
     /// 奖励池中的单条奖励配置
     /// </summary>
     [Serializable]
-    public class SurpriseRewardEntry
+    public class SurpriseRewardEntry : IWeighted
     {
         [Tooltip("奖励类型")]
         public SurpriseRewardType type = SurpriseRewardType.Gold;
@@ -37,6 +38,9 @@ namespace IndieGame.Gameplay.Board.Data
         [Tooltip("抽中该条目的相对权重，数值越大越容易抽中")]
         [Min(1)]
         public int weight = 1;
+
+        // IWeighted 接口实现
+        public int Weight => weight;
 
         /// <summary>
         /// 判断该条目配置是否有效
@@ -78,23 +82,7 @@ namespace IndieGame.Gameplay.Board.Data
             }
 
             // 按权重随机选出一条
-            int totalWeight = 0;
-            foreach (var entry in validEntries)
-                totalWeight += entry.weight;
-
-            int roll = UnityEngine.Random.Range(0, totalWeight);
-            SurpriseRewardEntry selected = null;
-            int accumulated = 0;
-            foreach (var entry in validEntries)
-            {
-                accumulated += entry.weight;
-                if (roll < accumulated)
-                {
-                    selected = entry;
-                    break;
-                }
-            }
-
+            SurpriseRewardEntry selected = WeightedRandomUtil.Pick(validEntries);
             if (selected == null) return;
 
             // 计算实际数量
