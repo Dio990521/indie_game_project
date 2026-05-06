@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 
@@ -80,7 +81,7 @@ namespace IndieGame.Gameplay.Stats
         {
             if (config == null)
             {
-                Debug.LogWarning("[CharacterStats] Missing config, using defaults.");
+                DebugTools.LogWarning("[CharacterStats] Missing config, using defaults.");
                 // 兜底默认值，避免空引用
                 Attack.BaseValue = 0f;
                 Defense.BaseValue = 0f;

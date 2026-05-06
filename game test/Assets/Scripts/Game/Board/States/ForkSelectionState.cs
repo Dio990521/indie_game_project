@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections;
 using UnityEngine;
 using IndieGame.Gameplay.Board.Runtime;
@@ -48,7 +49,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 1. 依赖性安全检查：如果缺少移动控制器或选择器组件
             if (context.movementController == null || context.movementController.forkSelector == null)
             {
-                Debug.LogError("[ForkSelectionState] 找不到所需的 BoardForkSelector 组件。");
+                DebugTools.LogError("[ForkSelectionState] 找不到所需的 BoardForkSelector 组件。");
                 // 直接返回空结果，避免流程卡死
                 _onSelected?.Invoke(null);
                 // 立即退出当前的覆盖状态

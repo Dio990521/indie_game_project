@@ -86,7 +86,7 @@ namespace IndieGame.UI.Shop
         {
             if (binder == null)
             {
-                Debug.LogError("[ShopUIController] Missing ShopUIBinder reference.");
+                DebugTools.LogError("[ShopUIController] Missing ShopUIBinder reference.");
                 return;
             }
 
@@ -265,7 +265,7 @@ namespace IndieGame.UI.Shop
             ShopPurchaseResult result = shopSystem.TryPurchase(_currentShopId, _popupShopEntryId, _popupQuantity);
             if (!result.Success)
             {
-                Debug.LogWarning($"[ShopUIController] Purchase failed: {result.FailReason} - {result.Message}");
+                DebugTools.LogWarning($"[ShopUIController] Purchase failed: {result.FailReason} - {result.Message}");
                 RefreshBuyButtonState();
                 RefreshQuantityPopupState();
                 return;
@@ -580,7 +580,7 @@ namespace IndieGame.UI.Shop
             ShopItemSlotUI slotUI = go.GetComponent<ShopItemSlotUI>();
             if (slotUI == null)
             {
-                Debug.LogError("[ShopUIController] Slot prefab missing ShopItemSlotUI component.");
+                DebugTools.LogError("[ShopUIController] Slot prefab missing ShopItemSlotUI component.");
                 _slotPool.Release(go);
                 return null;
             }

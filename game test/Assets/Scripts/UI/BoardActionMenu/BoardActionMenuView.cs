@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -80,7 +81,7 @@ namespace IndieGame.UI
         {
             if (binder == null)
             {
-                Debug.LogError("[BoardActionMenuView] Missing binder reference.");
+                DebugTools.LogError("[BoardActionMenuView] Missing binder reference.");
                 return;
             }
             // 缓存根节点与 CanvasGroup
@@ -172,13 +173,13 @@ namespace IndieGame.UI
             if (binder.ButtonPrefab == null || binder.ButtonContainer == null) return;
             if (binder.ButtonPrefab.gameObject.scene.IsValid())
             {
-                Debug.LogError("[BoardActionMenuView] ButtonPrefab must be a prefab asset, not a scene object.");
+                DebugTools.LogError("[BoardActionMenuView] ButtonPrefab must be a prefab asset, not a scene object.");
                 return;
             }
             bool parentValid = binder.ButtonContainer.gameObject.scene.IsValid();
             if (!parentValid)
             {
-                Debug.LogWarning("[BoardActionMenuView] ButtonContainer is not a scene object, skipping button rebuild.");
+                DebugTools.LogWarning("[BoardActionMenuView] ButtonContainer is not a scene object, skipping button rebuild.");
                 return;
             }
             EnsurePoolFromChildren();
@@ -302,7 +303,7 @@ namespace IndieGame.UI
                 case BoardActionId.Camp:
                     if (campingLocationId == null)
                     {
-                        Debug.LogWarning("[BoardActionMenuView] Missing campingLocationId.");
+                        DebugTools.LogWarning("[BoardActionMenuView] Missing campingLocationId.");
                         break;
                     }
                     if (BoardGameManager.Instance != null)

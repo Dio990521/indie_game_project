@@ -88,7 +88,7 @@ namespace IndieGame.Core.SaveSystem
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[SaveManager] Save failed: {ex}");
+                DebugTools.LogError($"[SaveManager] Save failed: {ex}");
                 EventBus.Raise(new SaveCompletedEvent
                 {
                     SlotIndex = slotIndex,
@@ -135,7 +135,7 @@ namespace IndieGame.Core.SaveSystem
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[SaveManager] Load failed: {ex}");
+                DebugTools.LogError($"[SaveManager] Load failed: {ex}");
                 EventBus.Raise(new LoadFailedEvent { SlotIndex = slotIndex, Error = ex.Message });
             }
         }
@@ -156,7 +156,7 @@ namespace IndieGame.Core.SaveSystem
             }
             catch (Exception ex)
             {
-                Debug.LogWarning($"[SaveManager] Read meta failed: {ex.Message}");
+                DebugTools.LogWarning($"[SaveManager] Read meta failed: {ex.Message}");
                 return null;
             }
         }
@@ -261,7 +261,7 @@ namespace IndieGame.Core.SaveSystem
                 Type type = Type.GetType(entry.TypeName);
                 if (type == null)
                 {
-                    Debug.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");
+                    DebugTools.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");
                     continue;
                 }
 
@@ -291,7 +291,7 @@ namespace IndieGame.Core.SaveSystem
                 Type type = Type.GetType(entry.TypeName);
                 if (type == null)
                 {
-                    Debug.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");
+                    DebugTools.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");
                     return;
                 }
 

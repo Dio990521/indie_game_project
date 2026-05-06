@@ -80,7 +80,7 @@ namespace IndieGame.Core
         {
             if (IsInitialized) return;
 
-            Debug.Log("<color=green>[GameManager] Game Initializing...</color>");
+            DebugTools.Log("<color=green>[GameManager] Game Initializing...</color>");
 
             // 1) SceneLoader: 先广播当前场景模式，清理状态。
             if (SceneLoader.Instance != null) SceneLoader.Instance.Init();
@@ -123,7 +123,7 @@ namespace IndieGame.Core
             // if (CurrentState == GameState.BoardMode) { ... }
 
             CurrentState = newState;
-            Debug.Log($"[GameManager] State Changed to: {newState}");
+            DebugTools.Log($"[GameManager] State Changed to: {newState}");
             EventBus.Raise(new GameStateChangedEvent { NewState = newState });
 
             // Loading 状态负责统一锁定/解锁输入
@@ -174,7 +174,7 @@ namespace IndieGame.Core
             if (CurrentPlayer != null) return;
             if (playerPrefab == null)
             {
-                Debug.LogError("[GameManager] playerPrefab is not assigned.");
+                DebugTools.LogError("[GameManager] playerPrefab is not assigned.");
                 return;
             }
 

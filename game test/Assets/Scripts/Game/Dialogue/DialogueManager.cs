@@ -70,7 +70,7 @@ namespace IndieGame.Gameplay.Dialogue
         {
             if (dialogueData == null || dialogueData.Lines == null || dialogueData.Lines.Count == 0)
             {
-                Debug.LogWarning("[DialogueManager] StartDialogue failed: DialogueData is null or empty.");
+                DebugTools.LogWarning("[DialogueManager] StartDialogue failed: DialogueData is null or empty.");
                 return;
             }
 

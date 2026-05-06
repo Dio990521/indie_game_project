@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.CameraSystem;
@@ -35,7 +36,7 @@ namespace IndieGame.Gameplay.Exploration
             // 在当前场景的所有 SpawnPoint 中，寻找 ID 与 target 匹配的那一个
             if (!SpawnPointRegistry.TryGet(target, out SpawnPoint spawn))
             {
-                Debug.LogWarning("[SceneInitializer] 未能在场景中找到匹配该 LocationID 的 SpawnPoint。");
+                DebugTools.LogWarning("[SceneInitializer] 未能在场景中找到匹配该 LocationID 的 SpawnPoint。");
                 loader.ClearPayload();
                 return;
             }
@@ -44,7 +45,7 @@ namespace IndieGame.Gameplay.Exploration
             // 确保全局管理器和玩家对象已经生成并就绪
             if (GameManager.Instance == null || GameManager.Instance.CurrentPlayer == null)
             {
-                Debug.LogWarning("[SceneInitializer] 玩家对象尚未就绪。");
+                DebugTools.LogWarning("[SceneInitializer] 玩家对象尚未就绪。");
                 loader.ClearPayload();
                 return;
             }

@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Serialization;
@@ -50,7 +51,7 @@ namespace IndieGame.Gameplay.Inventory
         public virtual void Use()
         {
             string name = ItemName != null ? ItemName.GetLocalizedString() : "Item";
-            Debug.Log($"[ItemSO] Use -> ID: {ID}, Name: {name}");
+            DebugTools.Log($"[ItemSO] Use -> ID: {ID}, Name: {name}");
         }
     }
 }

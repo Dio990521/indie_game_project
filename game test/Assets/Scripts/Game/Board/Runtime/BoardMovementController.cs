@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -278,7 +279,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
 
                 // 目标节点不是当前路口的直接出口：打警告，回退到正常分叉逻辑
-                Debug.LogWarning($"[BoardMovementController] 扭曲格目标节点 ID={forcedId} 不是当前路口的直接出口，忽略方向锁。");
+                DebugTools.LogWarning($"[BoardMovementController] 扭曲格目标节点 ID={forcedId} 不是当前路口的直接出口，忽略方向锁。");
             }
 
             // A. 如果只有一个出口：直接自动开始该路段的位移

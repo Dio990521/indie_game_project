@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using IndieGame.Core;
 using UnityEngine;
 
@@ -14,7 +15,7 @@ namespace IndieGame.Gameplay.Board.Data
 
         public override void OnPlayerStop(GameObject player)
         {
-            Debug.Log($"<color=lime>[Forward Tile]</color> 玩家 {player.name} 触发前进格，额外前进 {steps} 格！");
+            DebugTools.Log($"<color=lime>[Forward Tile]</color> 玩家 {player.name} 触发前进格，额外前进 {steps} 格！");
             EventBus.Raise(new BoardExtraMoveRequestedEvent { Steps = steps });
         }
     }

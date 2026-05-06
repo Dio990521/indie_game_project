@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Gameplay.Shop;
@@ -73,14 +74,14 @@ namespace IndieGame.Gameplay.Dialogue
         {
             if (dialogueData == null)
             {
-                Debug.LogWarning($"[NPCInteractable] Missing dialogue data on {name}.");
+                DebugTools.LogWarning($"[NPCInteractable] Missing dialogue data on {name}.");
                 return;
             }
 
             DialogueManager manager = DialogueManager.Instance;
             if (manager == null)
             {
-                Debug.LogWarning("[NPCInteractable] DialogueManager instance not found.");
+                DebugTools.LogWarning("[NPCInteractable] DialogueManager instance not found.");
                 return;
             }
 
@@ -95,7 +96,7 @@ namespace IndieGame.Gameplay.Dialogue
         {
             if (shopData == null || string.IsNullOrWhiteSpace(shopData.ID))
             {
-                Debug.LogWarning($"[NPCInteractable] Missing/invalid ShopSO on merchant NPC: {name}");
+                DebugTools.LogWarning($"[NPCInteractable] Missing/invalid ShopSO on merchant NPC: {name}");
                 return;
             }
 

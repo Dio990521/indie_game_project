@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections.Generic;
 using IndieGame.Core;
 using IndieGame.Core.SaveSystem;
@@ -29,7 +30,7 @@ namespace IndieGame.UI.TitleScreen
         {
             if (binder == null)
             {
-                Debug.LogError("[SaveLoadMenuView] Missing SaveLoadMenuBinder reference.");
+                DebugTools.LogError("[SaveLoadMenuView] Missing SaveLoadMenuBinder reference.");
                 return;
             }
 
@@ -72,7 +73,7 @@ namespace IndieGame.UI.TitleScreen
             SaveManager saveManager = SaveManager.Instance;
             if (saveManager == null)
             {
-                Debug.LogWarning("[SaveLoadMenuView] SaveManager instance not found.");
+                DebugTools.LogWarning("[SaveLoadMenuView] SaveManager instance not found.");
                 SetVisible(false);
                 return;
             }
@@ -91,7 +92,7 @@ namespace IndieGame.UI.TitleScreen
 
             if (binder == null || binder.ListContainer == null || binder.SlotButtonPrefab == null)
             {
-                Debug.LogWarning("[SaveLoadMenuView] Binder.ListContainer or Binder.SlotButtonPrefab is not assigned.");
+                DebugTools.LogWarning("[SaveLoadMenuView] Binder.ListContainer or Binder.SlotButtonPrefab is not assigned.");
                 return;
             }
 

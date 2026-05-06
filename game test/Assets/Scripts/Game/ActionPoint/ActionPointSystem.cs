@@ -158,7 +158,7 @@ namespace IndieGame.Gameplay.ActionPoint
             EnsureInitialized();
             if (newMax <= maxActionPoints)
             {
-                Debug.LogWarning($"[ActionPointSystem] SetMaxActionPoints 忽略：新上限 {newMax} 不高于当前上限 {maxActionPoints}。");
+                DebugTools.LogWarning($"[ActionPointSystem] SetMaxActionPoints 忽略：新上限 {newMax} 不高于当前上限 {maxActionPoints}。");
                 return;
             }
 
@@ -213,7 +213,7 @@ namespace IndieGame.Gameplay.ActionPoint
 
         private void RaiseActionPointChanged(int delta, string reason)
         {
-            Debug.Log($"[ActionPointSystem] 行动点变化：{delta:+#;-#;0}，当前 {currentActionPoints}/{maxActionPoints}，原因：{reason}");
+            DebugTools.Log($"[ActionPointSystem] 行动点变化：{delta:+#;-#;0}，当前 {currentActionPoints}/{maxActionPoints}，原因：{reason}");
             EventBus.Raise(new ActionPointChangedEvent
             {
                 CurrentPoints = currentActionPoints,

@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
@@ -35,7 +36,7 @@ namespace IndieGame.UI.Inventory
         {
             if (binder == null)
             {
-                Debug.LogError("[InventoryUIView] Missing binder reference.");
+                DebugTools.LogError("[InventoryUIView] Missing binder reference.");
                 return;
             }
             if (binder.CloseButton != null)

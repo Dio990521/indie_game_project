@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using IndieGame.Core;
 using IndieGame.Gameplay.ActionPoint;
 using UnityEngine;
@@ -13,7 +14,7 @@ namespace IndieGame.Gameplay.Board.Data
         public override void OnPlayerStop(GameObject player)
         {
             int amount = Random.Range(1, 6);
-            Debug.Log($"<color=magenta>[Excitement Tile]</color> 玩家 {player.name} 兴奋了！随机恢复 {amount} 点行动点！");
+            DebugTools.Log($"<color=magenta>[Excitement Tile]</color> 玩家 {player.name} 兴奋了！随机恢复 {amount} 点行动点！");
             ActionPointSystem.Instance.RestoreActionPoints(amount, "ExcitementTile");
         }
     }

@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 
 namespace IndieGame.Core.Utilities
@@ -33,14 +34,14 @@ namespace IndieGame.Core.Utilities
 
                         if (FindObjectsByType<T>(FindObjectsSortMode.None).Length > 1)
                         {
-                            Debug.LogError($"[MonoSingleton] Something went really wrong " +
+                            DebugTools.LogError($"[MonoSingleton] Something went really wrong " +
                                            $" - there should never be more than 1 singleton! Reopening the scene might fix it.");
                             return _instance;
                         }
 
                         if (_instance == null)
                         {
-                            Debug.LogWarning($"[MonoSingleton] Instance of {typeof(T)} not found. Ensure GameBootstrapper created it.");
+                            DebugTools.LogWarning($"[MonoSingleton] Instance of {typeof(T)} not found. Ensure GameBootstrapper created it.");
                         }
                     }
 
@@ -67,7 +68,7 @@ namespace IndieGame.Core.Utilities
             }
             else if (_instance != this)
             {
-                Debug.Log($"[MonoSingleton] Deleting extra instance of {typeof(T)} attached to {gameObject.name}");
+                DebugTools.Log($"[MonoSingleton] Deleting extra instance of {typeof(T)} attached to {gameObject.name}");
                 Destroy(gameObject);
             }
         }

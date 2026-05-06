@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -176,7 +177,7 @@ namespace IndieGame.UI
         {
             if (!_pendingStartFromLoad) return;
             _pendingStartFromLoad = false;
-            Debug.LogWarning($"[TitleScreenManager] Load failed for slot {evt.SlotIndex}: {evt.Error}");
+            DebugTools.LogWarning($"[TitleScreenManager] Load failed for slot {evt.SlotIndex}: {evt.Error}");
         }
 
         /// <summary>

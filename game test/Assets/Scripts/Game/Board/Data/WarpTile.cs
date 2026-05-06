@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using IndieGame.Core;
 using UnityEngine;
 
@@ -35,7 +36,7 @@ namespace IndieGame.Gameplay.Board.Data
             if (forcedSlideNodeId >= 0)
                 EventBus.Raise(new BoardWarpSlideRequestedEvent { ForcedNodeId = forcedSlideNodeId });
 
-            Debug.Log($"<color=cyan>[Warp Tile]</color> 玩家 {player.name} 经过扭曲格（保护:{protectedNodeId} / 强制滑行:{forcedSlideNodeId}）");
+            DebugTools.Log($"<color=cyan>[Warp Tile]</color> 玩家 {player.name} 经过扭曲格（保护:{protectedNodeId} / 强制滑行:{forcedSlideNodeId}）");
         }
 
         // 满足基类抽象约束，实际逻辑已在 OnEnter 中处理

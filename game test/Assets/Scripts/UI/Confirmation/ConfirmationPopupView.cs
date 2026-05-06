@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using UnityEngine.Localization;
@@ -31,7 +32,7 @@ namespace IndieGame.UI.Confirmation
         {
             if (binder == null)
             {
-                Debug.LogError("[ConfirmationPopupView] Missing binder reference.");
+                DebugTools.LogError("[ConfirmationPopupView] Missing binder reference.");
                 return;
             }
 

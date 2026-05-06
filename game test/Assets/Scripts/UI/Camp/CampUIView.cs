@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -56,7 +57,7 @@ namespace IndieGame.UI.Camp
         {
             if (binder == null)
             {
-                Debug.LogError("[CampUIView] Missing binder reference.");
+                DebugTools.LogError("[CampUIView] Missing binder reference.");
                 return;
             }
             // 初始化 CanvasGroup
@@ -164,16 +165,16 @@ namespace IndieGame.UI.Camp
                     EventBus.Raise(new OpenCraftingUIEvent());
                     break;
                 case CampActionID.Inventory:
-                    Debug.Log("Log: 打开已有 Inventory 界面...");
+                    DebugTools.Log("Log: 打开已有 Inventory 界面...");
                     break;
                 case CampActionID.Memory:
-                    Debug.Log("Log: 检索语料库，查看任务记录与对话日志...");
+                    DebugTools.Log("Log: 检索语料库，查看任务记录与对话日志...");
                     break;
                 case CampActionID.SkillTree:
-                    Debug.Log("Log: 打开技能配置界面...");
+                    DebugTools.Log("Log: 打开技能配置界面...");
                     break;
                 case CampActionID.Sleep:
-                    Debug.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
+                    DebugTools.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
                     StartCoroutine(SleepRoutine());
                     break;
             }
@@ -223,7 +224,7 @@ namespace IndieGame.UI.Camp
 
             if (!EventBus.HasSubscribers<AutoSaveRequestedEvent>())
             {
-                Debug.LogWarning("[CampUIView] Sleep auto-save skipped: no AutoSaveRequestedEvent subscriber.");
+                DebugTools.LogWarning("[CampUIView] Sleep auto-save skipped: no AutoSaveRequestedEvent subscriber.");
                 yield break;
             }
 
@@ -251,11 +252,11 @@ namespace IndieGame.UI.Camp
 
             if (!_pendingSleepAutoSaveCompleted)
             {
-                Debug.LogWarning("[CampUIView] Sleep auto-save timed out. Continue return-to-board flow.");
+                DebugTools.LogWarning("[CampUIView] Sleep auto-save timed out. Continue return-to-board flow.");
             }
             else if (!_pendingSleepAutoSaveSuccess)
             {
-                Debug.LogWarning($"[CampUIView] Sleep auto-save failed: {_pendingSleepAutoSaveError}");
+                DebugTools.LogWarning($"[CampUIView] Sleep auto-save failed: {_pendingSleepAutoSaveError}");
             }
 
             _pendingSleepAutoSaveRequestId = -1;

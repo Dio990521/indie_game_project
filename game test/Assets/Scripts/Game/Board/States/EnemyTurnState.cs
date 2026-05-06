@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Gameplay.Board.Runtime;
@@ -45,14 +46,14 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 2. 依赖检查：确保移动控制器可用
             if (_controller == null)
             {
-                Debug.LogWarning("[EnemyTurnState] 缺失 movementController，无法驱动 NPC。");
+                DebugTools.LogWarning("[EnemyTurnState] 缺失 movementController，无法驱动 NPC。");
                 context.ChangeState(new PlayerTurnState());
                 return;
             }
 
             // 3. 步数分配：目前硬编码为 1 步。未来可在此接入随机数或 AI 逻辑。
             int steps = 1;
-            Debug.Log("<color=orange>🤖 NPC 回合移动: 1</color>");
+            DebugTools.Log("<color=orange>🤖 NPC 回合移动: 1</color>");
 
             // 4. 事件订阅：准备监听移动结束事件
             _onMoveEnded = OnMoveEnded;

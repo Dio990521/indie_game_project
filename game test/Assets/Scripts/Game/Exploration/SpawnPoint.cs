@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 
@@ -28,7 +29,7 @@ namespace IndieGame.Gameplay.Exploration
         {
             if (locationId == null)
             {
-                Debug.LogWarning("[SpawnPoint] 缺失 LocationID，该出生点将无法被寻址。");
+                DebugTools.LogWarning("[SpawnPoint] 缺失 LocationID，该出生点将无法被寻址。");
                 return;
             }
 

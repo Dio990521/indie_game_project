@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -88,7 +89,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 2. 依赖检查
             if (inputReader == null || viewHelper == null)
             {
-                Debug.LogWarning("[BoardForkSelector] 缺失 inputReader 或 viewHelper，无法进行分叉选择。");
+                DebugTools.LogWarning("[BoardForkSelector] 缺失 inputReader 或 viewHelper，无法进行分叉选择。");
                 onSelected?.Invoke(null);
                 yield break;
             }

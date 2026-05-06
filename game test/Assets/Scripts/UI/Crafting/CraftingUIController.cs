@@ -100,7 +100,7 @@ namespace IndieGame.UI.Crafting
         {
             if (binder == null)
             {
-                Debug.LogError("[CraftingUIController] Missing CraftUIBinder reference.");
+                DebugTools.LogError("[CraftingUIController] Missing CraftUIBinder reference.");
                 return;
             }
 
@@ -469,7 +469,7 @@ namespace IndieGame.UI.Crafting
             // 避免玩家点击制造后无反馈。
             if (!EventBus.HasSubscribers<CraftNameInputPopupRequestEvent>())
             {
-                Debug.LogWarning("[CraftingUIController] No listener for CraftNameInputPopupRequestEvent. Please add CraftNameInputPopupView.");
+                DebugTools.LogWarning("[CraftingUIController] No listener for CraftNameInputPopupRequestEvent. Please add CraftNameInputPopupView.");
                 ClearPendingPopupRequest();
                 return;
             }
@@ -674,7 +674,7 @@ namespace IndieGame.UI.Crafting
             BlueprintSlotUI slotUI = go.GetComponent<BlueprintSlotUI>();
             if (slotUI == null)
             {
-                Debug.LogError("[CraftingUIController] slotPrefab missing BlueprintSlotUI component.");
+                DebugTools.LogError("[CraftingUIController] slotPrefab missing BlueprintSlotUI component.");
                 _slotPool.Release(go);
                 return null;
             }
@@ -696,7 +696,7 @@ namespace IndieGame.UI.Crafting
             RequirementSlotUI requirementUI = go.GetComponent<RequirementSlotUI>();
             if (requirementUI == null)
             {
-                Debug.LogError("[CraftingUIController] requirementSlotPrefab missing RequirementSlotUI component.");
+                DebugTools.LogError("[CraftingUIController] requirementSlotPrefab missing RequirementSlotUI component.");
                 _requirementPool.Release(go);
                 return null;
             }

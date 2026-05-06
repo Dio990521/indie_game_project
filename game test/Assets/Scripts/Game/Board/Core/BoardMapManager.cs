@@ -60,7 +60,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (_nodes.Count > 0)
             {
                 _isReady = true;
-                Debug.Log($"[BoardMapManager] 地图初始化完成，已缓存地块数量: {_nodes.Count}");
+                DebugTools.Log($"[BoardMapManager] 地图初始化完成，已缓存地块数量: {_nodes.Count}");
             }
         }
 

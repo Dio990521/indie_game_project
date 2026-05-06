@@ -438,7 +438,7 @@ namespace IndieGame.Gameplay.Shop
 
             if (shopDatabase == null || shopDatabase.Shops == null)
             {
-                Debug.LogWarning("[ShopSystem] Missing ShopDatabaseSO.");
+                DebugTools.LogWarning("[ShopSystem] Missing ShopDatabaseSO.");
                 return;
             }
 
@@ -448,13 +448,13 @@ namespace IndieGame.Gameplay.Shop
                 if (shop == null) continue;
                 if (string.IsNullOrWhiteSpace(shop.ID))
                 {
-                    Debug.LogWarning("[ShopSystem] Shop has empty ID, ignored.");
+                    DebugTools.LogWarning("[ShopSystem] Shop has empty ID, ignored.");
                     continue;
                 }
 
                 if (_shopById.ContainsKey(shop.ID))
                 {
-                    Debug.LogWarning($"[ShopSystem] Duplicate Shop ID ignored: {shop.ID}");
+                    DebugTools.LogWarning($"[ShopSystem] Duplicate Shop ID ignored: {shop.ID}");
                     continue;
                 }
 
@@ -471,13 +471,13 @@ namespace IndieGame.Gameplay.Shop
                     if (entry.Item == null) continue;
                     if (string.IsNullOrWhiteSpace(entry.EntryID))
                     {
-                        Debug.LogWarning($"[ShopSystem] Shop entry has empty ID. Shop={shop.ID}, Index={entryIndex}");
+                        DebugTools.LogWarning($"[ShopSystem] Shop entry has empty ID. Shop={shop.ID}, Index={entryIndex}");
                         continue;
                     }
 
                     if (entryMap.ContainsKey(entry.EntryID))
                     {
-                        Debug.LogWarning($"[ShopSystem] Duplicate shop entry ignored. Shop={shop.ID}, EntryID={entry.EntryID}");
+                        DebugTools.LogWarning($"[ShopSystem] Duplicate shop entry ignored. Shop={shop.ID}, EntryID={entry.EntryID}");
                         continue;
                     }
 

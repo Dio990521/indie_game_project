@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core;
@@ -28,7 +29,7 @@ namespace IndieGame.Gameplay.Exploration
             LocationID id = spawnPoint.LocationId;
             if (id == null)
             {
-                Debug.LogWarning("[SpawnPointRegistry] SpawnPoint 缺失 LocationID，无法注册。");
+                DebugTools.LogWarning("[SpawnPointRegistry] SpawnPoint 缺失 LocationID，无法注册。");
                 return;
             }
 

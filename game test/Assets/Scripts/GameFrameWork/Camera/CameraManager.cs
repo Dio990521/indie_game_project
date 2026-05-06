@@ -55,7 +55,7 @@ namespace IndieGame.Core.CameraSystem
                 if (_mainGameplayCamera == null)
                 {
                     // 摄像机缺失时给出警告并退出
-                    Debug.LogWarning("CameraManager: Main Cinemachine Camera is missing.");
+                    DebugTools.LogWarning("CameraManager: Main Cinemachine Camera is missing.");
                     return;
                 }
             }
@@ -63,7 +63,7 @@ namespace IndieGame.Core.CameraSystem
             // 缓存目标并设置 Cinemachine Follow
             _currentTarget = target;
             _mainGameplayCamera.Follow = _currentTarget;
-            Debug.Log($"[CameraManager] Camera is now following: {target.name}");
+            DebugTools.Log($"[CameraManager] Camera is now following: {target.name}");
         }
 
         /// <summary>

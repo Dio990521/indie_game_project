@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using System.Collections;
 using DG.Tweening;
 using IndieGame.Core;
@@ -43,7 +44,7 @@ namespace IndieGame.UI.Dialogue
         {
             if (binder == null)
             {
-                Debug.LogError("[DialogueUIView] Missing DialogueUIBinder reference.");
+                DebugTools.LogError("[DialogueUIView] Missing DialogueUIBinder reference.");
                 return;
             }
 

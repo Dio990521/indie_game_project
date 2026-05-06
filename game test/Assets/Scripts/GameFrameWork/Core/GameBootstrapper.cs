@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.UI;
 using IndieGame.Gameplay.Board.Runtime;
@@ -69,7 +70,7 @@ namespace IndieGame.Core
 
         private void Bootstrap()
         {
-            Debug.Log("[GameBootstrapper] Starting Game Systems...");
+            DebugTools.Log("[GameBootstrapper] Starting Game Systems...");
 
             // 1) 统一确保所有管理器在同一根节点下生成
             GameObject root = EnsureGameSystemRoot();
@@ -159,7 +160,7 @@ namespace IndieGame.Core
             else
             {
                 // 兜底创建空物体并附加组件
-                Debug.LogWarning($"[GameBootstrapper] Missing manager prefab for {fallbackName}, creating empty GameObject.");
+                DebugTools.LogWarning($"[GameBootstrapper] Missing manager prefab for {fallbackName}, creating empty GameObject.");
                 go = new GameObject(fallbackName);
                 go.transform.SetParent(root.transform, false);
             }

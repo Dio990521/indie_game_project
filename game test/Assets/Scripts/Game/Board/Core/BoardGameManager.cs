@@ -290,7 +290,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             // 输出调试信息：显示遇到的单位名称和所在节点 ID
-            Debug.Log($"<color=yellow>⚔ 遇到单位: {evt.Target.name} (Node {evt.Node.nodeID})</color>");
+            DebugTools.Log($"<color=yellow>⚔ 遇到单位: {evt.Target.name} (Node {evt.Node.nodeID})</color>");
 
             // 交互完成回调：允许后续逻辑继续（如主流程继续移动或切换回合）
             evt.OnCompleted?.Invoke();

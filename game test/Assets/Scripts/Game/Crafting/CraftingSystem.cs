@@ -216,7 +216,7 @@ namespace IndieGame.Gameplay.Crafting
                 {
                     // 正常情况下不会进入该分支（因为前面 CanCraft 已校验），
                     // 这里保留防御式判断，避免未来并发/外部篡改导致状态污染。
-                    Debug.LogWarning($"[CraftingSystem] RemoveItem failed unexpectedly. BlueprintID={blueprintId}");
+                    DebugTools.LogWarning($"[CraftingSystem] RemoveItem failed unexpectedly. BlueprintID={blueprintId}");
                     return false;
                 }
             }
@@ -358,7 +358,7 @@ namespace IndieGame.Gameplay.Crafting
 
             if (blueprintDatabase == null || blueprintDatabase.Blueprints == null)
             {
-                Debug.LogWarning("[CraftingSystem] Missing BlueprintDatabaseSO.");
+                DebugTools.LogWarning("[CraftingSystem] Missing BlueprintDatabaseSO.");
                 return;
             }
 
@@ -368,13 +368,13 @@ namespace IndieGame.Gameplay.Crafting
                 if (data == null) continue;
                 if (string.IsNullOrWhiteSpace(data.ID))
                 {
-                    Debug.LogWarning("[CraftingSystem] Blueprint has empty ID, ignored.");
+                    DebugTools.LogWarning("[CraftingSystem] Blueprint has empty ID, ignored.");
                     continue;
                 }
 
                 if (_blueprintById.ContainsKey(data.ID))
                 {
-                    Debug.LogWarning($"[CraftingSystem] Duplicate Blueprint ID ignored: {data.ID}");
+                    DebugTools.LogWarning($"[CraftingSystem] Duplicate Blueprint ID ignored: {data.ID}");
                     continue;
                 }
 

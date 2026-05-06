@@ -219,7 +219,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
             else
             {
-                Debug.LogWarning("触发了路径事件，但未分配 EventAction 脚本对象！");
+                DebugTools.LogWarning("触发了路径事件，但未分配 EventAction 脚本对象！");
             }
 
             SetMoveAnimationSpeed(1f); // 恢复移动动画

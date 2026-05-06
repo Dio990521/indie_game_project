@@ -136,7 +136,7 @@ namespace IndieGame.UI
             Transform root = GetRoot(priority);
             if (root == null)
             {
-                Debug.LogWarning("[UIManager] Missing UI root for layer.");
+                DebugTools.LogWarning("[UIManager] Missing UI root for layer.");
                 return null;
             }
 
@@ -292,7 +292,7 @@ namespace IndieGame.UI
                 uiRoots = CanvasInstance.GetComponent<UIPriorityRoots>();
                 if (uiRoots == null)
                 {
-                    Debug.LogWarning("[UIManager] UIRoots component missing on Canvas.");
+                    DebugTools.LogWarning("[UIManager] UIRoots component missing on Canvas.");
                     return;
                 }
             }
@@ -307,7 +307,7 @@ namespace IndieGame.UI
 
             if (uiCanvasPrefab == null)
             {
-                Debug.LogWarning("[UIManager] Missing UICanvas prefab.");
+                DebugTools.LogWarning("[UIManager] Missing UICanvas prefab.");
                 return;
             }
 
@@ -336,7 +336,7 @@ namespace IndieGame.UI
         {
             if (FullscreenFadeInstance == null)
             {
-                Debug.LogWarning("[UIManager] Missing fullscreenFade CanvasGroup.");
+                DebugTools.LogWarning("[UIManager] Missing fullscreenFade CanvasGroup.");
                 return;
             }
 

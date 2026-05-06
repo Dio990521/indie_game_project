@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 
 namespace IndieGame.Gameplay.Board.Data
@@ -11,7 +12,7 @@ namespace IndieGame.Gameplay.Board.Data
         {
             // 这里未来可以调用 player.GetComponent<Wallet>().AddCoin(coinAmount);
             // 目前仅输出调试信息
-            Debug.Log($"<color=yellow>[Coin Tile]</color> 恭喜！玩家 {player.name} 获得了 {coinAmount} 金币！");
+            DebugTools.Log($"<color=yellow>[Coin Tile]</color> 恭喜！玩家 {player.name} 获得了 {coinAmount} 金币！");
         }
     }
 }

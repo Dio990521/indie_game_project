@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.UI;
@@ -102,7 +103,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             {
                 if (!ActionPointSystem.Instance.TryConsumeActionPoints(1, "RollDice"))
                 {
-                    Debug.Log("<color=orange>[行动点] 行动点不足，无法掷骰子。</color>");
+                    DebugTools.Log("<color=orange>[行动点] 行动点不足，无法掷骰子。</color>");
                     return;
                 }
             }
@@ -110,7 +111,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // --- 核心游戏逻辑：掷骰子 ---
             // 随机生成 1 到 6 之间的点数
             int steps = Random.Range(1, 7);
-            Debug.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
+            DebugTools.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
 
             // 切换状态机：进入“移动状态”，并将计算出的步数传递过去
             context.ChangeState(new MovementState(steps));

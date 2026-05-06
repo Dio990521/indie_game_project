@@ -135,7 +135,7 @@ namespace IndieGame.Core
 
             if (_lastBoardNodeIndex < 0)
             {
-                Debug.LogWarning("[SceneLoader] Saved board node index is invalid, will fallback to start node.");
+                DebugTools.LogWarning("[SceneLoader] Saved board node index is invalid, will fallback to start node.");
             }
             _payload = new TransitionPayload
             {
@@ -381,7 +381,7 @@ namespace IndieGame.Core
                     }
                     else
                     {
-                        Debug.LogWarning($"[SceneLoader] Additive scene '{sceneName}' did not load correctly.");
+                        DebugTools.LogWarning($"[SceneLoader] Additive scene '{sceneName}' did not load correctly.");
                         CompleteTransition(transitionToken);
                     }
                 };
@@ -535,7 +535,7 @@ namespace IndieGame.Core
             }
             else
             {
-                Debug.LogWarning($"[SceneLoader] Board scene '{GetBoardSceneName()}' is not loaded.");
+                DebugTools.LogWarning($"[SceneLoader] Board scene '{GetBoardSceneName()}' is not loaded.");
             }
         }
 

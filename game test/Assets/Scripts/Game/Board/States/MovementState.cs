@@ -1,3 +1,4 @@
+using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Gameplay.Board.Runtime;
@@ -37,7 +38,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 1. 基础依赖检查
             if (context.movementController == null)
             {
-                Debug.LogWarning("[MovementState] 缺失 movementController，无法执行移动。");
+                DebugTools.LogWarning("[MovementState] 缺失 movementController，无法执行移动。");
                 context.ChangeState(new PlayerTurnState()); // 容错：跳回回合开始状态
                 return;
             }
@@ -52,7 +53,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 如果还是找不到玩家实体，说明场景配置有问题
             if (context.movementController.PlayerEntity == null)
             {
-                Debug.LogWarning("[MovementState] 场景中缺失玩家实体 (Player Entity)。");
+                DebugTools.LogWarning("[MovementState] 场景中缺失玩家实体 (Player Entity)。");
                 context.ChangeState(new PlayerTurnState());
                 return;
             }
