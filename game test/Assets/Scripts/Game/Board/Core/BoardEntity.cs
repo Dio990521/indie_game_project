@@ -206,6 +206,48 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
+        /// 抛物线弹射协程：从当前位置高弧线飞往目标节点，不触发路径事件。
+        /// 控制点取两端中点上方 arcHeight 处，形成炮弹抛物线效果。
+        /// </summary>
+        public IEnumerator LaunchParabolic(MapWaypoint targetNode, float arcHeight, float launchSpeed)
+        {
+            if (targetNode == null) yield break;
+
+            Vector3 p0 = transform.position;
+            Vector3 p2 = targetNode.transform.position;
+            // 控制点：中点正上方 arcHeight，形成对称抛物线
+            Vector3 p1 = (p0 + p2) * 0.5f + Vector3.up * arcHeight;
+
+            float approxDist = Vector3.Distance(p0, p1) + Vector3.Distance(p1, p2);
+            float speed = launchSpeed > 0f ? launchSpeed : moveSpeed;
+
+            if (approxDist <= 0f)
+            {
+                transform.position = p2;
+                LastWaypoint = null;
+                SetCurrentNode(targetNode, false, true);
+                yield break;
+            }
+
+            float duration = approxDist / speed;
+            float timer = 0f;
+
+            while (timer < duration)
+            {
+                float dt = Time.deltaTime;
+                timer += dt;
+                float t = Mathf.Clamp01(timer / duration);
+                transform.position = BezierUtils.GetQuadraticBezierPoint(t, p0, p1, p2);
+                yield return null;
+            }
+
+            transform.position = p2;
+            // 弹射落地后无来路限制
+            LastWaypoint = null;
+            SetCurrentNode(targetNode, false, true);
+        }
+
+        /// <summary>
         /// 处理路径中途触发的特定事件（如过场动画或即时奖励）。
         /// </summary>
         private IEnumerator HandleConnectionEvent(ConnectionEvent evt)

@@ -51,6 +51,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         private int _pendingForcedNextNodeId = -1;
         // [扭曲格] 下次分叉选择时需要过滤掉的被保护节点 ID；-1 表示无过滤
         private int _pendingProtectedNodeId = -1;
+        // [人体大炮] 是否有待执行的弹射请求及参数
+        private bool _pendingCannonLaunch = false;
+        private float _pendingCannonArcHeight = 5f;
+        private float _pendingCannonLaunchSpeed = 12f;
 
         private void OnDisable()
         {
@@ -397,6 +401,20 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
             }
 
+            // [人体大炮] 弹射仅在最终落点生效；路过时丢弃
+            // 使用 while 循环支持连续弹射（落点也是大炮格时继续触发）
+            if (_pendingCannonLaunch && isFinalStep)
+            {
+                while (_pendingCannonLaunch)
+                {
+                    _pendingCannonLaunch = false;
+                    yield return DoCannonLaunch();
+                }
+                FinishMove();
+                yield break;
+            }
+            _pendingCannonLaunch = false; // 路过时丢弃
+
             if (_stepsRemaining <= 0)
             {
                 FinishMove();
@@ -506,6 +524,39 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
+        /// 执行炮弹弹射：随机选目标节点 → 抛物线飞行 → 触发目标格子效果。
+        /// </summary>
+        private IEnumerator DoCannonLaunch()
+        {
+            List<MapWaypoint> allNodes = BoardMapManager.Instance != null
+                ? BoardMapManager.Instance.GetAllNodes()
+                : new List<MapWaypoint>();
+
+            MapWaypoint current = _activeEntity.CurrentNode;
+            allNodes.Remove(current);
+
+            if (allNodes.Count == 0) yield break;
+
+            MapWaypoint target = allNodes[UnityEngine.Random.Range(0, allNodes.Count)];
+            DebugTools.Log($"<color=orange>[Cannon Tile]</color> 弹射目标：{target.nodeID} ({target.name})");
+
+            yield return _activeEntity.LaunchParabolic(target, _pendingCannonArcHeight, _pendingCannonLaunchSpeed);
+
+            // 触发落点格子效果（作为最终落点处理）
+            yield return HandleNodeArrival(target, true);
+        }
+
+        /// <summary>
+        /// 接收人体大炮弹射请求事件（仅在移动期间订阅）。
+        /// </summary>
+        private void OnCannonLaunchRequested(BoardCannonLaunchRequestedEvent evt)
+        {
+            _pendingCannonLaunch = true;
+            _pendingCannonArcHeight = evt.ArcHeight;
+            _pendingCannonLaunchSpeed = evt.LaunchSpeed;
+        }
+
+        /// <summary>
         /// 接收格子请求的额外步数事件（仅在移动期间订阅）。
         /// </summary>
         private void OnExtraMoveRequested(BoardExtraMoveRequestedEvent evt)
@@ -536,6 +587,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EventBus.Subscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
             EventBus.Subscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
             EventBus.Subscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
+            EventBus.Subscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
         }
 
         private void UnsubscribeSegmentEvent()
@@ -544,6 +596,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EventBus.Unsubscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
             EventBus.Unsubscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
             EventBus.Unsubscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
+            EventBus.Unsubscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
         }
     }
 }

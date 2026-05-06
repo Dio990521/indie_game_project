@@ -717,4 +717,16 @@ namespace IndieGame.Core
         // 变化原因（如 "RollDice" / "SkillEffect" / "LoadRestore"）
         public string Reason;
     }
+
+    /// <summary>
+    /// 人体大炮弹射请求事件：
+    /// CannonTile 触发后广播，BoardMovementController 消费后随机选目标并执行抛物线弹射。
+    /// </summary>
+    public struct BoardCannonLaunchRequestedEvent
+    {
+        // 抛物线峰值高度
+        public float ArcHeight;
+        // 弹射速度
+        public float LaunchSpeed;
+    }
 }
