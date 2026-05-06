@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: Excitement_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.ExcitementTile
   tileName: Excitement_Tile
-  gizmoColor: {r: 0.15990254, g: 0.5560156, b: 0.9245283, a: 1}
+  gizmoColor: {r: 0.049788952, g: 0, b: 1, a: 1}

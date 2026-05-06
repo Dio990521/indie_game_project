@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 648f67b1f007b8e49b48559931212ffc, type: 3}
+  m_Name: Surprise_Tile
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.SurpriseTile
+  tileName: SurpriseTile
+  gizmoColor: {r: 0.051105406, g: 0.29007983, b: 0.8553459, a: 1}
+  rewardPool:
+  - type: 0
+    item: {fileID: 0}
+    minAmount: 1
+    maxAmount: 100
+    weight: 1
+  - type: 1
+    item: {fileID: 11400000, guid: ef1d58365e535493989d2c977c1068c4, type: 2}
+    minAmount: 1
+    maxAmount: 5
+    weight: 1
