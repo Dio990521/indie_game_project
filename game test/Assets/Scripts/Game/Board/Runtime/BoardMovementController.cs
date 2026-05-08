@@ -59,6 +59,9 @@ namespace IndieGame.Gameplay.Board.Runtime
         private bool _pendingTeleport         = false;
         private int  _pendingTeleportTargetId = -1;
         private bool _isTeleporting           = false;
+        // [方向格] 首步强制走向的节点 ID 及移动步数；-1/0 表示无待执行请求
+        private int _pendingDirectionalNodeId = -1;
+        private int _pendingDirectionalSteps  = 0;
 
         private void OnDisable()
         {
@@ -405,6 +408,18 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
             }
 
+            // 消费方向格请求（首步强制方向 + 指定步数，仅最终落点生效；路过时丢弃）
+            if (_pendingDirectionalSteps > 0)
+            {
+                if (isFinalStep)
+                {
+                    _stepsRemaining          = _pendingDirectionalSteps;
+                    _pendingForcedNextNodeId = _pendingDirectionalNodeId;
+                }
+                _pendingDirectionalSteps  = 0;
+                _pendingDirectionalNodeId = -1;
+            }
+
             // [人体大炮] 弹射仅在最终落点生效；路过时丢弃
             // 使用 while 循环支持连续弹射（落点也是大炮格时继续触发）
             if (_pendingCannonLaunch && isFinalStep)
@@ -595,6 +610,15 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
+        /// 接收方向格移动请求事件（仅在移动期间订阅）。
+        /// </summary>
+        private void OnDirectionalMoveRequested(BoardDirectionalMoveRequestedEvent evt)
+        {
+            _pendingDirectionalNodeId = evt.DirectionNodeId;
+            _pendingDirectionalSteps  = evt.Steps;
+        }
+
+        /// <summary>
         /// 接收传送格传送请求事件（仅在移动期间订阅）。
         /// </summary>
         private void OnTeleportRequested(BoardTeleportRequestedEvent evt)
@@ -636,6 +660,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EventBus.Subscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
             EventBus.Subscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
             EventBus.Subscribe<BoardTeleportRequestedEvent>(OnTeleportRequested);
+            EventBus.Subscribe<BoardDirectionalMoveRequestedEvent>(OnDirectionalMoveRequested);
         }
 
         private void UnsubscribeSegmentEvent()
@@ -646,6 +671,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EventBus.Unsubscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
             EventBus.Unsubscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
             EventBus.Unsubscribe<BoardTeleportRequestedEvent>(OnTeleportRequested);
+            EventBus.Unsubscribe<BoardDirectionalMoveRequestedEvent>(OnDirectionalMoveRequested);
         }
     }
 }

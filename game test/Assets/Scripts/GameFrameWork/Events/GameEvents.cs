@@ -413,6 +413,19 @@ namespace IndieGame.Core
     }
 
     /// <summary>
+    /// 方向格移动请求事件：
+    /// DirectionalMoveTile 触发后广播，BoardMovementController 在最终落点时将步数重置为 Steps，
+    /// 并锁定首步方向为 DirectionNodeId 指定的节点（跳过分叉UI）；路过时自动丢弃。
+    /// </summary>
+    public struct BoardDirectionalMoveRequestedEvent
+    {
+        /// <summary> 移动总格数（大于0） </summary>
+        public int Steps;
+        /// <summary> 首步强制走向的节点 nodeID，决定行进方向 </summary>
+        public int DirectionNodeId;
+    }
+
+    /// <summary>
     /// 扭曲格强制滑行请求事件：
     /// WarpTile 触发后广播，BoardMovementController 在最终落点时追加1步并锁定方向（跳过分叉UI）；
     /// 路过时自动丢弃。
