@@ -400,7 +400,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 16
-  tileData: {fileID: 11400000, guid: 6c7a73bd6c9f8a44985fd7dcb58ffb0b, type: 2}
+  tileData: {fileID: 11400000, guid: a9c64a1f233effe48af7910bbcbba060, type: 2}
   connections:
   - targetNode: {fileID: 553511170}
     controlPointOffset: {x: -1.8499999, y: 0, z: 1.9749994}
@@ -2312,7 +2312,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 9
-  tileData: {fileID: 11400000, guid: cba5a323eb0b38d4eb1644b25e99ba20, type: 2}
+  tileData: {fileID: 11400000, guid: a9c64a1f233effe48af7910bbcbba060, type: 2}
   connections:
   - targetNode: {fileID: 360996485}
     controlPointOffset: {x: 1.7449989, y: 0, z: -1.9899998}
@@ -2433,7 +2433,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 20
-  tileData: {fileID: 11400000, guid: 023b982871242ac4eb9f9302f22c3544, type: 2}
+  tileData: {fileID: 11400000, guid: 0864971fe15a542759e5e5ff267168ba, type: 2}
   connections:
   - targetNode: {fileID: 401567712}
     controlPointOffset: {x: -0.120000124, y: 0, z: 2.005001}

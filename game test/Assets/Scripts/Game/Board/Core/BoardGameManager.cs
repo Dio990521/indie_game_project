@@ -295,5 +295,22 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 交互完成回调：允许后续逻辑继续（如主流程继续移动或切换回合）
             evt.OnCompleted?.Invoke();
         }
+
+#if UNITY_EDITOR
+        // === Debug Actions（仅编辑器，右键 Inspector 组件触发）===
+        [ContextMenu("骰子点数 - 1")] private void DebugRoll1() => DebugForceRoll(1);
+        [ContextMenu("骰子点数 - 2")] private void DebugRoll2() => DebugForceRoll(2);
+        [ContextMenu("骰子点数 - 3")] private void DebugRoll3() => DebugForceRoll(3);
+        [ContextMenu("骰子点数 - 4")] private void DebugRoll4() => DebugForceRoll(4);
+        [ContextMenu("骰子点数 - 5")] private void DebugRoll5() => DebugForceRoll(5);
+        [ContextMenu("骰子点数 - 6")] private void DebugRoll6() => DebugForceRoll(6);
+
+        private void DebugForceRoll(int steps)
+        {
+            if (!_isBoardActive || movementController == null || movementController.IsMoving) return;
+            DebugTools.Log($"<color=lime>[Debug] 强制骰子：{steps} 步</color>");
+            ChangeState(new MovementState(steps));
+        }
+#endif
     }
 }

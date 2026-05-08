@@ -729,4 +729,14 @@ namespace IndieGame.Core
         // 弹射速度
         public float LaunchSpeed;
     }
+
+    /// <summary>
+    /// 传送格传送请求事件：
+    /// TeleportTile 触发后广播，BoardMovementController 消费后瞬移玩家并触发目标格子效果。
+    /// </summary>
+    public struct BoardTeleportRequestedEvent
+    {
+        // 目标节点 ID（由 TeleportTile Inspector 配置）
+        public int TargetNodeId;
+    }
 }

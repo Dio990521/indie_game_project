@@ -55,6 +55,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         private bool _pendingCannonLaunch = false;
         private float _pendingCannonArcHeight = 5f;
         private float _pendingCannonLaunchSpeed = 12f;
+        // [传送格] 是否有待执行的传送请求及目标节点；_isTeleporting 防止连锁触发
+        private bool _pendingTeleport         = false;
+        private int  _pendingTeleportTargetId = -1;
+        private bool _isTeleporting           = false;
 
         private void OnDisable()
         {
@@ -415,6 +419,18 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
             _pendingCannonLaunch = false; // 路过时丢弃
 
+            // [传送格] 传送仅在最终落点生效；路过或已在传送中时丢弃（不连锁）
+            if (_pendingTeleport && isFinalStep && !_isTeleporting)
+            {
+                _pendingTeleport = false;
+                _isTeleporting = true;
+                yield return DoTeleport();
+                _isTeleporting = false;
+                FinishMove();
+                yield break;
+            }
+            _pendingTeleport = false; // 路过时丢弃
+
             if (_stepsRemaining <= 0)
             {
                 FinishMove();
@@ -557,6 +573,37 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
+        /// 执行传送：按指定节点 ID 瞬间移动玩家 → 触发目标格子效果。
+        /// </summary>
+        private IEnumerator DoTeleport()
+        {
+            MapWaypoint target = BoardMapManager.Instance != null
+                ? BoardMapManager.Instance.GetNode(_pendingTeleportTargetId)
+                : null;
+
+            if (target == null)
+            {
+                DebugTools.LogWarning($"[Teleport Tile] 找不到节点 ID={_pendingTeleportTargetId}，跳过传送。");
+                yield break;
+            }
+
+            DebugTools.Log($"<color=cyan>[Teleport Tile]</color> 传送目标：{target.nodeID} ({target.name})");
+            // 瞬间传送：snap 坐标 + 重置来路（防止传送后被当成原路返回）
+            _activeEntity.SetCurrentNode(target, true, true);
+
+            yield return HandleNodeArrival(target, true);
+        }
+
+        /// <summary>
+        /// 接收传送格传送请求事件（仅在移动期间订阅）。
+        /// </summary>
+        private void OnTeleportRequested(BoardTeleportRequestedEvent evt)
+        {
+            _pendingTeleport         = true;
+            _pendingTeleportTargetId = evt.TargetNodeId;
+        }
+
+        /// <summary>
         /// 接收格子请求的额外步数事件（仅在移动期间订阅）。
         /// </summary>
         private void OnExtraMoveRequested(BoardExtraMoveRequestedEvent evt)
@@ -588,6 +635,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EventBus.Subscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
             EventBus.Subscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
             EventBus.Subscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
+            EventBus.Subscribe<BoardTeleportRequestedEvent>(OnTeleportRequested);
         }
 
         private void UnsubscribeSegmentEvent()
@@ -597,6 +645,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             EventBus.Unsubscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
             EventBus.Unsubscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
             EventBus.Unsubscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
+            EventBus.Unsubscribe<BoardTeleportRequestedEvent>(OnTeleportRequested);
         }
     }
 }
