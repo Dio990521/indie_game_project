@@ -752,4 +752,17 @@ namespace IndieGame.Core
         // 目标节点 ID（由 TeleportTile Inspector 配置）
         public int TargetNodeId;
     }
+
+    /// <summary>
+    /// 连锁移位倍率变更事件：
+    /// ComboMoveSystem 在 Combo 计数发生变化时广播（每次位移格触发时 +1，每次掷骰开始时归零）。
+    /// UI 层订阅此事件显示连击提示；奖励系统可读取 Multiplier 字段直接使用。
+    /// </summary>
+    public struct ComboMoveUpdatedEvent
+    {
+        // 当前连锁触发次数（0 表示已归零）
+        public int ComboCount;
+        // 当前奖励倍率（= 1 + ComboCount）
+        public float Multiplier;
+    }
 }

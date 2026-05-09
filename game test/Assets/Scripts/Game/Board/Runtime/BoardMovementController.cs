@@ -94,6 +94,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             _triggerNodeEvents = triggerNodeEvents;
             _stepsRemaining    = totalSteps;
             _fx                = TileEffectPendingState.Default;
+            ComboMoveSystem.ResetCombo(); // 每次掷骰开始时清零连锁计数
 
             // 同步底层属性：实体在移动时是否检测路径上的事件（如连线中间的交互）
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
@@ -355,6 +356,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 if (isFinalStep)
                 {
+                    ComboMoveSystem.IncrementCombo(); // 扭曲格触发强制滑行，进入连锁
                     // 最终落点：补充1步，方向锁留给 AdvanceToNextStep 读取
                     if (_stepsRemaining <= 0) _stepsRemaining = 1;
                 }
@@ -370,6 +372,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 int extra      = _fx.ExtraSteps;
                 _fx.ExtraSteps = 0;
+                ComboMoveSystem.IncrementCombo(); // 前进/后退格触发额外位移，进入连锁
                 if (extra > 0)
                 {
                     // 前进格：追加步数，自然向前继续移动
@@ -397,6 +400,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 if (isFinalStep)
                 {
+                    ComboMoveSystem.IncrementCombo(); // 方向格触发强制移动，进入连锁
                     _stepsRemaining      = _fx.DirectionalSteps;
                     _fx.ForcedNextNodeId = _fx.DirectionalNodeId;
                 }
@@ -411,6 +415,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 while (_fx.CannonLaunch)
                 {
                     _fx.CannonLaunch = false;
+                    ComboMoveSystem.IncrementCombo(); // 大炮每次弹射计一次连锁
                     yield return DoCannonLaunch();
                 }
                 // 大炮落点可能触发了其他格子效果，依次检查并处理
@@ -418,6 +423,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 {
                     _fx.Teleport   = false;
                     _isTeleporting = true;
+                    ComboMoveSystem.IncrementCombo(); // 大炮落点为传送格，再次连锁
                     yield return DoTeleport();
                     _isTeleporting = false;
                     FinishMove();
@@ -425,6 +431,7 @@ namespace IndieGame.Gameplay.Board.Runtime
                 }
                 if (_fx.DirectionalSteps > 0)
                 {
+                    ComboMoveSystem.IncrementCombo(); // 大炮落点为方向格，再次连锁
                     _stepsRemaining       = _fx.DirectionalSteps;
                     _fx.ForcedNextNodeId  = _fx.DirectionalNodeId;
                     _fx.DirectionalSteps  = 0;
@@ -442,6 +449,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             {
                 _fx.Teleport   = false;
                 _isTeleporting = true;
+                ComboMoveSystem.IncrementCombo(); // 传送格触发传送，进入连锁
                 yield return DoTeleport();
                 _isTeleporting = false;
                 FinishMove();
