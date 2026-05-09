@@ -44,24 +44,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         private Coroutine _arrivalRoutine;      // 当前正在执行的抵达处理协程
         // [掉头控制] 仅在 BeginMove 时检测到实体处于死胡同时置 true，消耗后立即清除，确保新回合首步允许掉头但途中不允许
         private bool _allowFirstStepUTurn;
-        // [额外步数] 前进格/后退格通过 EventBus 写入，HandleSegmentCompleted 末尾统一消费；正数前进，负数后退
-        private int _pendingExtraSteps = 0;
-        // [扭曲格] 下一步强制走向的目标节点 ID；-1 表示无强制方向
-        // 由 WarpTile 通过 EventBus 写入，HandleSegmentCompleted 消费（追加步数），AdvanceToNextStep 最终使用
-        private int _pendingForcedNextNodeId = -1;
-        // [扭曲格] 下次分叉选择时需要过滤掉的被保护节点 ID；-1 表示无过滤
-        private int _pendingProtectedNodeId = -1;
-        // [人体大炮] 是否有待执行的弹射请求及参数
-        private bool _pendingCannonLaunch = false;
-        private float _pendingCannonArcHeight = 5f;
-        private float _pendingCannonLaunchSpeed = 12f;
-        // [传送格] 是否有待执行的传送请求及目标节点；_isTeleporting 防止连锁触发
-        private bool _pendingTeleport         = false;
-        private int  _pendingTeleportTargetId = -1;
-        private bool _isTeleporting           = false;
-        // [方向格] 首步强制走向的节点 ID 及移动步数；-1/0 表示无待执行请求
-        private int _pendingDirectionalNodeId = -1;
-        private int _pendingDirectionalSteps  = 0;
+        // 特殊格子效果的待执行状态集合（详见 TileEffectPendingState）
+        private TileEffectPendingState _fx = TileEffectPendingState.Default;
+        // [传送格] 防止连锁传送标志（不属于 pending，在协程执行期间持续有效）
+        private bool _isTeleporting = false;
 
         private void OnDisable()
         {
@@ -104,12 +90,10 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             // 初始化移动参数
-            _activeEntity = entity;
+            _activeEntity      = entity;
             _triggerNodeEvents = triggerNodeEvents;
-            _stepsRemaining = totalSteps;
-            _pendingExtraSteps = 0;
-            _pendingForcedNextNodeId = -1;
-            _pendingProtectedNodeId = -1;
+            _stepsRemaining    = totalSteps;
+            _fx                = TileEffectPendingState.Default;
 
             // 同步底层属性：实体在移动时是否检测路径上的事件（如连线中间的交互）
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
@@ -233,13 +217,13 @@ namespace IndieGame.Gameplay.Board.Runtime
             List<MapWaypoint> validNodes = current.GetValidNextNodes(_activeEntity.LastWaypoint);
 
             // [扭曲格] 路过时：从候选出口中移除被保护的路径
-            if (_pendingProtectedNodeId >= 0)
+            if (_fx.ProtectedNodeId >= 0)
             {
                 MapWaypoint protectedNode = BoardMapManager.Instance != null
-                    ? BoardMapManager.Instance.GetNode(_pendingProtectedNodeId)
+                    ? BoardMapManager.Instance.GetNode(_fx.ProtectedNodeId)
                     : null;
                 if (protectedNode != null) validNodes.Remove(protectedNode);
-                _pendingProtectedNodeId = -1;
+                _fx.ProtectedNodeId = -1;
             }
 
             // 如果死路一条，则停止
@@ -270,11 +254,11 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             // 3. 决策逻辑：
             // [扭曲格] 停下时：若有强制方向锁，跳过分叉UI直接走向指定节点
-            if (_pendingForcedNextNodeId >= 0)
+            if (_fx.ForcedNextNodeId >= 0)
             {
-                int forcedId = _pendingForcedNextNodeId;
-                _pendingForcedNextNodeId = -1;
-                _pendingProtectedNodeId = -1; // 强制方向时无需过滤，同步清除
+                int forcedId        = _fx.ForcedNextNodeId;
+                _fx.ForcedNextNodeId = -1;
+                _fx.ProtectedNodeId  = -1; // 强制方向时无需过滤，同步清除
 
                 MapWaypoint forcedTarget = BoardMapManager.Instance != null
                     ? BoardMapManager.Instance.GetNode(forcedId)
@@ -367,7 +351,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             _stepsRemaining--;
 
             // [扭曲格] 强制滑行仅在最终落点时生效，路过时丢弃
-            if (_pendingForcedNextNodeId >= 0)
+            if (_fx.ForcedNextNodeId >= 0)
             {
                 if (isFinalStep)
                 {
@@ -377,15 +361,15 @@ namespace IndieGame.Gameplay.Board.Runtime
                 else
                 {
                     // 路过：丢弃强制滑行（分叉过滤仍有效）
-                    _pendingForcedNextNodeId = -1;
+                    _fx.ForcedNextNodeId = -1;
                 }
             }
 
             // 消费格子请求的额外步数（前进格 / 后退格写入）
-            if (_pendingExtraSteps != 0)
+            if (_fx.ExtraSteps != 0)
             {
-                int extra = _pendingExtraSteps;
-                _pendingExtraSteps = 0;
+                int extra      = _fx.ExtraSteps;
+                _fx.ExtraSteps = 0;
                 if (extra > 0)
                 {
                     // 前进格：追加步数，自然向前继续移动
@@ -409,61 +393,61 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             // 消费方向格请求（首步强制方向 + 指定步数，仅最终落点生效；路过时丢弃）
-            if (_pendingDirectionalSteps > 0)
+            if (_fx.DirectionalSteps > 0)
             {
                 if (isFinalStep)
                 {
-                    _stepsRemaining          = _pendingDirectionalSteps;
-                    _pendingForcedNextNodeId = _pendingDirectionalNodeId;
+                    _stepsRemaining      = _fx.DirectionalSteps;
+                    _fx.ForcedNextNodeId = _fx.DirectionalNodeId;
                 }
-                _pendingDirectionalSteps  = 0;
-                _pendingDirectionalNodeId = -1;
+                _fx.DirectionalSteps  = 0;
+                _fx.DirectionalNodeId = -1;
             }
 
             // [人体大炮] 弹射仅在最终落点生效；路过时丢弃
             // 使用 while 循环支持连续弹射（落点也是大炮格时继续触发）
-            if (_pendingCannonLaunch && isFinalStep)
+            if (_fx.CannonLaunch && isFinalStep)
             {
-                while (_pendingCannonLaunch)
+                while (_fx.CannonLaunch)
                 {
-                    _pendingCannonLaunch = false;
+                    _fx.CannonLaunch = false;
                     yield return DoCannonLaunch();
                 }
                 // 大炮落点可能触发了其他格子效果，依次检查并处理
-                if (_pendingTeleport && !_isTeleporting)
+                if (_fx.Teleport && !_isTeleporting)
                 {
-                    _pendingTeleport = false;
+                    _fx.Teleport   = false;
                     _isTeleporting = true;
                     yield return DoTeleport();
                     _isTeleporting = false;
                     FinishMove();
                     yield break;
                 }
-                if (_pendingDirectionalSteps > 0)
+                if (_fx.DirectionalSteps > 0)
                 {
-                    _stepsRemaining          = _pendingDirectionalSteps;
-                    _pendingForcedNextNodeId = _pendingDirectionalNodeId;
-                    _pendingDirectionalSteps  = 0;
-                    _pendingDirectionalNodeId = -1;
+                    _stepsRemaining       = _fx.DirectionalSteps;
+                    _fx.ForcedNextNodeId  = _fx.DirectionalNodeId;
+                    _fx.DirectionalSteps  = 0;
+                    _fx.DirectionalNodeId = -1;
                     AdvanceToNextStep();
                     yield break;
                 }
                 FinishMove();
                 yield break;
             }
-            _pendingCannonLaunch = false; // 路过时丢弃
+            _fx.CannonLaunch = false; // 路过时丢弃
 
             // [传送格] 传送仅在最终落点生效；路过或已在传送中时丢弃（不连锁）
-            if (_pendingTeleport && isFinalStep && !_isTeleporting)
+            if (_fx.Teleport && isFinalStep && !_isTeleporting)
             {
-                _pendingTeleport = false;
+                _fx.Teleport   = false;
                 _isTeleporting = true;
                 yield return DoTeleport();
                 _isTeleporting = false;
                 FinishMove();
                 yield break;
             }
-            _pendingTeleport = false; // 路过时丢弃
+            _fx.Teleport = false; // 路过时丢弃
 
             if (_stepsRemaining <= 0)
             {
@@ -590,7 +574,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             MapWaypoint target = allNodes[UnityEngine.Random.Range(0, allNodes.Count)];
             DebugTools.Log($"<color=orange>[Cannon Tile]</color> 弹射目标：{target.nodeID} ({target.name})");
 
-            yield return _activeEntity.LaunchParabolic(target, _pendingCannonArcHeight, _pendingCannonLaunchSpeed);
+            yield return _activeEntity.LaunchParabolic(target, _fx.CannonArcHeight, _fx.CannonLaunchSpeed);
 
             // 触发落点格子效果（作为最终落点处理）
             yield return HandleNodeArrival(target, true);
@@ -601,9 +585,9 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnCannonLaunchRequested(BoardCannonLaunchRequestedEvent evt)
         {
-            _pendingCannonLaunch = true;
-            _pendingCannonArcHeight = evt.ArcHeight;
-            _pendingCannonLaunchSpeed = evt.LaunchSpeed;
+            _fx.CannonLaunch      = true;
+            _fx.CannonArcHeight   = evt.ArcHeight;
+            _fx.CannonLaunchSpeed = evt.LaunchSpeed;
         }
 
         /// <summary>
@@ -612,12 +596,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         private IEnumerator DoTeleport()
         {
             MapWaypoint target = BoardMapManager.Instance != null
-                ? BoardMapManager.Instance.GetNode(_pendingTeleportTargetId)
+                ? BoardMapManager.Instance.GetNode(_fx.TeleportTargetId)
                 : null;
 
             if (target == null)
             {
-                DebugTools.LogWarning($"[Teleport Tile] 找不到节点 ID={_pendingTeleportTargetId}，跳过传送。");
+                DebugTools.LogWarning($"[Teleport Tile] 找不到节点 ID={_fx.TeleportTargetId}，跳过传送。");
                 yield break;
             }
 
@@ -633,8 +617,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnDirectionalMoveRequested(BoardDirectionalMoveRequestedEvent evt)
         {
-            _pendingDirectionalNodeId = evt.DirectionNodeId;
-            _pendingDirectionalSteps  = evt.Steps;
+            _fx.DirectionalNodeId = evt.DirectionNodeId;
+            _fx.DirectionalSteps  = evt.Steps;
         }
 
         /// <summary>
@@ -642,8 +626,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnTeleportRequested(BoardTeleportRequestedEvent evt)
         {
-            _pendingTeleport         = true;
-            _pendingTeleportTargetId = evt.TargetNodeId;
+            _fx.Teleport         = true;
+            _fx.TeleportTargetId = evt.TargetNodeId;
         }
 
         /// <summary>
@@ -651,7 +635,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnExtraMoveRequested(BoardExtraMoveRequestedEvent evt)
         {
-            _pendingExtraSteps = evt.Steps;
+            _fx.ExtraSteps = evt.Steps;
         }
 
         /// <summary>
@@ -659,7 +643,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnWarpSlideRequested(BoardWarpSlideRequestedEvent evt)
         {
-            _pendingForcedNextNodeId = evt.ForcedNodeId;
+            _fx.ForcedNextNodeId = evt.ForcedNodeId;
         }
 
         /// <summary>
@@ -667,7 +651,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnWarpFilterPathRequested(BoardWarpFilterPathEvent evt)
         {
-            _pendingProtectedNodeId = evt.ProtectedNodeId;
+            _fx.ProtectedNodeId = evt.ProtectedNodeId;
         }
 
         // --- 事件总线订阅管理 ---
