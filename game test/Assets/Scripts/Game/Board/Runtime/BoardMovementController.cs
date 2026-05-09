@@ -429,6 +429,25 @@ namespace IndieGame.Gameplay.Board.Runtime
                     _pendingCannonLaunch = false;
                     yield return DoCannonLaunch();
                 }
+                // 大炮落点可能触发了其他格子效果，依次检查并处理
+                if (_pendingTeleport && !_isTeleporting)
+                {
+                    _pendingTeleport = false;
+                    _isTeleporting = true;
+                    yield return DoTeleport();
+                    _isTeleporting = false;
+                    FinishMove();
+                    yield break;
+                }
+                if (_pendingDirectionalSteps > 0)
+                {
+                    _stepsRemaining          = _pendingDirectionalSteps;
+                    _pendingForcedNextNodeId = _pendingDirectionalNodeId;
+                    _pendingDirectionalSteps  = 0;
+                    _pendingDirectionalNodeId = -1;
+                    AdvanceToNextStep();
+                    yield break;
+                }
                 FinishMove();
                 yield break;
             }
