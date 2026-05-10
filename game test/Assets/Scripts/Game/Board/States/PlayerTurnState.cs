@@ -122,8 +122,8 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             }
 
             // --- 核心游戏逻辑：掷骰子 ---
-            // 随机生成 1 到 6 之间的点数
-            int steps = UnityEngine.Random.Range(1, 7);
+            // 随机生成 1 到 4 之间的点数
+            int steps = UnityEngine.Random.Range(1, 5);
             DebugTools.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
 
             // 切换状态机：进入“移动状态”，并将计算出的步数传递过去
