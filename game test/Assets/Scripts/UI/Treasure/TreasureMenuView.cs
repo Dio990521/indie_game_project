@@ -1,0 +1,241 @@
+using System.Collections.Generic;
+using UnityEngine;
+using DG.Tweening;
+using IndieGame.Core;
+using IndieGame.Core.Utilities;
+using IndieGame.Gameplay.Treasure;
+
+namespace IndieGame.UI.Treasure
+{
+    /// <summary>
+    /// 宝具菜单视图：自管理 UI（仿 ShopUIController 模式）。
+    /// 订阅 BoardTreasureMenuRequestedEvent 后自动展示宝具列表，
+    /// 玩家确认后发布 TreasureItemSelectedEvent，取消后发布 TreasureMenuCancelledEvent。
+    /// </summary>
+    public class TreasureMenuView : MonoBehaviour
+    {
+        [Header("Binder")]
+        [SerializeField] private TreasureMenuBinder binder;
+
+        [Header("Animation")]
+        [Tooltip("显示动画时长")]
+        public float showDuration = 0.2f;
+        [Tooltip("隐藏动画时长")]
+        public float hideDuration = 0.15f;
+        [Tooltip("显示缓动曲线")]
+        public Ease showEase = Ease.OutBack;
+        [Tooltip("隐藏缓动曲线")]
+        public Ease hideEase = Ease.InBack;
+
+        [Header("Input")]
+        [Tooltip("方向键连发间隔（秒）")]
+        public float inputRepeatDelay = 0.2f;
+
+        // --- 运行时状态 ---
+        private readonly List<TreasureSlotUI> _slots = new List<TreasureSlotUI>();
+        private readonly List<TreasureSO> _options = new List<TreasureSO>();
+        private int _selectedIndex = -1;
+        private float _nextInputTime;
+        private bool _isVisible;
+        private bool _inputSubscribed;
+        private CanvasGroup _canvasGroup;
+        private RectTransform _rootRect;
+        private Sequence _showSeq;
+        private Sequence _hideSeq;
+
+        private void Awake()
+        {
+            if (binder == null)
+            {
+                DebugTools.LogError("[TreasureMenuView] 缺少 Binder 引用。");
+                return;
+            }
+            _canvasGroup = binder.CanvasGroup;
+            _rootRect    = binder.RootRect;
+
+            if (_canvasGroup != null)
+            {
+                _canvasGroup.alpha          = 0f;
+                _canvasGroup.blocksRaycasts = false;
+                _canvasGroup.interactable   = false;
+            }
+        }
+
+        private void OnDisable()
+        {
+            UnsubscribeInput();
+            _showSeq?.Kill();
+            _hideSeq?.Kill();
+        }
+
+        // ── 公开接口 ──────────────────────────────────────────────────────
+
+        /// <summary>
+        /// 展示宝具菜单（幂等：已显示时忽略）。
+        /// </summary>
+        public void Show(IReadOnlyList<TreasureSO> treasures)
+        {
+            if (_isVisible) return;
+
+            RefreshSlots(treasures);
+            SelectIndex(0, instant: true);
+            PlayShowAnimation();
+            _isVisible = true;
+            SubscribeInput();
+        }
+
+        /// <summary>
+        /// 隐藏宝具菜单（幂等）。
+        /// </summary>
+        public void Hide()
+        {
+            if (!_isVisible) return;
+            _isVisible = false; // 立即标记，防止动画期间 Show() 被 _isVisible 守卫拦截
+            UnsubscribeInput();
+            PlayHideAnimation();
+        }
+
+        // ── 输入处理 ──────────────────────────────────────────────────────
+
+        private void OnMoveInput(InputMoveEvent evt)
+        {
+            if (_options.Count == 0 || Time.time < _nextInputTime) return;
+
+            if (evt.Value.y > 0.5f)
+            {
+                _nextInputTime = Time.time + inputRepeatDelay;
+                SelectIndex((_selectedIndex - 1 + _options.Count) % _options.Count);
+            }
+            else if (evt.Value.y < -0.5f)
+            {
+                _nextInputTime = Time.time + inputRepeatDelay;
+                SelectIndex((_selectedIndex + 1) % _options.Count);
+            }
+        }
+
+        private void OnInteractInput(InputInteractEvent evt)
+        {
+            if (_selectedIndex < 0 || _selectedIndex >= _options.Count) return;
+            TreasureSO selected = _options[_selectedIndex];
+            Hide();
+            EventBus.Raise(new TreasureItemSelectedEvent { TreasureId = selected.TreasureId });
+        }
+
+        private void OnCancelInput(InputInteractCanceledEvent evt)
+        {
+            Hide();
+            EventBus.Raise(new TreasureMenuCancelledEvent());
+        }
+
+        // ── 内部逻辑 ──────────────────────────────────────────────────────
+
+        private void RefreshSlots(IReadOnlyList<TreasureSO> treasures)
+        {
+            _options.Clear();
+
+            if (binder == null || binder.SlotPrefab == null || binder.SlotContainer == null) return;
+
+            // 隐藏旧 Slot
+            foreach (var slot in _slots)
+                if (slot != null) slot.gameObject.SetActive(false);
+
+            // 复用或新建 Slot
+            for (int i = 0; i < treasures.Count; i++)
+            {
+                TreasureSlotUI slot = i < _slots.Count ? _slots[i] : CreateSlot();
+                if (slot == null) break;
+
+                slot.Setup(treasures[i]);
+                slot.gameObject.SetActive(true);
+                _options.Add(treasures[i]);
+            }
+
+            _selectedIndex = -1;
+        }
+
+        private TreasureSlotUI CreateSlot()
+        {
+            TreasureSlotUI slot = Instantiate(binder.SlotPrefab, binder.SlotContainer, false);
+            _slots.Add(slot);
+            return slot;
+        }
+
+        private void SelectIndex(int index, bool instant = false)
+        {
+            if (_options.Count == 0) return;
+            _selectedIndex = Mathf.Clamp(index, 0, _options.Count - 1);
+
+            for (int i = 0; i < _slots.Count; i++)
+            {
+                if (_slots[i] == null || !_slots[i].gameObject.activeSelf) continue;
+                _slots[i].SetHighlighted(i == _selectedIndex);
+            }
+        }
+
+        // ── 动画 ──────────────────────────────────────────────────────────
+
+        private void PlayShowAnimation()
+        {
+            _showSeq?.Kill();
+            _hideSeq?.Kill();
+
+            if (_canvasGroup == null) return;
+            _canvasGroup.alpha          = 0f;
+            _canvasGroup.blocksRaycasts = true;
+            _canvasGroup.interactable   = true;
+
+            if (_rootRect != null) _rootRect.localScale = Vector3.one * 0.85f;
+
+            _showSeq = DOTween.Sequence();
+            if (_rootRect != null)
+                _showSeq.Join(_rootRect.DOScale(1f, showDuration).SetEase(showEase));
+            _showSeq.Join(_canvasGroup.DOFade(1f, showDuration));
+        }
+
+        private void PlayHideAnimation()
+        {
+            _showSeq?.Kill();
+            _hideSeq?.Kill();
+
+            if (_canvasGroup == null)
+            {
+                _isVisible = false;
+                return;
+            }
+
+            _hideSeq = DOTween.Sequence();
+            if (_rootRect != null)
+                _hideSeq.Join(_rootRect.DOScale(0.85f, hideDuration).SetEase(hideEase));
+            _hideSeq.Join(_canvasGroup.DOFade(0f, hideDuration));
+            _hideSeq.OnComplete(() =>
+            {
+                if (_canvasGroup != null)
+                {
+                    _canvasGroup.blocksRaycasts = false;
+                    _canvasGroup.interactable   = false;
+                }
+                _isVisible = false;
+            });
+        }
+
+        // ── 输入订阅管理 ──────────────────────────────────────────────────
+
+        private void SubscribeInput()
+        {
+            if (_inputSubscribed) return;
+            EventBus.Subscribe<InputMoveEvent>(OnMoveInput);
+            EventBus.Subscribe<InputInteractEvent>(OnInteractInput);
+            EventBus.Subscribe<InputInteractCanceledEvent>(OnCancelInput);
+            _inputSubscribed = true;
+        }
+
+        private void UnsubscribeInput()
+        {
+            if (!_inputSubscribed) return;
+            EventBus.Unsubscribe<InputMoveEvent>(OnMoveInput);
+            EventBus.Unsubscribe<InputInteractEvent>(OnInteractInput);
+            EventBus.Unsubscribe<InputInteractCanceledEvent>(OnCancelInput);
+            _inputSubscribed = false;
+        }
+    }
+}

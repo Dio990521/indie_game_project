@@ -96,6 +96,39 @@ namespace IndieGame.Gameplay.Board.View
             }
         }
 
+        /// <summary>
+        /// 直接在节点世界坐标处生成光标（不依赖 WaypointConnection）。
+        /// 用于飞翼宝具等需要直接高亮节点而非路径曲线的场景。
+        /// </summary>
+        public void ShowCursorsAtNodes(List<MapWaypoint> nodes)
+        {
+            ClearCursors();
+
+            foreach (var node in nodes)
+            {
+                if (node == null) continue;
+
+                GameObject cursor;
+                if (cursorPrefab != null)
+                {
+                    cursor = _cursorPool.Get();
+                }
+                else
+                {
+                    cursor = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                    Destroy(cursor.GetComponent<Collider>());
+                }
+
+                cursor.transform.position   = node.transform.position;
+                cursor.transform.localScale = Vector3.one * cursorScale;
+
+                if (cursor.GetComponent<Renderer>() == null)
+                    cursor.AddComponent<MeshRenderer>();
+
+                _activeCursors.Add(cursor);
+            }
+        }
+
         public void ClearCursors()
         {
             foreach (var c in _activeCursors)

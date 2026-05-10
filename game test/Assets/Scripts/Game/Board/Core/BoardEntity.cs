@@ -208,8 +208,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// <summary>
         /// 抛物线弹射协程：从当前位置高弧线飞往目标节点，不触发路径事件。
         /// 控制点取两端中点上方 arcHeight 处，形成炮弹抛物线效果。
+        /// originNode：飞跃的起点节点。传入时落地后 LastWaypoint 保留方向信息（飞翼等有方向性的跳跃）；
+        ///             传 null 时落地后 LastWaypoint = null，不限制来路（大炮格随机落点）。
         /// </summary>
-        public IEnumerator LaunchParabolic(MapWaypoint targetNode, float arcHeight, float launchSpeed)
+        public IEnumerator LaunchParabolic(MapWaypoint targetNode, float arcHeight, float launchSpeed, MapWaypoint originNode = null)
         {
             if (targetNode == null) yield break;
 
@@ -224,8 +226,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             if (approxDist <= 0f)
             {
                 transform.position = p2;
-                LastWaypoint = null;
-                SetCurrentNode(targetNode, false, true);
+                SetCurrentNode(targetNode, false, false);
+                LastWaypoint = originNode;
                 yield break;
             }
 
@@ -237,14 +239,24 @@ namespace IndieGame.Gameplay.Board.Runtime
                 float dt = Time.deltaTime;
                 timer += dt;
                 float t = Mathf.Clamp01(timer / duration);
+
+                // 水平朝向目标节点（忽略 Y，避免随抛物线弧度出现俯仰）
+                Vector3 toTarget = p2 - transform.position;
+                toTarget.y = 0f;
+                if (toTarget != Vector3.zero)
+                {
+                    Quaternion targetRot = Quaternion.LookRotation(toTarget);
+                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * dt);
+                }
+
                 transform.position = BezierUtils.GetQuadraticBezierPoint(t, p0, p1, p2);
                 yield return null;
             }
 
             transform.position = p2;
-            // 弹射落地后无来路限制
-            LastWaypoint = null;
-            SetCurrentNode(targetNode, false, true);
+            // resetLastWaypoint = false，由外部传入的 originNode 决定来路（null = 无限制，非 null = 保留方向）
+            SetCurrentNode(targetNode, false, false);
+            LastWaypoint = originNode;
         }
 
         /// <summary>

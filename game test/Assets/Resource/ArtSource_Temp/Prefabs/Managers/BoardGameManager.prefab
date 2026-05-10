@@ -50,6 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardGameManager
   movementController: {fileID: 1063210582564695611}
   campingLocationId: {fileID: 11400000, guid: 8af5bc471d543450c9a7f4c7b3f933d7, type: 2}
+  wingTreasureData: {fileID: 11400000, guid: b7aa10937bbf56046873825f62d0d725, type: 2}
 --- !u!114 &3702525346231296957
 MonoBehaviour:
   m_ObjectHideFlags: 0

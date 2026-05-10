@@ -108,7 +108,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Inventory.InventoryUIView
   binder: {fileID: 7490010810423989356}
-  layer: 1
 --- !u!1 &1136193205516503143
 GameObject:
   m_ObjectHideFlags: 0

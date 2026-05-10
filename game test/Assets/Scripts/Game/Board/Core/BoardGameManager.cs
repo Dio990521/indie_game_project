@@ -3,6 +3,7 @@ using IndieGame.Core;
 using IndieGame.Core.CameraSystem;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Board.Runtime.States;
+using IndieGame.Gameplay.Treasure;
 
 namespace IndieGame.Gameplay.Board.Runtime
 {
@@ -19,6 +20,10 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         [Tooltip("行动点耗尽时强制进入露营的目标位置 ID")]
         public LocationID campingLocationId;
+
+        [Header("宝具配置")]
+        [Tooltip("飞翼宝具的配置资源，拖入对应的 WingTreasureSO 资源文件")]
+        public WingTreasureSO wingTreasureData;
 
         // --- 状态机相关 ---
         // 主状态机：控制游戏的主循环流程（如：初始化 -> 玩家回合 -> 移动中 -> 事件触发 -> 敌人回合）

@@ -4,6 +4,7 @@ using IndieGame.Core;
 using IndieGame.UI;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.ActionPoint;
+using IndieGame.Gameplay.Treasure;
 using UnityEngine.Localization;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
@@ -22,6 +23,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private System.Action<BoardRollDiceRequestedEvent> _onRollDice;
         private System.Action _onInventoryOpened;
         private System.Action _onInventoryClosed;
+        private System.Action<BoardTreasureMenuRequestedEvent> _onBoardTreasureMenuRequested;
+        private System.Action<TreasureItemSelectedEvent> _onTreasureSelected;
+        private System.Action<TreasureMenuCancelledEvent> _onTreasureCancelled;
 
         /// <summary>
         /// 进入该状态时执行：初始化 UI 菜单并绑定相关输入事件。
@@ -58,6 +62,18 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             InventoryManager.OnInventoryOpened += _onInventoryOpened;
             InventoryManager.OnInventoryClosed += _onInventoryClosed;
+
+            // 订阅宝具菜单相关事件：
+            // - BoardTreasureMenuRequested：操作菜单点击"宝具"时触发，由此处直接调用 TreasureMenuView.Show()
+            //   集中在 PlayerTurnState 处理可提供 UIManager 未配置时的兜底回退逻辑
+            // - TreasureItemSelected：玩家在宝具菜单中确认选择，切换到对应宝具激活状态
+            // - TreasureMenuCancelled：玩家取消宝具菜单，重新显示操作菜单
+            _onBoardTreasureMenuRequested = HandleBoardTreasureMenuRequested;
+            _onTreasureSelected = HandleTreasureSelected;
+            _onTreasureCancelled = _ => HandleTreasureCancelled();
+            EventBus.Subscribe(_onBoardTreasureMenuRequested);
+            EventBus.Subscribe(_onTreasureSelected);
+            EventBus.Subscribe(_onTreasureCancelled);
         }
 
         /// <summary>
@@ -69,10 +85,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 注销背包相关的全局事件
             if (_onInventoryOpened != null) InventoryManager.OnInventoryOpened -= _onInventoryOpened;
             if (_onInventoryClosed != null) InventoryManager.OnInventoryClosed -= _onInventoryClosed;
-            if (_onRollDice != null)
-            {
-                EventBus.Unsubscribe(_onRollDice);
-            }
+            if (_onRollDice != null) EventBus.Unsubscribe(_onRollDice);
+            if (_onBoardTreasureMenuRequested != null) EventBus.Unsubscribe(_onBoardTreasureMenuRequested);
+            if (_onTreasureSelected != null) EventBus.Unsubscribe(_onTreasureSelected);
+            if (_onTreasureCancelled != null) EventBus.Unsubscribe(_onTreasureCancelled);
 
             if (_menu != null)
             {
@@ -84,6 +100,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             _onRollDice = null;
             _onInventoryOpened = null;
             _onInventoryClosed = null;
+            _onBoardTreasureMenuRequested = null;
+            _onTreasureSelected = null;
+            _onTreasureCancelled = null;
             _context = null;
         }
 
@@ -147,6 +166,57 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         }
 
         /// <summary>
+        /// 响应操作菜单"宝具"点击：直接调用 TreasureMenuView.Show()。
+        /// 若 UIManager 未配置宝具菜单预制体或宝具列表为空，则直接回退到操作菜单。
+        /// </summary>
+        private void HandleBoardTreasureMenuRequested(BoardTreasureMenuRequestedEvent evt)
+        {
+            var treasureMenu = UIManager.Instance?.TreasureMenuInstance;
+            var ownedTreasures = TreasureSystem.Instance?.OwnedTreasures;
+
+            if (treasureMenu == null)
+            {
+                DebugTools.LogWarning("[PlayerTurnState] TreasureMenuInstance 未配置，回退到操作菜单。");
+                _menu?.Show(BuildDefaultMenuData());
+                return;
+            }
+
+            if (ownedTreasures == null || ownedTreasures.Count == 0)
+            {
+                DebugTools.Log("[PlayerTurnState] 宝具列表为空，回退到操作菜单。");
+                _menu?.Show(BuildDefaultMenuData());
+                return;
+            }
+
+            treasureMenu.Show(ownedTreasures);
+        }
+
+        /// <summary>
+        /// 响应宝具选中事件：根据宝具 ID 切换到对应的激活状态。
+        /// </summary>
+        private void HandleTreasureSelected(TreasureItemSelectedEvent evt)
+        {
+            if (evt.TreasureId == "wing" && _context != null && _context.wingTreasureData != null)
+            {
+                _context.ChangeState(new WingTreasureState(_context.wingTreasureData));
+            }
+            else
+            {
+                // 未知宝具或数据缺失：回退到操作菜单
+                DebugTools.LogWarning($"[PlayerTurnState] 未知宝具 ID \"{evt.TreasureId}\" 或缺少配置，返回操作菜单。");
+                _menu?.Show(BuildDefaultMenuData());
+            }
+        }
+
+        /// <summary>
+        /// 响应宝具菜单取消事件：重新显示操作菜单。
+        /// </summary>
+        private void HandleTreasureCancelled()
+        {
+            _menu?.Show(BuildDefaultMenuData());
+        }
+
+        /// <summary>
         /// 构建默认菜单数据：定义玩家回合开始时菜单里有哪些按钮。
         /// 这里使用了本地化字符串 (LocalizedString)，确保 UI 文字支持多语言。
         /// </summary>
@@ -161,13 +231,19 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                     Id = BoardActionId.RollDice,
                     Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "RollDice" }
                 },
-                // 2. 道具选项
+                // 2. 背包选项
                 new BoardActionOptionData
                 {
                     Id = BoardActionId.Item,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Item" }
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Bag" }
                 },
-                // 3. 营地/整备选项
+                // 3. 宝具选项
+                new BoardActionOptionData
+                {
+                    Id = BoardActionId.Treasure,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Treasure" }
+                },
+                // 4. 营地/整备选项
                 new BoardActionOptionData
                 {
                     Id = BoardActionId.Camp,

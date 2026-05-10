@@ -158,6 +158,7 @@ namespace IndieGame.UI
         public void Hide()
         {
             if (!_isVisible) return;
+            _isVisible = false; // 立即标记，防止动画期间 Show() 被守卫拦截
             UnsubscribeInput();
             PlayHideAnimation();
         }
@@ -299,6 +300,10 @@ namespace IndieGame.UI
                 case BoardActionId.Item:
                     EventBus.Raise(new OpenInventoryEvent());
                     Hide();
+                    break;
+                case BoardActionId.Treasure:
+                    Hide(); // 先隐藏操作菜单，再通知，确保 _isVisible=false 时恢复逻辑可正常触发 Show
+                    EventBus.Raise(new BoardTreasureMenuRequestedEvent());
                     break;
                 case BoardActionId.Camp:
                     if (campingLocationId == null)

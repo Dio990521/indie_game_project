@@ -552,6 +552,28 @@ namespace IndieGame.Core
         public string Error;
     }
 
+    /// <summary>
+    /// 宝具菜单打开请求事件：
+    /// 由 BoardActionMenuView 在玩家点击"宝具"按钮时发布，TreasureMenuView 订阅后自行展示。
+    /// </summary>
+    public struct BoardTreasureMenuRequestedEvent { }
+
+    /// <summary>
+    /// 宝具选中事件：
+    /// TreasureMenuView 在玩家确认选择某个宝具时发布，PlayerTurnState 监听后切换到对应激活状态。
+    /// </summary>
+    public struct TreasureItemSelectedEvent
+    {
+        // 选中宝具的唯一 ID（与 TreasureSO.TreasureId 对应）
+        public string TreasureId;
+    }
+
+    /// <summary>
+    /// 宝具菜单取消事件：
+    /// TreasureMenuView 在玩家按取消键时发布，PlayerTurnState 监听后重新显示操作菜单。
+    /// </summary>
+    public struct TreasureMenuCancelledEvent { }
+
     public struct InputMoveEvent
     {
         public UnityEngine.Vector2 Value;

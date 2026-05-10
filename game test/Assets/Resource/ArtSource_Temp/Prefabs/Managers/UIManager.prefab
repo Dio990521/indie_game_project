@@ -54,3 +54,4 @@ MonoBehaviour:
   dialogueUIPrefab: {fileID: 7919900453157921880, guid: 9abcb250f448942ff8edc9e37687301e, type: 3}
   playerHudPrefab: {fileID: 5158511135100238901, guid: d553bc591ba004f1cbfe96f2bc1df2b4, type: 3}
   shopUIPrefab: {fileID: 5549291709720614763, guid: 362ad348136914466bb367a70aa3e4ed, type: 3}
+  treasureMenuPrefab: {fileID: 7935050363261153765, guid: 37ceda32413a6c545a570316dc999431, type: 3}

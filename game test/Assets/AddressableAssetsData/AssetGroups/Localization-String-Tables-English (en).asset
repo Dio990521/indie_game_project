@@ -33,6 +33,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Locale-en
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 88ead1a70ce7241468696d6c53352a8b
+    m_Address: Treasures_en
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-en
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: f7c343d2cabb840f582b3555df4f8dee
     m_Address: Weapons_en
     m_ReadOnly: 1

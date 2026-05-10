@@ -30,6 +30,14 @@ MonoBehaviour:
     m_Localized: Item
     m_Metadata:
       m_Items: []
+  - m_Id: 37280589120569344
+    m_Localized: Bag
+    m_Metadata:
+      m_Items: []
+  - m_Id: 37280776282996736
+    m_Localized: Treasure
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

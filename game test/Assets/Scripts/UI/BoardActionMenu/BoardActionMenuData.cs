@@ -15,7 +15,9 @@ namespace IndieGame.UI
         // 道具
         Item,
         // 营地/整备
-        Camp
+        Camp,
+        // 宝具
+        Treasure
     }
 
     /// <summary>

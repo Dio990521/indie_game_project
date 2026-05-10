@@ -27,6 +27,14 @@ MonoBehaviour:
     m_Key: Camp
     m_Metadata:
       m_Items: []
+  - m_Id: 37280589120569344
+    m_Key: Bag
+    m_Metadata:
+      m_Items: []
+  - m_Id: 37280776282996736
+    m_Key: Treasure
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:
