@@ -69,21 +69,5 @@ namespace IndieGame.Gameplay.Board.Events
             // Execute() 返回后，MoveAlongConnection 协程自动恢复剩余步数的移动
         }
 
-        /// <summary>
-        /// 平滑转向目标，逻辑与 LookAtEventSO 保持一致。
-        /// </summary>
-        private IEnumerator LookAt(Transform self, Transform target, float duration)
-        {
-            if (self == null || target == null) yield break;
-
-            Quaternion targetRot = Quaternion.LookRotation(target.position - self.position);
-            float timer = 0f;
-            while (timer < duration)
-            {
-                timer += Time.deltaTime;
-                self.rotation = Quaternion.Slerp(self.rotation, targetRot, timer * 5f);
-                yield return null;
-            }
-        }
     }
 }

@@ -11,19 +11,7 @@ namespace IndieGame.Gameplay.Board.Events
 
         public override IEnumerator Execute(BoardGameManager manager, Transform targetContext)
         {
-            if (targetContext == null) yield break;
-
-            Transform player = manager.movementController.playerToken;
-            Quaternion targetRot = Quaternion.LookRotation(targetContext.position - player.position);
-            
-            float timer = 0f;
-            while (timer < duration)
-            {
-                timer += Time.deltaTime;
-                // 平滑插值转向目标
-                player.rotation = Quaternion.Slerp(player.rotation, targetRot, timer * 5f);
-                yield return null;
-            }
+            yield return LookAt(manager.movementController.playerToken, targetContext, duration);
         }
     }
 }

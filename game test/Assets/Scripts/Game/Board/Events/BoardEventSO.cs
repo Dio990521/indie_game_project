@@ -17,5 +17,22 @@ namespace IndieGame.Gameplay.Board.Events
         /// </summary>
         /// <param name="manager">提供上下文，让事件能访问角色、位置等信息</param>
         public abstract IEnumerator Execute(BoardGameManager manager, Transform targetContext);
+
+        /// <summary>
+        /// 通用平滑转向协程，子类事件可直接复用。
+        /// </summary>
+        protected IEnumerator LookAt(Transform self, Transform target, float duration)
+        {
+            if (self == null || target == null) yield break;
+
+            Quaternion targetRot = Quaternion.LookRotation(target.position - self.position);
+            float timer = 0f;
+            while (timer < duration)
+            {
+                timer += Time.deltaTime;
+                self.rotation = Quaternion.Slerp(self.rotation, targetRot, timer * 5f);
+                yield return null;
+            }
+        }
     }
 }
