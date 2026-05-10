@@ -60,7 +60,7 @@ namespace IndieGame.Gameplay.Shop
     /// - 逻辑层全部走 Dictionary 索引；
     /// - 高频查询不做 List 全扫描，避免 UI 刷新时的额外开销。
     /// </summary>
-    public class ShopSystem : MonoSingleton<ShopSystem>, ISaveable
+    public class ShopSystem : SaveableMonoSingleton<ShopSystem>
     {
         [Header("Config")]
         [Tooltip("商店数据库（静态数据）。")]
@@ -78,35 +78,19 @@ namespace IndieGame.Gameplay.Shop
         private readonly Dictionary<string, Dictionary<string, RuntimeEntryState>> _runtimeByShopId =
             new Dictionary<string, Dictionary<string, RuntimeEntryState>>(StringComparer.Ordinal);
 
-        // 存档系统缓存
-        private SaveManager _saveManager;
-        private bool _isRegisteredToSaveManager;
+        // 当前是否已初始化静态/运行时数据
         private bool _isInitialized;
 
         /// <summary>
         /// ISaveable 唯一标识。
         /// </summary>
-        public string SaveID => "ShopSystem";
+        public override string SaveID => "ShopSystem";
 
         protected override void Awake()
         {
             base.Awake();
             if (Instance != this) return;
             EnsureInitialized();
-        }
-
-        private void OnEnable()
-        {
-            EnsureSaveRegistration(forceSearch: false);
-        }
-
-        private void OnDisable()
-        {
-            if (_isRegisteredToSaveManager && _saveManager != null)
-            {
-                _saveManager.Unregister(this);
-            }
-            _isRegisteredToSaveManager = false;
         }
 
         /// <summary>
@@ -223,90 +207,85 @@ namespace IndieGame.Gameplay.Shop
         {
             EnsureInitialized();
 
-            ShopPurchaseResult result = new ShopPurchaseResult
+            // 第一步：纯校验（不改任何状态）
+            ShopPurchaseFailReason failReason = ValidatePurchase(
+                shopId, shopEntryId, quantity,
+                out int maxPurchasable,
+                out ShopItemEntry entry,
+                out RuntimeEntryState state);
+
+            if (failReason != ShopPurchaseFailReason.None)
             {
-                Success = false,
-                FailReason = ShopPurchaseFailReason.None,
-                Message = string.Empty,
-                MaxPurchasableAtRequest = 0,
-                PurchasedQuantity = 0,
-                TotalCost = 0
-            };
+                return BuildFailResult(failReason, maxPurchasable, ResolveFailMessage(failReason, maxPurchasable));
+            }
+
+            // 第二步：执行交易（扣金币 / 加物品 / 写库存 / 广播事件）
+            return ExecutePurchase(shopId, shopEntryId, entry, state, quantity, maxPurchasable);
+        }
+
+        /// <summary>
+        /// 校验阶段：依次检查商店/条目/数量/库存/金币/背包等约束。
+        /// 整个流程只读不写，校验通过返回 None，否则返回具体失败原因。
+        /// </summary>
+        private ShopPurchaseFailReason ValidatePurchase(
+            string shopId, string shopEntryId, int quantity,
+            out int maxPurchasable,
+            out ShopItemEntry entry,
+            out RuntimeEntryState state)
+        {
+            maxPurchasable = 0;
+            entry = null;
+            state = null;
 
             if (string.IsNullOrWhiteSpace(shopId))
-            {
-                result.FailReason = ShopPurchaseFailReason.InvalidShop;
-                result.Message = "商店 ID 无效。";
-                return result;
-            }
+                return ShopPurchaseFailReason.InvalidShop;
 
             if (string.IsNullOrWhiteSpace(shopEntryId))
-            {
-                result.FailReason = ShopPurchaseFailReason.InvalidEntry;
-                result.Message = "商品条目 ID 无效。";
-                return result;
-            }
+                return ShopPurchaseFailReason.InvalidEntry;
 
-            if (!TryGetEntryAndState(shopId, shopEntryId, out ShopItemEntry entry, out RuntimeEntryState state))
-            {
-                result.FailReason = ShopPurchaseFailReason.InvalidEntry;
-                result.Message = "找不到对应商品条目。";
-                return result;
-            }
+            if (!TryGetEntryAndState(shopId, shopEntryId, out entry, out state))
+                return ShopPurchaseFailReason.InvalidEntry;
 
             if (quantity <= 0)
-            {
-                result.FailReason = ShopPurchaseFailReason.InvalidQuantity;
-                result.Message = "购买数量必须大于 0。";
-                return result;
-            }
+                return ShopPurchaseFailReason.InvalidQuantity;
 
-            int maxPurchasable = GetMaxPurchasableQuantity(shopId, shopEntryId);
-            result.MaxPurchasableAtRequest = maxPurchasable;
+            maxPurchasable = GetMaxPurchasableQuantity(shopId, shopEntryId);
             if (maxPurchasable <= 0)
-            {
-                result.FailReason = ResolveBlockingReason(entry, state);
-                result.Message = "当前条件下无法购买该商品。";
-                return result;
-            }
+                return ResolveBlockingReason(entry, state);
 
             if (quantity > maxPurchasable)
-            {
-                result.FailReason = ShopPurchaseFailReason.AmountExceedsCurrentMax;
-                result.Message = $"超过可购买上限，当前最多可买 {maxPurchasable} 个。";
-                return result;
-            }
+                return ShopPurchaseFailReason.AmountExceedsCurrentMax;
 
-            GoldSystem goldSystem = GoldSystem.Instance;
-            InventoryManager inventory = InventoryManager.Instance;
-            if (goldSystem == null)
-            {
-                result.FailReason = ShopPurchaseFailReason.InsufficientGold;
-                result.Message = "金币系统不可用。";
-                return result;
-            }
+            if (GoldSystem.Instance == null)
+                return ShopPurchaseFailReason.InsufficientGold;
 
-            if (inventory == null)
-            {
-                result.FailReason = ShopPurchaseFailReason.InventoryFull;
-                result.Message = "背包系统不可用。";
-                return result;
-            }
+            if (InventoryManager.Instance == null)
+                return ShopPurchaseFailReason.InventoryFull;
 
+            // 价格溢出预检查（int 乘法可能溢出，提前转 long 比较）
             long costLong = (long)entry.UnitPrice * quantity;
             if (costLong > int.MaxValue)
-            {
-                result.FailReason = ShopPurchaseFailReason.CostOverflow;
-                result.Message = "本次交易金额过大。";
-                return result;
-            }
+                return ShopPurchaseFailReason.CostOverflow;
 
-            int totalCost = (int)costLong;
+            return ShopPurchaseFailReason.None;
+        }
+
+        /// <summary>
+        /// 执行阶段：在校验通过的前提下做实际交易。
+        /// 失败安全：扣金币后入包失败会自动退款回滚。
+        /// </summary>
+        private ShopPurchaseResult ExecutePurchase(
+            string shopId, string shopEntryId,
+            ShopItemEntry entry, RuntimeEntryState state,
+            int quantity, int maxPurchasable)
+        {
+            int totalCost = entry.UnitPrice * quantity;
+            GoldSystem goldSystem = GoldSystem.Instance;
+            InventoryManager inventory = InventoryManager.Instance;
+
             if (!goldSystem.TrySpendGold(totalCost, "ShopPurchase"))
             {
-                result.FailReason = ShopPurchaseFailReason.InsufficientGold;
-                result.Message = "金币不足。";
-                return result;
+                return BuildFailResult(ShopPurchaseFailReason.InsufficientGold, maxPurchasable, "金币不足。");
             }
 
             bool addSucceeded = inventory.AddItem(entry.Item, quantity);
@@ -316,15 +295,10 @@ namespace IndieGame.Gameplay.Shop
                 // 理论上在 CanAddItem 的前置校验下不应失败；
                 // 这里保留防御式回滚，避免未来其他系统并发改背包导致玩家资金损失。
                 goldSystem.AddGold(totalCost, "ShopPurchaseRollback");
-
-                result.FailReason = ShopPurchaseFailReason.InventoryFull;
-                result.Message = "背包空间不足，交易已自动回滚退款。";
-                return result;
+                return BuildFailResult(ShopPurchaseFailReason.InventoryFull, maxPurchasable, "背包空间不足，交易已自动回滚退款。");
             }
 
-            // 正式写入运行时状态：
-            // 1) 有限库存才扣减；
-            // 2) 累计购买数始终增加（用于限购）。
+            // 正式写入运行时状态：有限库存才扣减；累计购买数始终增加（用于限购）。
             if (state.RemainingStock >= 0)
             {
                 state.RemainingStock = Mathf.Max(0, state.RemainingStock - quantity);
@@ -339,18 +313,58 @@ namespace IndieGame.Gameplay.Shop
                 TotalCost = totalCost
             });
 
-            result.Success = true;
-            result.FailReason = ShopPurchaseFailReason.None;
-            result.Message = "购买成功。";
-            result.PurchasedQuantity = quantity;
-            result.TotalCost = totalCost;
-            return result;
+            return new ShopPurchaseResult
+            {
+                Success = true,
+                FailReason = ShopPurchaseFailReason.None,
+                Message = "购买成功。",
+                MaxPurchasableAtRequest = maxPurchasable,
+                PurchasedQuantity = quantity,
+                TotalCost = totalCost
+            };
+        }
+
+        /// <summary>
+        /// 构造统一格式的失败结果。
+        /// </summary>
+        private static ShopPurchaseResult BuildFailResult(ShopPurchaseFailReason reason, int maxPurchasable, string message)
+        {
+            return new ShopPurchaseResult
+            {
+                Success = false,
+                FailReason = reason,
+                Message = message ?? string.Empty,
+                MaxPurchasableAtRequest = maxPurchasable,
+                PurchasedQuantity = 0,
+                TotalCost = 0
+            };
+        }
+
+        /// <summary>
+        /// 把校验失败原因映射到面向玩家的中文提示。
+        /// </summary>
+        private static string ResolveFailMessage(ShopPurchaseFailReason reason, int maxPurchasable)
+        {
+            switch (reason)
+            {
+                case ShopPurchaseFailReason.InvalidShop:           return "商店 ID 无效。";
+                case ShopPurchaseFailReason.InvalidEntry:          return "找不到对应商品条目。";
+                case ShopPurchaseFailReason.InvalidQuantity:       return "购买数量必须大于 0。";
+                case ShopPurchaseFailReason.NoStock:               return "当前条件下无法购买该商品。";
+                case ShopPurchaseFailReason.PurchaseLimitReached:  return "当前条件下无法购买该商品。";
+                case ShopPurchaseFailReason.InsufficientGold:      return "当前条件下无法购买该商品。";
+                case ShopPurchaseFailReason.InventoryFull:         return "当前条件下无法购买该商品。";
+                case ShopPurchaseFailReason.AmountExceedsCurrentMax:
+                    return $"超过可购买上限，当前最多可买 {maxPurchasable} 个。";
+                case ShopPurchaseFailReason.CostOverflow:          return "本次交易金额过大。";
+                default:                                           return string.Empty;
+            }
         }
 
         /// <summary>
         /// 保存运行时状态。
         /// </summary>
-        public object CaptureState()
+        public override object CaptureState()
         {
             EnsureInitialized();
 
@@ -385,7 +399,7 @@ namespace IndieGame.Gameplay.Shop
         /// - 新增条目能自动带默认值；
         /// - 已删除条目不会污染当前运行时数据。
         /// </summary>
-        public void RestoreState(object data)
+        public override void RestoreState(object data)
         {
             EnsureInitialized();
             ResetRuntimeStateToDefaults();
@@ -430,6 +444,7 @@ namespace IndieGame.Gameplay.Shop
 
         /// <summary>
         /// 数据库索引构建（List -> Dictionary）。
+        /// 商店主索引复用 DatabaseIndexer，每个商店内部条目再单独索引一次。
         /// </summary>
         private void RebuildStaticIndex()
         {
@@ -442,47 +457,22 @@ namespace IndieGame.Gameplay.Shop
                 return;
             }
 
-            for (int i = 0; i < shopDatabase.Shops.Count; i++)
+            // 复用通用索引器构建“ShopID -> ShopSO”
+            Dictionary<string, ShopSO> shopMap = DatabaseIndexer.BuildById(
+                shopDatabase.Shops,
+                shop => shop != null ? shop.ID : null,
+                "ShopSystem");
+
+            foreach (KeyValuePair<string, ShopSO> pair in shopMap)
             {
-                ShopSO shop = shopDatabase.Shops[i];
-                if (shop == null) continue;
-                if (string.IsNullOrWhiteSpace(shop.ID))
-                {
-                    DebugTools.LogWarning("[ShopSystem] Shop has empty ID, ignored.");
-                    continue;
-                }
+                _shopById.Add(pair.Key, pair.Value);
 
-                if (_shopById.ContainsKey(shop.ID))
-                {
-                    DebugTools.LogWarning($"[ShopSystem] Duplicate Shop ID ignored: {shop.ID}");
-                    continue;
-                }
+                Dictionary<string, ShopItemEntry> entryMap = DatabaseIndexer.BuildById(
+                    pair.Value.Entries,
+                    entry => (entry != null && entry.Item != null) ? entry.EntryID : null,
+                    $"ShopSystem:{pair.Key}");
 
-                _shopById.Add(shop.ID, shop);
-
-                Dictionary<string, ShopItemEntry> entryMap = new Dictionary<string, ShopItemEntry>(StringComparer.Ordinal);
-                _entryByShopId.Add(shop.ID, entryMap);
-
-                if (shop.Entries == null) continue;
-                for (int entryIndex = 0; entryIndex < shop.Entries.Count; entryIndex++)
-                {
-                    ShopItemEntry entry = shop.Entries[entryIndex];
-                    if (entry == null) continue;
-                    if (entry.Item == null) continue;
-                    if (string.IsNullOrWhiteSpace(entry.EntryID))
-                    {
-                        DebugTools.LogWarning($"[ShopSystem] Shop entry has empty ID. Shop={shop.ID}, Index={entryIndex}");
-                        continue;
-                    }
-
-                    if (entryMap.ContainsKey(entry.EntryID))
-                    {
-                        DebugTools.LogWarning($"[ShopSystem] Duplicate shop entry ignored. Shop={shop.ID}, EntryID={entry.EntryID}");
-                        continue;
-                    }
-
-                    entryMap.Add(entry.EntryID, entry);
-                }
+                _entryByShopId.Add(pair.Key, entryMap);
             }
         }
 
@@ -589,30 +579,6 @@ namespace IndieGame.Gameplay.Shop
             }
 
             return best;
-        }
-
-        /// <summary>
-        /// 确保已向 SaveManager 注册。
-        /// </summary>
-        private void EnsureSaveRegistration(bool forceSearch)
-        {
-            if (_isRegisteredToSaveManager) return;
-
-            _saveManager = ResolveSaveManager(forceSearch);
-            if (_saveManager == null) return;
-
-            _saveManager.Register(this);
-            _isRegisteredToSaveManager = true;
-        }
-
-        /// <summary>
-        /// 解析 SaveManager（避免硬依赖 Instance 触发日志）。
-        /// </summary>
-        private SaveManager ResolveSaveManager(bool forceSearch)
-        {
-            if (_saveManager != null) return _saveManager;
-            if (!forceSearch && _isRegisteredToSaveManager) return null;
-            return FindAnyObjectByType<SaveManager>();
         }
 
         /// <summary>

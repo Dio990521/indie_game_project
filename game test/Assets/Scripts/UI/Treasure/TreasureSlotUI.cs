@@ -2,6 +2,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using IndieGame.Gameplay.Treasure;
+using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Treasure
 {
@@ -45,15 +46,7 @@ namespace IndieGame.UI.Treasure
             if (nameLabel != null)
             {
                 nameLabel.text = string.Empty;
-                if (data.DisplayName != null)
-                {
-                    var handle = data.DisplayName.GetLocalizedStringAsync();
-                    handle.Completed += op =>
-                    {
-                        if (nameLabel != null)
-                            nameLabel.text = op.Result;
-                    };
-                }
+                LocalizedTextHelper.SetLocalizedAsync(nameLabel, data.DisplayName);
             }
 
             SetHighlighted(false);

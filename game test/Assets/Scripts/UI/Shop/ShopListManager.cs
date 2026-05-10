@@ -4,6 +4,7 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Shop;
+using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Shop
 {
@@ -11,8 +12,9 @@ namespace IndieGame.UI.Shop
     /// 商店界面左侧列表管理器（纯 C# 辅助类）：
     /// 职责：对象池管理、商品列表构建、条目索引、选中状态。
     /// 由 ShopUIController 在 Awake 中实例化并持有。
+    /// 通用集合维护逻辑（_activeSlots / _entryByKey / _entryOrder / ReleaseAll）已迁移至 BaseListManager。
     /// </summary>
-    internal class ShopListManager
+    internal class ShopListManager : BaseListManager<ShopListManager.ShopListEntry, ShopItemSlotUI>
     {
         // 列表条目 UI 适配模型：将 ShopSystem 数据映射到统一展示结构
         internal struct ShopListEntry
@@ -26,18 +28,10 @@ namespace IndieGame.UI.Shop
             public int UnitPrice;
         }
 
-        private GameObjectPool _slotPool;
         private ShopUIBinder _binder;
-
-        private readonly List<ShopItemSlotUI> _activeSlots = new List<ShopItemSlotUI>();
-        private readonly Dictionary<string, ShopListEntry> _entryByKey = new Dictionary<string, ShopListEntry>(StringComparer.Ordinal);
-        private readonly List<string> _entryOrder = new List<string>();
 
         // 避免每次重建都 new 的缓存
         private readonly List<ShopItemEntry> _shopEntryBuffer = new List<ShopItemEntry>();
-
-        public string SelectedEntryKey { get; private set; }
-        public IReadOnlyList<string> EntryOrder => _entryOrder;
 
         /// <summary>
         /// 初始化：创建对象池，必须在 Awake 中调用。
@@ -84,15 +78,6 @@ namespace IndieGame.UI.Shop
         }
 
         /// <summary>
-        /// 记录当前选中条目。
-        /// </summary>
-        public void Select(string entryKey)
-        {
-            if (_entryByKey.ContainsKey(entryKey))
-                SelectedEntryKey = entryKey;
-        }
-
-        /// <summary>
         /// 尝试获取当前选中条目数据。
         /// </summary>
         public bool TryGetSelectedEntry(out ShopListEntry entry)
@@ -101,12 +86,6 @@ namespace IndieGame.UI.Shop
             if (string.IsNullOrWhiteSpace(SelectedEntryKey)) return false;
             return _entryByKey.TryGetValue(SelectedEntryKey, out entry);
         }
-
-        /// <summary>
-        /// 尝试通过指定 key 获取条目数据。
-        /// </summary>
-        public bool TryGetEntry(string key, out ShopListEntry entry) =>
-            _entryByKey.TryGetValue(key, out entry);
 
         /// <summary>
         /// 在当前列表中查找指定 ShopEntryID 对应的 EntryKey。
@@ -124,32 +103,14 @@ namespace IndieGame.UI.Shop
             return string.Empty;
         }
 
-        /// <summary>
-        /// 回收所有列表项并清空索引。
-        /// </summary>
-        public void ReleaseAll()
-        {
-            for (int i = 0; i < _activeSlots.Count; i++)
-            {
-                if (_activeSlots[i] != null && _slotPool != null)
-                    _slotPool.Release(_activeSlots[i].gameObject);
-            }
-            _activeSlots.Clear();
-            _entryByKey.Clear();
-            _entryOrder.Clear();
-            SelectedEntryKey = string.Empty;
-        }
-
         // --- 私有方法 ---
 
         private void AddEntry(ShopListEntry entry)
         {
             ShopItemSlotUI slotUI = SpawnSlot(entry);
             if (slotUI == null) return;
-
-            _activeSlots.Add(slotUI);
-            _entryByKey[entry.EntryKey] = entry;
-            _entryOrder.Add(entry.EntryKey);
+            // 父类登记三件套（_activeSlots / _entryByKey / _entryOrder）
+            RegisterActiveSlot(entry.EntryKey, entry, slotUI);
         }
 
         private ShopItemSlotUI SpawnSlot(ShopListEntry entry)

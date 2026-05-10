@@ -16,7 +16,7 @@ namespace IndieGame.Gameplay.ActionPoint
     /// 3) 行为变化统一广播 ActionPointChangedEvent，UI 层解耦监听；
     /// 4) 接入 ISaveable，存档时保存当前点数与当前上限。
     /// </summary>
-    public class ActionPointSystem : MonoSingleton<ActionPointSystem>, ISaveable
+    public class ActionPointSystem : SaveableMonoSingleton<ActionPointSystem>
     {
         [Header("Config")]
         [Tooltip("初始行动点上限（未读档时生效）。")]
@@ -30,12 +30,9 @@ namespace IndieGame.Gameplay.ActionPoint
 
         // 是否已完成初始化，防止重复覆盖数值。
         private bool _isInitialized;
-        // 延迟缓存 SaveManager 引用，避免 Awake 顺序依赖。
-        private SaveManager _saveManager;
-        private bool _isRegisteredToSaveManager;
 
         /// <summary> 存档模块唯一标识。</summary>
-        public string SaveID => "ActionPointSystem";
+        public override string SaveID => "ActionPointSystem";
 
         /// <summary> 当前剩余行动点（只读）。</summary>
         public int CurrentActionPoints
@@ -64,20 +61,6 @@ namespace IndieGame.Gameplay.ActionPoint
 
             EnsureInitialized();
             EnsureSaveRegistration(forceSearch: true);
-        }
-
-        private void OnEnable()
-        {
-            EnsureSaveRegistration(forceSearch: false);
-        }
-
-        private void OnDisable()
-        {
-            if (_isRegisteredToSaveManager && _saveManager != null)
-            {
-                _saveManager.Unregister(this);
-            }
-            _isRegisteredToSaveManager = false;
         }
 
         // ──────────────────── 公开接口 ────────────────────
@@ -172,7 +155,7 @@ namespace IndieGame.Gameplay.ActionPoint
         /// <summary>
         /// 捕获存档状态。
         /// </summary>
-        public object CaptureState()
+        public override object CaptureState()
         {
             EnsureInitialized();
             return new ActionPointSaveState
@@ -185,7 +168,7 @@ namespace IndieGame.Gameplay.ActionPoint
         /// <summary>
         /// 从存档恢复状态。
         /// </summary>
-        public void RestoreState(object data)
+        public override void RestoreState(object data)
         {
             EnsureInitialized();
             if (!(data is ActionPointSaveState state)) return;
@@ -226,24 +209,6 @@ namespace IndieGame.Gameplay.ActionPoint
         private static string NormalizeReason(string reason, string fallback)
         {
             return string.IsNullOrWhiteSpace(reason) ? fallback : reason.Trim();
-        }
-
-        private void EnsureSaveRegistration(bool forceSearch)
-        {
-            if (_isRegisteredToSaveManager) return;
-
-            _saveManager = ResolveSaveManager(forceSearch);
-            if (_saveManager == null) return;
-
-            _saveManager.Register(this);
-            _isRegisteredToSaveManager = true;
-        }
-
-        private SaveManager ResolveSaveManager(bool forceSearch)
-        {
-            if (_saveManager != null) return _saveManager;
-            if (!forceSearch && _isRegisteredToSaveManager) return null;
-            return FindAnyObjectByType<SaveManager>();
         }
 
         /// <summary>

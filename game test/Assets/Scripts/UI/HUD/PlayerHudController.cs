@@ -19,7 +19,7 @@ namespace IndieGame.UI.Hud
     /// - 目前实现为：仅在 Exploration 模式且场景名不是 World 时显示；
     /// - Title / Board / Camp 模式统一隐藏。
     /// </summary>
-    public class PlayerHudController : MonoBehaviour
+    public class PlayerHudController : EventBusMonoBehaviour
     {
         [Header("View")]
         [SerializeField] private PlayerHudView view;
@@ -55,13 +55,18 @@ namespace IndieGame.UI.Hud
             }
         }
 
-        private void OnEnable()
+        protected override void Bind()
         {
-            EventBus.Subscribe<HealthChangedEvent>(HandleHealthChangedEvent);
-            EventBus.Subscribe<ExpChangedEvent>(HandleExpChangedEvent);
-            EventBus.Subscribe<GameModeChangedEvent>(HandleGameModeChangedEvent);
-            EventBus.Subscribe<DialogueStartedEvent>(HandleDialogueStartedEvent);
-            EventBus.Subscribe<DialogueEndedEvent>(HandleDialogueEndedEvent);
+            Subscribe<HealthChangedEvent>(HandleHealthChangedEvent);
+            Subscribe<ExpChangedEvent>(HandleExpChangedEvent);
+            Subscribe<GameModeChangedEvent>(HandleGameModeChangedEvent);
+            Subscribe<DialogueStartedEvent>(HandleDialogueStartedEvent);
+            Subscribe<DialogueEndedEvent>(HandleDialogueEndedEvent);
+        }
+
+        protected override void OnEnable()
+        {
+            base.OnEnable();
             SceneManager.sceneLoaded += HandleSceneLoaded;
 
             // 首次启用时执行一次可见性兜底判断：
@@ -71,13 +76,9 @@ namespace IndieGame.UI.Hud
             ApplyVisibility();
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
-            EventBus.Unsubscribe<HealthChangedEvent>(HandleHealthChangedEvent);
-            EventBus.Unsubscribe<ExpChangedEvent>(HandleExpChangedEvent);
-            EventBus.Unsubscribe<GameModeChangedEvent>(HandleGameModeChangedEvent);
-            EventBus.Unsubscribe<DialogueStartedEvent>(HandleDialogueStartedEvent);
-            EventBus.Unsubscribe<DialogueEndedEvent>(HandleDialogueEndedEvent);
+            base.OnDisable();
             SceneManager.sceneLoaded -= HandleSceneLoaded;
         }
 

@@ -22,7 +22,7 @@ namespace IndieGame.UI.Shop
     ///
     /// ESC 优先级：先关数量弹窗，再关整个商店界面。
     /// </summary>
-    public class ShopUIController : MonoBehaviour
+    public class ShopUIController : EventBusMonoBehaviour
     {
         [Header("References")]
         [SerializeField] private ShopUIBinder binder;
@@ -67,17 +67,19 @@ namespace IndieGame.UI.Shop
             UnhookButtons();
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
-            SubscribeEvents();
+            // 父类调用 Bind() 自动订阅所有 EventBus 事件
+            base.OnEnable();
             SubscribeInput();
             SetVisible(false);
             _quantityPopup.Close();
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
-            UnsubscribeEvents();
+            // 父类自动取消订阅所有 EventBus 事件
+            base.OnDisable();
             UnsubscribeInput();
             _listManager.ReleaseAll();
             ClearSelectionAndDetail();
@@ -346,22 +348,17 @@ namespace IndieGame.UI.Shop
 
         // --- 订阅管理 ---
 
-        private void SubscribeEvents()
+        /// <summary>
+        /// EventBusMonoBehaviour 入口：集中注册所有 EventBus 事件。
+        /// 反注册由父类在 OnDisable 自动完成。
+        /// </summary>
+        protected override void Bind()
         {
-            EventBus.Subscribe<OpenShopUIRequestEvent>(HandleOpenShopUIRequest);
-            EventBus.Subscribe<CloseShopUIRequestEvent>(HandleCloseShopUIRequest);
-            EventBus.Subscribe<ShopItemSlotClickedEvent>(HandleShopItemSlotClicked);
-            EventBus.Subscribe<GoldChangedEvent>(HandleGoldChangedEvent);
-            EventBus.Subscribe<ShopPurchaseCompletedEvent>(HandleShopPurchaseCompletedEvent);
-        }
-
-        private void UnsubscribeEvents()
-        {
-            EventBus.Unsubscribe<OpenShopUIRequestEvent>(HandleOpenShopUIRequest);
-            EventBus.Unsubscribe<CloseShopUIRequestEvent>(HandleCloseShopUIRequest);
-            EventBus.Unsubscribe<ShopItemSlotClickedEvent>(HandleShopItemSlotClicked);
-            EventBus.Unsubscribe<GoldChangedEvent>(HandleGoldChangedEvent);
-            EventBus.Unsubscribe<ShopPurchaseCompletedEvent>(HandleShopPurchaseCompletedEvent);
+            Subscribe<OpenShopUIRequestEvent>(HandleOpenShopUIRequest);
+            Subscribe<CloseShopUIRequestEvent>(HandleCloseShopUIRequest);
+            Subscribe<ShopItemSlotClickedEvent>(HandleShopItemSlotClicked);
+            Subscribe<GoldChangedEvent>(HandleGoldChangedEvent);
+            Subscribe<ShopPurchaseCompletedEvent>(HandleShopPurchaseCompletedEvent);
         }
 
         private void SubscribeInput()

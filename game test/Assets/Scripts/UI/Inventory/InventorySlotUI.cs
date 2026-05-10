@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using TMPro;
 using IndieGame.Gameplay.Inventory;
+using IndieGame.UI.Common;
 using UnityEngine.Localization;
 
 namespace IndieGame.UI.Inventory
@@ -11,7 +12,7 @@ namespace IndieGame.UI.Inventory
     /// 背包槽位 UI：
     /// 负责显示物品名称，并在点击时触发回调。
     /// </summary>
-    public class InventorySlotUI : MonoBehaviour, IPointerClickHandler
+    public class InventorySlotUI : BaseSlotUI
     {
         // 物品名称文本
         public TMP_Text nameLabel;
@@ -46,7 +47,7 @@ namespace IndieGame.UI.Inventory
                     if (countLabel != null) countLabel.text = string.Empty;
                     return;
                 }
-                // 异步读取本地化“空”文本
+                // 异步读取本地化“空”文本（使用 helper，此处保留 _slot != slot 的绑定校验防止异步漂移）
                 var emptyHandle = emptyLabel.GetLocalizedStringAsync();
                 emptyHandle.Completed += op =>
                 {
@@ -85,7 +86,7 @@ namespace IndieGame.UI.Inventory
             }
         }
 
-        public void OnPointerClick(PointerEventData eventData)
+        protected override void HandleClick(PointerEventData eventData)
         {
             if (_slot == null || _slot.Item == null) return;
             // 点击后通知外部处理物品逻辑

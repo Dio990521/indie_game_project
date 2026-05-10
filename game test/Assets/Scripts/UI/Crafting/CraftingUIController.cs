@@ -17,7 +17,7 @@ namespace IndieGame.UI.Crafting
     /// - CraftingUIController（本类）：协调上述两者，处理生命周期与事件路由。
     /// - CraftingSystem：只负责规则与数据（扣料、产出、历史、存档）。
     /// </summary>
-    public class CraftingUIController : MonoBehaviour
+    public class CraftingUIController : EventBusMonoBehaviour
     {
         /// <summary>
         /// Tab 类型：Prototype 显示未消耗蓝图，Replication 显示历史记录。
@@ -75,17 +75,19 @@ namespace IndieGame.UI.Crafting
             if (binder.ReplicationTabButton != null) binder.ReplicationTabButton.onClick.RemoveListener(HandleReplicationTabClicked);
         }
 
-        private void OnEnable()
+        protected override void OnEnable()
         {
-            SubscribeEvents();
+            // 父类调用 Bind() 自动订阅所有 EventBus 事件
+            base.OnEnable();
             SubscribeInput();
             // 重要：默认隐藏，等待 OpenCraftingUIEvent 再显示
             SetVisible(false);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
-            UnsubscribeEvents();
+            // 父类自动取消订阅所有 EventBus 事件
+            base.OnDisable();
             UnsubscribeInput();
             _listManager.ReleaseAll();
             _detailPanel.ReleaseAllRequirementSlots();
@@ -273,26 +275,19 @@ namespace IndieGame.UI.Crafting
 
         // --- 订阅管理 ---
 
-        private void SubscribeEvents()
+        /// <summary>
+        /// EventBusMonoBehaviour 入口：集中注册所有 EventBus 事件。
+        /// 反注册由父类在 OnDisable 自动完成。
+        /// </summary>
+        protected override void Bind()
         {
-            EventBus.Subscribe<OnInventoryChanged>(HandleInventoryChanged);
-            EventBus.Subscribe<OnBlueprintConsumed>(HandleBlueprintConsumed);
-            EventBus.Subscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
-            EventBus.Subscribe<CraftBlueprintSlotClickedEvent>(HandleBlueprintSlotClicked);
-            EventBus.Subscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
-            EventBus.Subscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
-            EventBus.Subscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
-        }
-
-        private void UnsubscribeEvents()
-        {
-            EventBus.Unsubscribe<OnInventoryChanged>(HandleInventoryChanged);
-            EventBus.Unsubscribe<OnBlueprintConsumed>(HandleBlueprintConsumed);
-            EventBus.Unsubscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
-            EventBus.Unsubscribe<CraftBlueprintSlotClickedEvent>(HandleBlueprintSlotClicked);
-            EventBus.Unsubscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
-            EventBus.Unsubscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
-            EventBus.Unsubscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
+            Subscribe<OnInventoryChanged>(HandleInventoryChanged);
+            Subscribe<OnBlueprintConsumed>(HandleBlueprintConsumed);
+            Subscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
+            Subscribe<CraftBlueprintSlotClickedEvent>(HandleBlueprintSlotClicked);
+            Subscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
+            Subscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
+            Subscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
         }
 
         private void SubscribeInput()

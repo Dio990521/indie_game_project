@@ -19,7 +19,7 @@ namespace IndieGame.Gameplay.Economy
     /// - UI 或商店系统只通过公开接口和 EventBus 与它交互；
     /// - 保持简洁，后续再扩展多币种、交易日志、统计分析。
     /// </summary>
-    public class GoldSystem : MonoSingleton<GoldSystem>, ISaveable
+    public class GoldSystem : SaveableMonoSingleton<GoldSystem>
     {
         [Header("Config")]
         [Tooltip("首次初始化时的默认金币。仅在没有读档恢复时生效。")]
@@ -31,16 +31,12 @@ namespace IndieGame.Gameplay.Economy
 
         // 是否已执行初始化，避免重复初始化导致数值覆盖。
         private bool _isInitialized;
-        // 存档系统引用缓存（延迟查找，减少重复搜索开销）。
-        private SaveManager _saveManager;
-        // 是否已经成功向 SaveManager 注册。
-        private bool _isRegisteredToSaveManager;
 
         /// <summary>
         /// 存档模块唯一标识：
         /// SaveManager 通过该值把存档中的条目映射回本系统。
         /// </summary>
-        public string SaveID => "GoldSystem";
+        public override string SaveID => "GoldSystem";
 
         /// <summary>
         /// 当前金币只读访问器：
@@ -64,22 +60,6 @@ namespace IndieGame.Gameplay.Economy
             EnsureInitialized();
             // Awake 里强制尝试一次注册，保证系统在最早阶段就可参与存档。
             EnsureSaveRegistration(forceSearch: true);
-        }
-
-        private void OnEnable()
-        {
-            // 生命周期恢复时再尝试一次注册（幂等），适配脚本重载/对象重启。
-            EnsureSaveRegistration(forceSearch: false);
-        }
-
-        private void OnDisable()
-        {
-            // 对象不可用时注销注册，避免 SaveManager 持有失效引用。
-            if (_isRegisteredToSaveManager && _saveManager != null)
-            {
-                _saveManager.Unregister(this);
-            }
-            _isRegisteredToSaveManager = false;
         }
 
         /// <summary>
@@ -135,7 +115,7 @@ namespace IndieGame.Gameplay.Economy
         /// <summary>
         /// SaveManager 调用：捕获金币状态。
         /// </summary>
-        public object CaptureState()
+        public override object CaptureState()
         {
             EnsureInitialized();
             return new GoldSaveState
@@ -147,7 +127,7 @@ namespace IndieGame.Gameplay.Economy
         /// <summary>
         /// SaveManager 调用：恢复金币状态。
         /// </summary>
-        public void RestoreState(object data)
+        public override void RestoreState(object data)
         {
             EnsureInitialized();
             if (!(data is GoldSaveState state)) return;
@@ -199,31 +179,6 @@ namespace IndieGame.Gameplay.Economy
                 return reason.Trim();
             }
             return fallback;
-        }
-
-        /// <summary>
-        /// 确保已向 SaveManager 注册。
-        /// </summary>
-        private void EnsureSaveRegistration(bool forceSearch)
-        {
-            if (_isRegisteredToSaveManager) return;
-
-            _saveManager = ResolveSaveManager(forceSearch);
-            if (_saveManager == null) return;
-
-            _saveManager.Register(this);
-            _isRegisteredToSaveManager = true;
-        }
-
-        /// <summary>
-        /// 查找 SaveManager：
-        /// 使用场景查找避免对 SaveManager.Instance 的硬依赖日志。
-        /// </summary>
-        private SaveManager ResolveSaveManager(bool forceSearch)
-        {
-            if (_saveManager != null) return _saveManager;
-            if (!forceSearch && _isRegisteredToSaveManager) return null;
-            return FindAnyObjectByType<SaveManager>();
         }
 
         /// <summary>

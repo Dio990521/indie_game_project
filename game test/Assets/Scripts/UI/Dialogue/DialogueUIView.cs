@@ -18,7 +18,7 @@ namespace IndieGame.UI.Dialogue
     /// - View 只处理“怎么显示”，不处理“何时切下一句”等业务决策。
     /// - 业务决策由 DialogueManager 统一管理。
     /// </summary>
-    public class DialogueUIView : MonoBehaviour
+    public class DialogueUIView : EventBusMonoBehaviour
     {
         [Header("Binder")]
         [SerializeField] private DialogueUIBinder binder;
@@ -63,23 +63,21 @@ namespace IndieGame.UI.Dialogue
             _container.SetActive(false);
         }
 
-        private void OnEnable()
+        protected override void Bind()
         {
-            EventBus.Subscribe<DialogueShowRequestEvent>(HandleShowRequest);
-            EventBus.Subscribe<DialogueHideRequestEvent>(HandleHideRequest);
-            EventBus.Subscribe<DialogueSpeakerChangedEvent>(HandleSpeakerChanged);
-            EventBus.Subscribe<DialogueTypewriterRequestEvent>(HandleTypewriterRequest);
-            EventBus.Subscribe<DialogueSkipTypewriterRequestEvent>(HandleSkipTypewriterRequest);
+            Subscribe<DialogueShowRequestEvent>(HandleShowRequest);
+            Subscribe<DialogueHideRequestEvent>(HandleHideRequest);
+            Subscribe<DialogueSpeakerChangedEvent>(HandleSpeakerChanged);
+            Subscribe<DialogueTypewriterRequestEvent>(HandleTypewriterRequest);
+            Subscribe<DialogueSkipTypewriterRequestEvent>(HandleSkipTypewriterRequest);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
-            EventBus.Unsubscribe<DialogueShowRequestEvent>(HandleShowRequest);
-            EventBus.Unsubscribe<DialogueHideRequestEvent>(HandleHideRequest);
-            EventBus.Unsubscribe<DialogueSpeakerChangedEvent>(HandleSpeakerChanged);
-            EventBus.Unsubscribe<DialogueTypewriterRequestEvent>(HandleTypewriterRequest);
-            EventBus.Unsubscribe<DialogueSkipTypewriterRequestEvent>(HandleSkipTypewriterRequest);
+            // 父类先做事件取消订阅
+            base.OnDisable();
 
+            // 视图自身资源清理
             _canvasGroup?.DOKill();
             StopTypewriterCoroutineOnly();
             _isTypewriterRunning = false;

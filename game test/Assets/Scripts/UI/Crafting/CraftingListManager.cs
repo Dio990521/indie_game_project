@@ -4,6 +4,7 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Crafting;
+using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Crafting
 {
@@ -11,8 +12,9 @@ namespace IndieGame.UI.Crafting
     /// 打造界面左侧列表管理器（纯 C# 辅助类，无 MonoBehaviour 生命周期）：
     /// 职责：对象池管理、列表构建（原型/复现两种数据源）、条目索引、选中状态。
     /// 由 CraftingUIController 在 Awake 中实例化并持有。
+    /// 通用集合维护逻辑（_activeSlots / _entryByKey / _entryOrder / ReleaseAll）已迁移至 BaseListManager。
     /// </summary>
-    internal class CraftingListManager
+    internal class CraftingListManager : BaseListManager<CraftingListManager.CraftListEntry, BlueprintSlotUI>
     {
         // 列表条目 UI 适配模型：将不同数据源统一映射到同一 UI 槽位
         internal struct CraftListEntry
@@ -23,21 +25,15 @@ namespace IndieGame.UI.Crafting
             public string SuggestedName;
         }
 
-        private GameObjectPool _slotPool;
         private CraftUIBinder _binder;
 
-        private readonly List<BlueprintSlotUI> _activeSlots = new List<BlueprintSlotUI>();
+        // 单独维护“EntryKey -> Slot”，用于按蓝图 ID 精确移除单个条目
         private readonly Dictionary<string, BlueprintSlotUI> _slotByEntryKey = new Dictionary<string, BlueprintSlotUI>(StringComparer.Ordinal);
-        private readonly Dictionary<string, CraftListEntry> _entryByKey = new Dictionary<string, CraftListEntry>(StringComparer.Ordinal);
-        private readonly List<string> _entryOrder = new List<string>();
 
         // 避免每次重建列表都 new 的临时缓存
         private readonly List<BlueprintRecord> _recordsCache = new List<BlueprintRecord>();
         private readonly List<CraftHistoryEntry> _historyCache = new List<CraftHistoryEntry>();
         private readonly HashSet<string> _dedupeSet = new HashSet<string>(StringComparer.Ordinal);
-
-        public string SelectedEntryKey { get; private set; }
-        public IReadOnlyList<string> EntryOrder => _entryOrder;
 
         /// <summary>
         /// 初始化：创建对象池，必须在 Awake 中调用。
@@ -123,21 +119,6 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 记录当前选中条目的 key。
-        /// </summary>
-        public void Select(string entryKey)
-        {
-            if (_entryByKey.ContainsKey(entryKey))
-                SelectedEntryKey = entryKey;
-        }
-
-        /// <summary>
-        /// 尝试获取指定 key 的条目数据。
-        /// </summary>
-        public bool TryGetEntry(string key, out CraftListEntry entry) =>
-            _entryByKey.TryGetValue(key, out entry);
-
-        /// <summary>
         /// 获取当前选中条目的蓝图 ID。
         /// </summary>
         public string GetSelectedBlueprintId()
@@ -176,20 +157,13 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 回收所有列表项并清空索引。
+        /// 回收所有列表项并清空索引：
+        /// 父类负责通用集合清理，本子类追加清理 _slotByEntryKey 索引。
         /// </summary>
-        public void ReleaseAll()
+        public override void ReleaseAll()
         {
-            for (int i = 0; i < _activeSlots.Count; i++)
-            {
-                if (_activeSlots[i] != null && _slotPool != null)
-                    _slotPool.Release(_activeSlots[i].gameObject);
-            }
-            _activeSlots.Clear();
+            base.ReleaseAll();
             _slotByEntryKey.Clear();
-            _entryByKey.Clear();
-            _entryOrder.Clear();
-            SelectedEntryKey = null;
         }
 
         // --- 私有方法 ---
@@ -210,10 +184,10 @@ namespace IndieGame.UI.Crafting
             }
 
             slotUI.Setup(entry.EntryKey, entry.BlueprintID, icon, entry.DisplayName);
-            _activeSlots.Add(slotUI);
+            // 父类登记三件套（_activeSlots / _entryByKey / _entryOrder）
+            RegisterActiveSlot(entry.EntryKey, entry, slotUI);
+            // 本子类额外维护按 key 反查 Slot 的索引
             _slotByEntryKey[entry.EntryKey] = slotUI;
-            _entryByKey[entry.EntryKey] = entry;
-            _entryOrder.Add(entry.EntryKey);
         }
 
         private void RemoveEntry(string key)

@@ -339,6 +339,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         /// <summary>
         /// 协程：处理一段路径走完后的事务（步数扣除、效果触发、循环推进）。
+        /// 主流程已拆分为多个 ApplyXxx / ProcessXxx 子方法，提升可读性。
         /// </summary>
         private IEnumerator HandleSegmentCompleted(MapWaypoint node)
         {
@@ -351,107 +352,23 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 消耗一步
             _stepsRemaining--;
 
-            // [扭曲格] 强制滑行仅在最终落点时生效，路过时丢弃
-            if (_fx.ForcedNextNodeId >= 0)
-            {
-                if (isFinalStep)
-                {
-                    ComboMoveSystem.IncrementCombo(); // 扭曲格触发强制滑行，进入连锁
-                    // 最终落点：补充1步，方向锁留给 AdvanceToNextStep 读取
-                    if (_stepsRemaining <= 0) _stepsRemaining = 1;
-                }
-                else
-                {
-                    // 路过：丢弃强制滑行（分叉过滤仍有效）
-                    _fx.ForcedNextNodeId = -1;
-                }
-            }
+            // 各类格子状态效果（不涉及 yield 的部分）按顺序处理
+            ApplyForcedNextEffect(isFinalStep);
+            ApplyExtraStepsEffect();
+            ApplyDirectionalStepsEffect(isFinalStep);
 
-            // 消费格子请求的额外步数（前进格 / 后退格写入）
-            if (_fx.ExtraSteps != 0)
-            {
-                int extra      = _fx.ExtraSteps;
-                _fx.ExtraSteps = 0;
-                ComboMoveSystem.IncrementCombo(); // 前进/后退格触发额外位移，进入连锁
-                if (extra > 0)
-                {
-                    // 前进格：追加步数，自然向前继续移动
-                    _stepsRemaining += extra;
-                }
-                else
-                {
-                    // 后退格：重置为向后步数，然后通过原地掉头实现方向反转
-                    _stepsRemaining = -extra;
-                    if (IsAtDeadEnd(_activeEntity))
-                    {
-                        // 死胡同节点：正向出口即来路，沿用首步掉头机制原路返回
-                        _allowFirstStepUTurn = true;
-                    }
-                    else
-                    {
-                        // 普通节点：原地掉头，使 GetValidNextNodes 自然返回反向路径
-                        _activeEntity.ReverseDirection();
-                    }
-                }
-            }
-
-            // 消费方向格请求（首步强制方向 + 指定步数，仅最终落点生效；路过时丢弃）
-            if (_fx.DirectionalSteps > 0)
-            {
-                if (isFinalStep)
-                {
-                    ComboMoveSystem.IncrementCombo(); // 方向格触发强制移动，进入连锁
-                    _stepsRemaining      = _fx.DirectionalSteps;
-                    _fx.ForcedNextNodeId = _fx.DirectionalNodeId;
-                }
-                _fx.DirectionalSteps  = 0;
-                _fx.DirectionalNodeId = -1;
-            }
-
-            // [人体大炮] 弹射仅在最终落点生效；路过时丢弃
-            // 使用 while 循环支持连续弹射（落点也是大炮格时继续触发）
+            // [人体大炮] 涉及协程 + 链式触发，单独抽出处理；返回 true 表示流程已自行结束
             if (_fx.CannonLaunch && isFinalStep)
             {
-                while (_fx.CannonLaunch)
-                {
-                    _fx.CannonLaunch = false;
-                    ComboMoveSystem.IncrementCombo(); // 大炮每次弹射计一次连锁
-                    yield return DoCannonLaunch();
-                }
-                // 大炮落点可能触发了其他格子效果，依次检查并处理
-                if (_fx.Teleport && !_isTeleporting)
-                {
-                    _fx.Teleport   = false;
-                    _isTeleporting = true;
-                    ComboMoveSystem.IncrementCombo(); // 大炮落点为传送格，再次连锁
-                    yield return DoTeleport();
-                    _isTeleporting = false;
-                    FinishMove();
-                    yield break;
-                }
-                if (_fx.DirectionalSteps > 0)
-                {
-                    ComboMoveSystem.IncrementCombo(); // 大炮落点为方向格，再次连锁
-                    _stepsRemaining       = _fx.DirectionalSteps;
-                    _fx.ForcedNextNodeId  = _fx.DirectionalNodeId;
-                    _fx.DirectionalSteps  = 0;
-                    _fx.DirectionalNodeId = -1;
-                    AdvanceToNextStep();
-                    yield break;
-                }
-                FinishMove();
+                yield return ProcessCannonChainCoroutine();
                 yield break;
             }
             _fx.CannonLaunch = false; // 路过时丢弃
 
-            // [传送格] 传送仅在最终落点生效；路过或已在传送中时丢弃（不连锁）
+            // [传送格] 仅在最终落点生效
             if (_fx.Teleport && isFinalStep && !_isTeleporting)
             {
-                _fx.Teleport   = false;
-                _isTeleporting = true;
-                ComboMoveSystem.IncrementCombo(); // 传送格触发传送，进入连锁
-                yield return DoTeleport();
-                _isTeleporting = false;
+                yield return ExecuteTeleportRoutine();
                 FinishMove();
                 yield break;
             }
@@ -465,6 +382,130 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             // 还没走完，继续寻找下一个目标节点
             AdvanceToNextStep();
+        }
+
+        /// <summary>
+        /// [扭曲格] 强制滑行仅在最终落点时生效，路过时丢弃。
+        /// </summary>
+        private void ApplyForcedNextEffect(bool isFinalStep)
+        {
+            if (_fx.ForcedNextNodeId < 0) return;
+
+            if (isFinalStep)
+            {
+                ComboMoveSystem.IncrementCombo(); // 扭曲格触发强制滑行，进入连锁
+                // 最终落点：补充1步，方向锁留给 AdvanceToNextStep 读取
+                if (_stepsRemaining <= 0) _stepsRemaining = 1;
+            }
+            else
+            {
+                // 路过：丢弃强制滑行（分叉过滤仍有效）
+                _fx.ForcedNextNodeId = -1;
+            }
+        }
+
+        /// <summary>
+        /// 消费格子请求的额外步数（前进格 / 后退格写入）。
+        /// </summary>
+        private void ApplyExtraStepsEffect()
+        {
+            if (_fx.ExtraSteps == 0) return;
+
+            int extra      = _fx.ExtraSteps;
+            _fx.ExtraSteps = 0;
+            ComboMoveSystem.IncrementCombo(); // 前进/后退格触发额外位移，进入连锁
+
+            if (extra > 0)
+            {
+                // 前进格：追加步数，自然向前继续移动
+                _stepsRemaining += extra;
+            }
+            else
+            {
+                // 后退格：重置为向后步数，然后通过原地掉头实现方向反转
+                _stepsRemaining = -extra;
+                if (IsAtDeadEnd(_activeEntity))
+                {
+                    // 死胡同节点：正向出口即来路，沿用首步掉头机制原路返回
+                    _allowFirstStepUTurn = true;
+                }
+                else
+                {
+                    // 普通节点：原地掉头，使 GetValidNextNodes 自然返回反向路径
+                    _activeEntity.ReverseDirection();
+                }
+            }
+        }
+
+        /// <summary>
+        /// 消费方向格请求（首步强制方向 + 指定步数，仅最终落点生效；路过时丢弃）。
+        /// </summary>
+        private void ApplyDirectionalStepsEffect(bool isFinalStep)
+        {
+            if (_fx.DirectionalSteps <= 0) return;
+
+            if (isFinalStep)
+            {
+                ComboMoveSystem.IncrementCombo(); // 方向格触发强制移动，进入连锁
+                _stepsRemaining      = _fx.DirectionalSteps;
+                _fx.ForcedNextNodeId = _fx.DirectionalNodeId;
+            }
+            _fx.DirectionalSteps  = 0;
+            _fx.DirectionalNodeId = -1;
+        }
+
+        /// <summary>
+        /// [人体大炮] 弹射协程：连续弹射 + 落点二次触发的格子效果（传送/方向格）。
+        /// 该协程负责自身的流程终止（FinishMove / AdvanceToNextStep），
+        /// 调用方在调用后应直接 yield break。
+        /// </summary>
+        private IEnumerator ProcessCannonChainCoroutine()
+        {
+            // 使用 while 循环支持连续弹射（落点也是大炮格时继续触发）
+            while (_fx.CannonLaunch)
+            {
+                _fx.CannonLaunch = false;
+                ComboMoveSystem.IncrementCombo(); // 大炮每次弹射计一次连锁
+                yield return DoCannonLaunch();
+            }
+
+            // 大炮落点可能触发了其他格子效果，依次检查并处理
+            if (_fx.Teleport && !_isTeleporting)
+            {
+                _fx.Teleport   = false;
+                _isTeleporting = true;
+                ComboMoveSystem.IncrementCombo(); // 大炮落点为传送格，再次连锁
+                yield return DoTeleport();
+                _isTeleporting = false;
+                FinishMove();
+                yield break;
+            }
+
+            if (_fx.DirectionalSteps > 0)
+            {
+                ComboMoveSystem.IncrementCombo(); // 大炮落点为方向格，再次连锁
+                _stepsRemaining       = _fx.DirectionalSteps;
+                _fx.ForcedNextNodeId  = _fx.DirectionalNodeId;
+                _fx.DirectionalSteps  = 0;
+                _fx.DirectionalNodeId = -1;
+                AdvanceToNextStep();
+                yield break;
+            }
+
+            FinishMove();
+        }
+
+        /// <summary>
+        /// [传送格] 执行单次传送：标记 _fx.Teleport 已消费，做一次 ComboMove 计数，并执行传送动画。
+        /// 调用方负责后续的 FinishMove。
+        /// </summary>
+        private IEnumerator ExecuteTeleportRoutine()
+        {
+            _fx.Teleport   = false;
+            _isTeleporting = true;
+            ComboMoveSystem.IncrementCombo(); // 传送格触发传送，进入连锁
+            yield return DoTeleport();
+            _isTeleporting = false;
         }
 
         /// <summary>

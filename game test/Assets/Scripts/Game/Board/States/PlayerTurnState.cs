@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
@@ -19,13 +21,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private BoardActionMenuView _menu;
         private BoardGameManager _context;
 
-        // 缓存事件委托，确保订阅与取消订阅的是同一个方法引用，防止内存泄漏
-        private System.Action<BoardRollDiceRequestedEvent> _onRollDice;
-        private System.Action _onInventoryOpened;
-        private System.Action _onInventoryClosed;
-        private System.Action<BoardTreasureMenuRequestedEvent> _onBoardTreasureMenuRequested;
-        private System.Action<TreasureItemSelectedEvent> _onTreasureSelected;
-        private System.Action<TreasureMenuCancelledEvent> _onTreasureCancelled;
+        // 收集本状态期间所有的反订阅闭包，OnExit 时统一执行，避免遗漏单条 Unsubscribe。
+        // 该模式与 EventBusMonoBehaviour 的设计一致，只是状态机不能直接继承 MonoBehaviour 基类，故在此本地实现。
+        private readonly List<Action> _eventUnsubscribers = new List<Action>();
 
         /// <summary>
         /// 进入该状态时执行：初始化 UI 菜单并绑定相关输入事件。
@@ -52,28 +50,35 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             }
 
             // 绑定掷骰子事件：由 UI 通过 EventBus 广播
-            _onRollDice = _ => OnInteract(_context);
-            EventBus.Subscribe(_onRollDice);
+            SubscribeEvent<BoardRollDiceRequestedEvent>(_ => OnInteract(_context));
 
             // 2. 界面互斥逻辑：监听背包系统的状态切换。
             // 当玩家在回合内打开背包查看道具时，棋盘操作菜单应当暂时隐藏，避免视觉叠层混乱。
-            _onInventoryOpened = () => HandleInventoryOpened(context);
-            _onInventoryClosed = () => HandleInventoryClosed(context);
-
-            InventoryManager.OnInventoryOpened += _onInventoryOpened;
-            InventoryManager.OnInventoryClosed += _onInventoryClosed;
+            Action onInventoryOpened = () => HandleInventoryOpened(context);
+            Action onInventoryClosed = () => HandleInventoryClosed(context);
+            InventoryManager.OnInventoryOpened += onInventoryOpened;
+            InventoryManager.OnInventoryClosed += onInventoryClosed;
+            _eventUnsubscribers.Add(() => InventoryManager.OnInventoryOpened -= onInventoryOpened);
+            _eventUnsubscribers.Add(() => InventoryManager.OnInventoryClosed -= onInventoryClosed);
 
             // 订阅宝具菜单相关事件：
             // - BoardTreasureMenuRequested：操作菜单点击"宝具"时触发，由此处直接调用 TreasureMenuView.Show()
             //   集中在 PlayerTurnState 处理可提供 UIManager 未配置时的兜底回退逻辑
             // - TreasureItemSelected：玩家在宝具菜单中确认选择，切换到对应宝具激活状态
             // - TreasureMenuCancelled：玩家取消宝具菜单，重新显示操作菜单
-            _onBoardTreasureMenuRequested = HandleBoardTreasureMenuRequested;
-            _onTreasureSelected = HandleTreasureSelected;
-            _onTreasureCancelled = _ => HandleTreasureCancelled();
-            EventBus.Subscribe(_onBoardTreasureMenuRequested);
-            EventBus.Subscribe(_onTreasureSelected);
-            EventBus.Subscribe(_onTreasureCancelled);
+            SubscribeEvent<BoardTreasureMenuRequestedEvent>(HandleBoardTreasureMenuRequested);
+            SubscribeEvent<TreasureItemSelectedEvent>(HandleTreasureSelected);
+            SubscribeEvent<TreasureMenuCancelledEvent>(_ => HandleTreasureCancelled());
+        }
+
+        /// <summary>
+        /// 本地辅助：订阅 EventBus 事件并自动登记反订阅闭包，确保 OnExit 一次性清理。
+        /// </summary>
+        private void SubscribeEvent<T>(Action<T> handler)
+        {
+            if (handler == null) return;
+            EventBus.Subscribe(handler);
+            _eventUnsubscribers.Add(() => EventBus.Unsubscribe(handler));
         }
 
         /// <summary>
@@ -82,13 +87,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         /// </summary>
         public override void OnExit(BoardGameManager context)
         {
-            // 注销背包相关的全局事件
-            if (_onInventoryOpened != null) InventoryManager.OnInventoryOpened -= _onInventoryOpened;
-            if (_onInventoryClosed != null) InventoryManager.OnInventoryClosed -= _onInventoryClosed;
-            if (_onRollDice != null) EventBus.Unsubscribe(_onRollDice);
-            if (_onBoardTreasureMenuRequested != null) EventBus.Unsubscribe(_onBoardTreasureMenuRequested);
-            if (_onTreasureSelected != null) EventBus.Unsubscribe(_onTreasureSelected);
-            if (_onTreasureCancelled != null) EventBus.Unsubscribe(_onTreasureCancelled);
+            // 一次性执行所有反订阅闭包，避免逐个 Unsubscribe 易遗漏
+            for (int i = 0; i < _eventUnsubscribers.Count; i++) _eventUnsubscribers[i]();
+            _eventUnsubscribers.Clear();
 
             if (_menu != null)
             {
@@ -96,13 +97,6 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 _menu.Hide();
             }
 
-            // 清空委托引用
-            _onRollDice = null;
-            _onInventoryOpened = null;
-            _onInventoryClosed = null;
-            _onBoardTreasureMenuRequested = null;
-            _onTreasureSelected = null;
-            _onTreasureCancelled = null;
             _context = null;
         }
 
@@ -129,7 +123,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             // --- 核心游戏逻辑：掷骰子 ---
             // 随机生成 1 到 6 之间的点数
-            int steps = Random.Range(1, 7);
+            int steps = UnityEngine.Random.Range(1, 7);
             DebugTools.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
 
             // 切换状态机：进入“移动状态”，并将计算出的步数传递过去

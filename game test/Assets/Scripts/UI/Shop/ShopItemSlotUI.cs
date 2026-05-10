@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using IndieGame.Core;
+using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Shop
 {
@@ -15,7 +16,7 @@ namespace IndieGame.UI.Shop
     /// - 不使用 Action 回调；
     /// - 统一通过 EventBus 广播 ShopItemSlotClickedEvent。
     /// </summary>
-    public class ShopItemSlotUI : MonoBehaviour, IPointerClickHandler
+    public class ShopItemSlotUI : BaseSlotUI
     {
         [Header("UI")]
         [SerializeField] private Image iconImage;
@@ -37,16 +38,8 @@ namespace IndieGame.UI.Shop
             _shopId = string.IsNullOrWhiteSpace(shopId) ? string.Empty : shopId;
             _shopEntryId = string.IsNullOrWhiteSpace(shopEntryId) ? string.Empty : shopEntryId;
 
-            if (iconImage != null)
-            {
-                iconImage.sprite = icon;
-                iconImage.enabled = iconImage.sprite != null;
-            }
-
-            if (nameText != null)
-            {
-                nameText.text = string.IsNullOrWhiteSpace(displayName) ? "Unknown Item" : displayName;
-            }
+            SetIcon(iconImage, icon);
+            SetName(nameText, displayName, "Unknown Item");
 
             if (priceText != null)
             {
@@ -58,7 +51,7 @@ namespace IndieGame.UI.Shop
         /// 点击整个 Slot：
         /// 广播条目选择事件给 ShopUIController。
         /// </summary>
-        public void OnPointerClick(PointerEventData eventData)
+        protected override void HandleClick(PointerEventData eventData)
         {
             if (string.IsNullOrWhiteSpace(_entryKey)) return;
             EventBus.Raise(new ShopItemSlotClickedEvent

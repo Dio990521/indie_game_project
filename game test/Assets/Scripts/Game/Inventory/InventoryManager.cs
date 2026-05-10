@@ -27,7 +27,12 @@ namespace IndieGame.Gameplay.Inventory
 
         // --- 事件回调 ---
 
-        /// <summary> 当背包内容发生变化（或初次打开同步数据）时触发，传递最新的槽位列表 </summary>
+        /// <summary>
+        /// 当背包内容发生变化（或初次打开同步数据）时触发，传递最新的槽位列表。
+        /// 已弃用：新代码请改用 EventBus 的 OnInventoryChanged 事件。
+        /// 保留此事件仅为兼容旧 UI 监听，未来可移除。
+        /// </summary>
+        [Obsolete("Use EventBus.Subscribe<OnInventoryChanged> instead. Will be removed in future cleanup.")]
         public static event Action<List<InventorySlot>> OnInventoryUpdated;
 
         /// <summary> 当背包界面被请求打开时触发 </summary>
@@ -255,11 +260,11 @@ namespace IndieGame.Gameplay.Inventory
         }
 
         /// <summary>
-        /// 按分类排序。
+        /// 按分类排序（同分类内回退到按 ID 排序）。
         /// </summary>
         public void SortByCategory()
         {
-            slots.Sort((a, b) =>
+            SortInventory((a, b) =>
             {
                 ItemSO itemA = a != null ? a.Item : null;
                 ItemSO itemB = b != null ? b.Item : null;
@@ -271,7 +276,6 @@ namespace IndieGame.Gameplay.Inventory
                 string idB = itemB != null ? itemB.ID : string.Empty;
                 return string.Compare(idA, idB, StringComparison.Ordinal);
             });
-            NotifyInventoryChanged();
         }
 
         /// <summary>
@@ -279,12 +283,23 @@ namespace IndieGame.Gameplay.Inventory
         /// </summary>
         public void SortByID()
         {
-            slots.Sort((a, b) =>
+            SortInventory((a, b) =>
             {
                 string idA = a != null && a.Item != null ? a.Item.ID : string.Empty;
                 string idB = b != null && b.Item != null ? b.Item.ID : string.Empty;
                 return string.Compare(idA, idB, StringComparison.Ordinal);
             });
+        }
+
+        /// <summary>
+        /// 通用排序入口：
+        /// 接收一个 Comparison 委托对 slots 排序，
+        /// 排序完成后统一广播 NotifyInventoryChanged。
+        /// </summary>
+        private void SortInventory(Comparison<InventorySlot> comparator)
+        {
+            if (comparator == null) return;
+            slots.Sort(comparator);
             NotifyInventoryChanged();
         }
 
@@ -294,8 +309,10 @@ namespace IndieGame.Gameplay.Inventory
         /// </summary>
         private void NotifyInventoryChanged()
         {
-            // 兼容已有背包 UI 监听逻辑
+            // 兼容已有背包 UI 监听逻辑（待 UI 全部迁移到 EventBus 后可移除此分支）
+#pragma warning disable CS0618
             OnInventoryUpdated?.Invoke(slots);
+#pragma warning restore CS0618
             // 提供给新系统（如打造系统）做解耦监听
             EventBus.Raise(new OnInventoryChanged
             {

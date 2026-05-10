@@ -44,7 +44,7 @@ namespace IndieGame.Gameplay.Crafting
     /// - BlueprintDatabaseSO 在初始化时转 Dictionary，后续按 ID O(1) 查询。
     /// - 背包材料统计在逻辑层用 Dictionary 聚合，避免重复遍历与重复计数。
     /// </summary>
-    public class CraftingSystem : MonoSingleton<CraftingSystem>, ISaveable
+    public class CraftingSystem : SaveableMonoSingleton<CraftingSystem>
     {
         [Header("Config")]
         [Tooltip("图纸数据库（静态配置来源）")]
@@ -62,15 +62,13 @@ namespace IndieGame.Gameplay.Crafting
         // 材料统计缓存：ItemSO -> 当前背包总数量（用于 CanCraft 快速判断）
         private readonly Dictionary<ItemSO, int> _inventoryCounter = new Dictionary<ItemSO, int>();
 
-        // 存档系统缓存（延迟发现，避免硬依赖）
-        private SaveManager _saveManager;
-        private bool _isRegisteredToSaveManager;
+        // 是否已完成静态/记录初始化
         private bool _isInitialized;
 
         /// <summary>
         /// SaveManager 识别该模块的唯一 ID。
         /// </summary>
-        public string SaveID => "CraftingSystem";
+        public override string SaveID => "CraftingSystem";
 
         protected override void Awake()
         {
@@ -78,22 +76,6 @@ namespace IndieGame.Gameplay.Crafting
             // 避免重复实例继续初始化，确保只有真正保留的单例执行后续逻辑
             if (Instance != this) return;
             Initialize();
-        }
-
-        private void OnEnable()
-        {
-            // 尝试向 SaveManager 注册（如果当前场景没有 SaveManager，会在后续保存时再次尝试）
-            EnsureSaveRegistration(forceSearch: false);
-        }
-
-        private void OnDisable()
-        {
-            // 生命周期结束时注销，防止 SaveManager 保留无效引用
-            if (_isRegisteredToSaveManager && _saveManager != null)
-            {
-                _saveManager.Unregister(this);
-            }
-            _isRegisteredToSaveManager = false;
         }
 
         /// <summary>
@@ -266,7 +248,7 @@ namespace IndieGame.Gameplay.Crafting
         /// <summary>
         /// SaveManager 调用：捕获当前打造系统状态。
         /// </summary>
-        public object CaptureState()
+        public override object CaptureState()
         {
             Initialize();
 
@@ -296,7 +278,7 @@ namespace IndieGame.Gameplay.Crafting
         /// <summary>
         /// SaveManager 调用：恢复打造系统状态。
         /// </summary>
-        public void RestoreState(object data)
+        public override void RestoreState(object data)
         {
             Initialize();
 
@@ -351,6 +333,7 @@ namespace IndieGame.Gameplay.Crafting
 
         /// <summary>
         /// 从数据库构建图纸索引（List -> Dictionary）。
+        /// 复用通用 DatabaseIndexer 处理空值/重复 ID 警告。
         /// </summary>
         private void RebuildBlueprintIndex()
         {
@@ -362,23 +345,14 @@ namespace IndieGame.Gameplay.Crafting
                 return;
             }
 
-            for (int i = 0; i < blueprintDatabase.Blueprints.Count; i++)
+            Dictionary<string, BlueprintSO> built = DatabaseIndexer.BuildById(
+                blueprintDatabase.Blueprints,
+                bp => bp != null ? bp.ID : null,
+                "CraftingSystem");
+
+            foreach (KeyValuePair<string, BlueprintSO> pair in built)
             {
-                BlueprintSO data = blueprintDatabase.Blueprints[i];
-                if (data == null) continue;
-                if (string.IsNullOrWhiteSpace(data.ID))
-                {
-                    DebugTools.LogWarning("[CraftingSystem] Blueprint has empty ID, ignored.");
-                    continue;
-                }
-
-                if (_blueprintById.ContainsKey(data.ID))
-                {
-                    DebugTools.LogWarning($"[CraftingSystem] Duplicate Blueprint ID ignored: {data.ID}");
-                    continue;
-                }
-
-                _blueprintById.Add(data.ID, data);
+                _blueprintById.Add(pair.Key, pair.Value);
             }
         }
 
@@ -480,31 +454,6 @@ namespace IndieGame.Gameplay.Crafting
             EnsureSaveRegistration(forceSearch: true);
             if (_saveManager == null) return;
             _ = _saveManager.SaveAsync(autoSaveSlotIndex);
-        }
-
-        /// <summary>
-        /// 确保已向 SaveManager 注册当前模块。
-        /// </summary>
-        private void EnsureSaveRegistration(bool forceSearch)
-        {
-            if (_isRegisteredToSaveManager) return;
-
-            _saveManager = ResolveSaveManager(forceSearch);
-            if (_saveManager == null) return;
-
-            _saveManager.Register(this);
-            _isRegisteredToSaveManager = true;
-        }
-
-        /// <summary>
-        /// 查找 SaveManager：
-        /// 使用场景查找避免强依赖，且不会触发 MonoSingleton.Instance 的警告日志。
-        /// </summary>
-        private SaveManager ResolveSaveManager(bool forceSearch)
-        {
-            if (_saveManager != null) return _saveManager;
-            if (!forceSearch && _isRegisteredToSaveManager) return null;
-            return FindAnyObjectByType<SaveManager>();
         }
 
         /// <summary>

@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
 using IndieGame.Core;
+using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Crafting
 {
@@ -14,7 +15,7 @@ namespace IndieGame.UI.Crafting
     /// - 左侧列表显示“图纸固定名称”（来自 BlueprintSO.DefaultName）
     /// - 图标通常显示成品图标（由 BlueprintSO 提供）
     /// </summary>
-    public class BlueprintSlotUI : MonoBehaviour, IPointerClickHandler
+    public class BlueprintSlotUI : BaseSlotUI
     {
         [Header("UI References")]
         [SerializeField] private Image iconImage;
@@ -41,23 +42,15 @@ namespace IndieGame.UI.Crafting
             _entryKey = string.IsNullOrWhiteSpace(entryKey) ? string.Empty : entryKey;
             _blueprintId = string.IsNullOrWhiteSpace(blueprintId) ? string.Empty : blueprintId;
 
-            if (iconImage != null)
-            {
-                iconImage.sprite = icon;
-                iconImage.enabled = iconImage.sprite != null;
-            }
-
-            if (nameText != null)
-            {
-                nameText.text = string.IsNullOrWhiteSpace(displayName) ? "Unnamed Blueprint" : displayName;
-            }
+            SetIcon(iconImage, icon);
+            SetName(nameText, displayName, "Unnamed Blueprint");
         }
 
         /// <summary>
         /// 实现“点击整个 Slot 即选中”：
         /// 不再依赖 Action 回调，改为纯 EventBus 广播。
         /// </summary>
-        public void OnPointerClick(PointerEventData eventData)
+        protected override void HandleClick(PointerEventData eventData)
         {
             if (string.IsNullOrWhiteSpace(_entryKey)) return;
             EventBus.Raise(new CraftBlueprintSlotClickedEvent

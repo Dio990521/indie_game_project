@@ -60,8 +60,8 @@ namespace IndieGame.Gameplay.Dialogue
         // 是否已记录过进入对话前的状态
         private bool _hasStateSnapshot;
 
-        // 已学习词条集合（运行时去重容器）
-        private readonly HashSet<string> _learnedWordIds = new HashSet<string>(StringComparer.Ordinal);
+        // 行解析器：负责本地化加载、关键词高亮、词条学习的协程逻辑（已抽离至独立类）
+        private DialogueLineResolver _lineResolver;
 
         /// <summary>
         /// 对外入口：启动一段对话。
@@ -128,8 +128,8 @@ namespace IndieGame.Gameplay.Dialogue
         /// </summary>
         public bool HasLearnedWord(string wordId)
         {
-            if (string.IsNullOrWhiteSpace(wordId)) return false;
-            return _learnedWordIds.Contains(wordId.Trim());
+            EnsureResolver();
+            return _lineResolver.HasLearnedWord(wordId);
         }
 
         /// <summary>
@@ -137,11 +137,18 @@ namespace IndieGame.Gameplay.Dialogue
         /// </summary>
         public void GetLearnedWordIDs(List<string> output)
         {
-            if (output == null) return;
-            output.Clear();
-            foreach (string id in _learnedWordIds)
+            EnsureResolver();
+            _lineResolver.GetLearnedWordIDs(output);
+        }
+
+        /// <summary>
+        /// 懒初始化解析器：避免依赖 Awake 顺序。
+        /// </summary>
+        private void EnsureResolver()
+        {
+            if (_lineResolver == null)
             {
-                output.Add(id);
+                _lineResolver = new DialogueLineResolver(defaultTypewriterSpeed, LearnableWordColorHex);
             }
         }
 
@@ -246,126 +253,19 @@ namespace IndieGame.Gameplay.Dialogue
             }
 
             StopResolveLineCoroutine();
-            _resolveLineCoroutine = StartCoroutine(ResolveAndPresentLineRoutine(_activeDialogue, _currentLineIndex));
-        }
+            EnsureResolver();
 
-        /// <summary>
-        /// 协程：解析当前行并下发到 View。
-        ///
-        /// 关键流程：
-        /// 1) 获取说话人与正文的本地化字符串。
-        /// 2) 遍历 LearnableWords，把命中的词条名替换为富文本颜色高亮。
-        /// 3) 命中即学习：把 WordID 放入 HashSet（去重）并发布习得事件。
-        /// 4) 发送“说话人更新”和“启动打字机”事件。
-        /// </summary>
-        private IEnumerator ResolveAndPresentLineRoutine(DialogueDataSO expectedDialogue, int expectedLineIndex)
-        {
-            if (expectedDialogue == null || expectedDialogue.Lines == null)
-            {
-                yield break;
-            }
-
-            if (expectedLineIndex < 0 || expectedLineIndex >= expectedDialogue.Lines.Count)
-            {
-                yield break;
-            }
-
-            DialogueLine line = expectedDialogue.Lines[expectedLineIndex];
-            if (line == null)
-            {
-                // 空行兜底：直接视为空文本句子，允许玩家继续下一句。
-                EventBus.Raise(new DialogueSpeakerChangedEvent { SpeakerText = string.Empty });
-                IsTyping = true;
-                EventBus.Raise(new DialogueTypewriterRequestEvent
-                {
-                    FormattedText = string.Empty,
-                    Speed = defaultTypewriterSpeed
-                });
-                _resolveLineCoroutine = null;
-                yield break;
-            }
-
-            // --- 1) 异步解析说话人与正文 ---
-            string speakerText = string.Empty;
-            if (line.Speaker != null)
-            {
-                var speakerHandle = line.Speaker.GetLocalizedStringAsync();
-                yield return speakerHandle;
-                speakerText = speakerHandle.Result ?? string.Empty;
-            }
-
-            string contentText = string.Empty;
-            if (line.Content != null)
-            {
-                var contentHandle = line.Content.GetLocalizedStringAsync();
-                yield return contentHandle;
-                contentText = contentHandle.Result ?? string.Empty;
-            }
-
-            // --- 2) 关键词高亮 + 3) 词条学习 ---
-            string formattedText = contentText;
-            IReadOnlyList<WordSO> learnableWords = line.LearnableWords;
-            if (learnableWords != null)
-            {
-                for (int i = 0; i < learnableWords.Count; i++)
-                {
-                    WordSO word = learnableWords[i];
-                    if (word == null || word.DisplayName == null) continue;
-
-                    // 获取词条显示名（本地化），用于在正文中做关键词匹配。
-                    var wordNameHandle = word.DisplayName.GetLocalizedStringAsync();
-                    yield return wordNameHandle;
-                    string wordDisplayName = wordNameHandle.Result ?? string.Empty;
-                    if (string.IsNullOrWhiteSpace(wordDisplayName)) continue;
-
-                    // 只有当正文命中关键词时，才执行高亮并判定“已学习”。
-                    if (formattedText.IndexOf(wordDisplayName, StringComparison.Ordinal) < 0) continue;
-
-                    string highlighted = "<color=" + LearnableWordColorHex + ">" + wordDisplayName + "</color>";
-                    formattedText = formattedText.Replace(wordDisplayName, highlighted);
-                    TryLearnWord(word);
-                }
-            }
-
-            // 防并发串线：
-            // 如果在异步解析期间发生了“切换到别的对话/别的行”，则丢弃当前结果，避免脏刷新。
-            if (!IsActive || _activeDialogue != expectedDialogue || _currentLineIndex != expectedLineIndex)
-            {
-                _resolveLineCoroutine = null;
-                yield break;
-            }
-
-            // --- 4) 下发到 View ---
-            EventBus.Raise(new DialogueSpeakerChangedEvent
-            {
-                SpeakerText = speakerText
-            });
-
-            IsTyping = true;
-            EventBus.Raise(new DialogueTypewriterRequestEvent
-            {
-                FormattedText = formattedText,
-                Speed = Mathf.Max(0.001f, defaultTypewriterSpeed)
-            });
-
-            _resolveLineCoroutine = null;
-        }
-
-        /// <summary>
-        /// 记录词条学习状态并发布事件（仅首次学习会发布）。
-        /// </summary>
-        private void TryLearnWord(WordSO word)
-        {
-            if (word == null || string.IsNullOrWhiteSpace(word.ID)) return;
-
-            string normalizedWordId = word.ID.Trim();
-            if (!_learnedWordIds.Add(normalizedWordId)) return;
-
-            EventBus.Raise(new DialogueWordLearnedEvent
-            {
-                WordID = normalizedWordId,
-                Word = word
-            });
+            // 捕获本次解析所属的 dialogue/lineIndex，用于异步完成时检验是否仍然有效
+            DialogueDataSO expectedDialogue = _activeDialogue;
+            int expectedLineIndex = _currentLineIndex;
+            _resolveLineCoroutine = StartCoroutine(_lineResolver.ResolveAndPresentLineRoutine(
+                expectedDialogue,
+                expectedLineIndex,
+                staleCheck: () => IsActive
+                                  && _activeDialogue == expectedDialogue
+                                  && _currentLineIndex == expectedLineIndex,
+                onTypewriterStarting: () => { IsTyping = true; }
+            ));
         }
 
         /// <summary>

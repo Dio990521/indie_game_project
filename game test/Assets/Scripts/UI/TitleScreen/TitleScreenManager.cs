@@ -16,7 +16,7 @@ namespace IndieGame.UI
     /// 负责处理游戏启动时的 UI 交互、资源预加载以及场景跳转。
     /// 通过协程实现了一个平滑的加载进度条，将资源加载与场景加载进度合并显示。
     /// </summary>
-    public class TitleScreenManager : MonoBehaviour
+    public class TitleScreenManager : EventBusMonoBehaviour
     {
         [Header("UI 引用")]
         [SerializeField] private Button startButton;     // 开始游戏按钮
@@ -61,22 +61,15 @@ namespace IndieGame.UI
             RefreshLoadButtonInteractivity();
         }
 
-        private void OnEnable()
+        protected override void Bind()
         {
             // 监听标题读档流程事件：
             // 1) 用户确认读取（进入等待自动进游戏状态）；
             // 2) 读档成功（触发进入游戏）；
             // 3) 读档失败（取消等待状态）。
-            EventBus.Subscribe<TitleLoadGameRequestedEvent>(HandleTitleLoadGameRequestedEvent);
-            EventBus.Subscribe<LoadCompletedEvent>(HandleLoadCompletedEvent);
-            EventBus.Subscribe<LoadFailedEvent>(HandleLoadFailedEvent);
-        }
-
-        private void OnDisable()
-        {
-            EventBus.Unsubscribe<TitleLoadGameRequestedEvent>(HandleTitleLoadGameRequestedEvent);
-            EventBus.Unsubscribe<LoadCompletedEvent>(HandleLoadCompletedEvent);
-            EventBus.Unsubscribe<LoadFailedEvent>(HandleLoadFailedEvent);
+            Subscribe<TitleLoadGameRequestedEvent>(HandleTitleLoadGameRequestedEvent);
+            Subscribe<LoadCompletedEvent>(HandleLoadCompletedEvent);
+            Subscribe<LoadFailedEvent>(HandleLoadFailedEvent);
         }
 
         private void OnDestroy()
