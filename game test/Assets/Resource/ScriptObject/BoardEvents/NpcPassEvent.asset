@@ -1,0 +1,18 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 637d4878b9b79de4893131786cabd38f, type: 3}
+  m_Name: NpcPassEvent
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Events.NpcMerchantPassBoardEvent
+  description: 
+  dialogueData: {fileID: 11400000, guid: e9c3ed8113baa42259baa5d3749be608, type: 2}
+  shopData: {fileID: 0}
+  lookAtDuration: 0.5
