@@ -475,6 +475,7 @@ GameObject:
   - component: {fileID: 5930299160949571877}
   - component: {fileID: 5217312323564224220}
   - component: {fileID: 5158511135100238901}
+  - component: {fileID: 5608812469326607630}
   m_Layer: 5
   m_Name: PlayerHUD
   m_TagString: Untagged
@@ -548,3 +549,24 @@ MonoBehaviour:
   worldSceneName: World
   titleSceneName: Title
   campSceneKeyword: Camp
+--- !u!114 &5608812469326607630
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8571689264536482850}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
+  fontReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
+    m_TableEntryReference:
+      m_KeyId: 69676597248
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+  applyToChildren: 1

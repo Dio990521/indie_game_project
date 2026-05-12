@@ -42,6 +42,7 @@ MonoBehaviour:
   m_BundleRedirectLimit: -1
   m_SharedBundleSettings: 0
   m_SharedBundleSettingsCustomGroupIndex: 0
+  m_simulatedLoadDelay: 0.1
   m_ContiguousBundles: 1
   m_StripUnityVersionFromBundleBuild: 0
   m_DisableVisibleSubAssetRepresentations: 0
@@ -62,11 +63,19 @@ MonoBehaviour:
   m_GroupAssets:
   - {fileID: 11400000, guid: 10889e3d835654d0ba8e2883c648adb7, type: 2}
   - {fileID: 11400000, guid: e4f170012c52a4f1d94e9cb3a3a5c5e0, type: 2}
+  - {fileID: 11400000, guid: a14c32b7e8e94ab4ca4381e2b4b81f2a, type: 2}
+  - {fileID: 11400000, guid: 506895afa5e463b4585d466462f885b1, type: 2}
   - {fileID: 11400000, guid: dffc9405f2f5243859a9fcd16b6fc7a6, type: 2}
   - {fileID: 11400000, guid: 11ecee46552f246b1a38fc4661dc1e65, type: 2}
   - {fileID: 11400000, guid: aa4b37a533bd94d209655159c7e78b98, type: 2}
   - {fileID: 11400000, guid: 016f44b5e131c4d8bb9e9730b261cd33, type: 2}
+  - {fileID: 11400000, guid: e381828add6da194990804f7a5825a26, type: 2}
+  - {fileID: 11400000, guid: 9de016881b02d89469f51f14ecdce80a, type: 2}
+  - {fileID: 11400000, guid: a8ea300ffc000314fa6fdf9a99fe07f6, type: 2}
+  - {fileID: 11400000, guid: 56720af5e7c128746b8252dffbebcc8a, type: 2}
   - {fileID: 11400000, guid: 3837180a29e764424b9fae65e9b8989b, type: 2}
+  - {fileID: 11400000, guid: e3bde7fa9c15b634094c5cce04d2cc0e, type: 2}
+  - {fileID: 11400000, guid: ec8046847af8b7049a2308aa89dc5bf4, type: 2}
   - {fileID: 11400000, guid: d63daca4628604ce59797ef7d13336e0, type: 2}
   m_BuildSettings:
     m_LogResourceManagerExceptions: 1

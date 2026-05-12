@@ -1,8 +1,10 @@
 using System;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.UI;
 using TMPro;
 using IndieGame.Gameplay.Inventory;
+using IndieGame.Core.Utilities;
 using IndieGame.UI.Common;
 using UnityEngine.Localization;
 
@@ -10,11 +12,14 @@ namespace IndieGame.UI.Inventory
 {
     /// <summary>
     /// 背包槽位 UI：
-    /// 负责显示物品名称，并在点击时触发回调。
+    /// 负责显示物品图标和数量，并在点击时触发回调。
+    /// nameLabel 保留兼容旧版 UI，新全屏背包界面不使用（物品名改由详情面板展示）。
     /// </summary>
     public class InventorySlotUI : BaseSlotUI
     {
-        // 物品名称文本
+        // 物品图标（新全屏背包界面使用）
+        [SerializeField] private Image iconImage;
+        // 物品名称文本（旧版 UI 兼容，新界面可留空）
         public TMP_Text nameLabel;
         // 数量文本（仅当数量 > 1 时显示）
         [SerializeField] private TMP_Text countLabel;
@@ -38,6 +43,11 @@ namespace IndieGame.UI.Inventory
         {
             _slot = slot;
             _onClick = onClick;
+
+            // 设置图标（null 安全，旧版预制体可不绑定 iconImage）
+            if (iconImage != null)
+                iconImage.sprite = slot?.Item?.Icon;
+
             if (nameLabel == null) return;
             if (slot == null || slot.Item == null)
             {

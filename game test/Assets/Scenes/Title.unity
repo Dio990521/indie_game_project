@@ -164,6 +164,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 676777310}
+  - component: {fileID: 676777311}
   m_Layer: 5
   m_Name: Title
   m_TagString: Untagged
@@ -194,6 +195,27 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &676777311
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 676777309}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
+  fontReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
+    m_TableEntryReference:
+      m_KeyId: 69676597248
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+  applyToChildren: 1
 --- !u!1 &749808937
 GameObject:
   m_ObjectHideFlags: 0
@@ -586,6 +608,7 @@ GameObject:
   - component: {fileID: 1308461800}
   - component: {fileID: 1308461799}
   - component: {fileID: 1308461798}
+  - component: {fileID: 1308461801}
   m_Layer: 0
   m_Name: Main Camera
   m_TagString: MainCamera
@@ -667,6 +690,50 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1308461801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1308461797}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a79441f348de89743a2939f4d699eac1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.RenderPipelines.Universal.Runtime::UnityEngine.Rendering.Universal.UniversalAdditionalCameraData
+  m_RenderShadows: 1
+  m_RequiresDepthTextureOption: 2
+  m_RequiresOpaqueTextureOption: 2
+  m_CameraType: 0
+  m_Cameras: []
+  m_RendererIndex: -1
+  m_VolumeLayerMask:
+    serializedVersion: 2
+    m_Bits: 1
+  m_VolumeTrigger: {fileID: 0}
+  m_VolumeFrameworkUpdateModeOption: 2
+  m_RenderPostProcessing: 0
+  m_Antialiasing: 0
+  m_AntialiasingQuality: 2
+  m_StopNaN: 0
+  m_Dithering: 0
+  m_ClearDepth: 1
+  m_AllowXRRendering: 1
+  m_AllowHDROutput: 1
+  m_UseScreenCoordOverride: 0
+  m_ScreenSizeOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_ScreenCoordScaleBias: {x: 0, y: 0, z: 0, w: 0}
+  m_RequiresDepthTexture: 0
+  m_RequiresColorTexture: 0
+  m_TaaSettings:
+    m_Quality: 3
+    m_FrameInfluence: 0.1
+    m_JitterScale: 1
+    m_MipBias: 0
+    m_VarianceClampScale: 0.9
+    m_ContrastAdaptiveSharpening: 0
+  m_Version: 2
 --- !u!1 &1364067361
 GameObject:
   m_ObjectHideFlags: 0
@@ -843,6 +910,7 @@ GameObject:
   - component: {fileID: 1643724745}
   - component: {fileID: 1643724747}
   - component: {fileID: 1643724746}
+  - component: {fileID: 1643724748}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -891,8 +959,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Play
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
-  m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: b3ce3d8ad06cbb34389912e01db18704, type: 2}
+  m_sharedMaterial: {fileID: 3791575249406161026, guid: b3ce3d8ad06cbb34389912e01db18704, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -969,6 +1037,22 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1643724744}
   m_CullTransparentMesh: 1
+--- !u!114 &1643724748
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1643724744}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 69beb381e244f92449b8c4cf954630e9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.PropertyVariants.GameObjectLocalizer
+  m_TrackedObjects: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &1648370393
 GameObject:
   m_ObjectHideFlags: 0

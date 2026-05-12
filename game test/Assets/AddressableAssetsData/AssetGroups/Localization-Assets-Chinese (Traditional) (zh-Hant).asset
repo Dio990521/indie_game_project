@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Localization-Assets-Chinese (Traditional) (zh-Hant)
+  m_EditorClassIdentifier: Unity.Addressables.Editor::UnityEditor.AddressableAssets.Settings.AddressableAssetGroup
+  m_GroupName: Localization-Assets-Chinese (Traditional) (zh-Hant)
+  m_GUID: 9c624acd084ced9458603d5e5f1864e7
+  m_SerializeEntries:
+  - m_GUID: 410b4dfba0f2bbf45a209be4fb097728
+    m_Address: "jf open \u7C89\u5713 SDF"
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-zh-Hant
+    FlaggedDuringContentUpdateRestriction: 0
+  m_ReadOnly: 1
+  m_Settings: {fileID: 11400000, guid: 14c807768e9f74abcaa35fd1a73fde46, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 10326a0311f27ec4092f46cdb0d69b73, type: 2}
+    - {fileID: 11400000, guid: 7b5addaa7f487ab47b1bcf6d2452aac5, type: 2}

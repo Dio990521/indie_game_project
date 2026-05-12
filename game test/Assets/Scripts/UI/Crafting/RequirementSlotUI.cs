@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
+using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Crafting;
 
 namespace IndieGame.UI.Crafting

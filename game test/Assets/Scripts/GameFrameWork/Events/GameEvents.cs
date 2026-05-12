@@ -36,6 +36,14 @@ namespace IndieGame.Core
     }
 
     /// <summary>
+    /// 关闭背包事件：
+    /// 由背包关闭按钮或 ESC 触发，InventoryFullScreenController 监听。
+    /// </summary>
+    public struct CloseInventoryEvent
+    {
+    }
+
+    /// <summary>
     /// 背包数据变更事件：
     /// 约定用于“依赖背包数量的系统”（例如打造系统）刷新可执行状态。
     /// </summary>

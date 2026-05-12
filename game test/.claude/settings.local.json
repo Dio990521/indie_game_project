@@ -1,7 +1,10 @@
 {
   "permissions": {
     "allow": [
-      "Bash(find \"d:\\\\\\\\Games\\\\\\\\Unity Projects\\\\\\\\indie_game_project\\\\\\\\game test\\\\\\\\Assets\\\\\\\\Scripts\\\\\\\\Game\\\\\\\\Board\\\\\\\\\" -name \"*.cs\" -type f)"
+      "Bash(find \"d:\\\\\\\\Games\\\\\\\\Unity Projects\\\\\\\\indie_game_project\\\\\\\\game test\\\\\\\\Assets\\\\\\\\Scripts\\\\\\\\Game\\\\\\\\Board\\\\\\\\\" -name \"*.cs\" -type f)",
+      "Bash(find \"d:\\\\\\\\Games\\\\\\\\Unity Projects\\\\\\\\indie_game_project\\\\\\\\game test\\\\\\\\Assets\\\\\\\\Resources\" -type f -name \"*.asset\")",
+      "Bash(find \"d:\\\\\\\\Games\\\\\\\\Unity Projects\\\\\\\\indie_game_project\\\\\\\\game test\\\\\\\\Assets\" -type f -name \"*Config*\" -o -name \"*Settings*\")",
+      "Bash(grep -E \"\\\\.\\(cs|asset\\)$\")"
     ]
   }
 }

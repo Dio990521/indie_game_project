@@ -165,7 +165,8 @@ namespace IndieGame.UI.Camp
                     EventBus.Raise(new OpenCraftingUIEvent());
                     break;
                 case CampActionID.Inventory:
-                    DebugTools.Log("Log: 打开已有 Inventory 界面...");
+                    // 与 ActionMenu 走相同事件通路，由 InventoryManager 统一处理打开逻辑
+                    EventBus.Raise(new OpenInventoryEvent());
                     break;
                 case CampActionID.Memory:
                     DebugTools.Log("Log: 检索语料库，查看任务记录与对话日志...");

@@ -44,8 +44,8 @@ namespace IndieGame.UI
         [SerializeField] private CanvasGroup fullscreenFadePrefab;
         // 棋盘操作菜单
         [SerializeField] private BoardActionMenuView boardActionMenuPrefab;
-        // 背包 UI
-        [SerializeField] private Inventory.InventoryUIView inventoryPrefab;
+        // 背包 UI（全屏版）
+        [SerializeField] private Inventory.InventoryFullScreenController inventoryPrefab;
         // 确认弹窗
         [SerializeField] private Confirmation.ConfirmationPopupView confirmationPrefab;
         // 露营 UI
@@ -64,7 +64,7 @@ namespace IndieGame.UI
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
         public BoardActionMenuView BoardActionMenuInstance { get; private set; }
-        public Inventory.InventoryUIView InventoryInstance { get; private set; }
+        public Inventory.InventoryFullScreenController InventoryInstance { get; private set; }
         public Confirmation.ConfirmationPopupView ConfirmationInstance { get; private set; }
         public Camp.CampUIView CampUIInstance { get; private set; }
         public CraftingUIController CraftingUIInstance { get; private set; }

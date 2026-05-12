@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 7819523320950227308}
   - component: {fileID: 5468940714867105065}
   - component: {fileID: 8621870439497032322}
+  - component: {fileID: 6243488606116514940}
   m_Layer: 5
   m_Name: SaveLoadView
   m_TagString: Untagged
@@ -69,6 +70,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.TitleScreen.SaveLoadMenuView
   binder: {fileID: 5468940714867105065}
+--- !u!114 &6243488606116514940
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 631668260870732445}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
+  fontReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
+    m_TableEntryReference:
+      m_KeyId: 69676597248
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+  applyToChildren: 1
 --- !u!1 &724933206940488916
 GameObject:
   m_ObjectHideFlags: 0

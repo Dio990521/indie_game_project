@@ -134,6 +134,7 @@ GameObject:
   - component: {fileID: 2696414867634828579}
   - component: {fileID: 5373188128845934333}
   - component: {fileID: 8835836302094458256}
+  - component: {fileID: 1717890418224346879}
   m_Layer: 5
   m_Name: Confirm
   m_TagString: Untagged
@@ -250,6 +251,27 @@ MonoBehaviour:
   references:
     version: 2
     RefIds: []
+--- !u!114 &1717890418224346879
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 733715642457944269}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
+  fontReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
+    m_TableEntryReference:
+      m_KeyId: 69676597248
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+  applyToChildren: 1
 --- !u!1 &1919982874554236788
 GameObject:
   m_ObjectHideFlags: 0

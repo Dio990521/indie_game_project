@@ -1622,6 +1622,7 @@ GameObject:
   - component: {fileID: 4154920919371586226}
   - component: {fileID: 6452553414403916289}
   - component: {fileID: 4028076687978797751}
+  - component: {fileID: 5679219990886861967}
   m_Layer: 5
   m_Name: CraftUI
   m_TagString: Untagged
@@ -1703,6 +1704,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Crafting.CraftingSystem
   blueprintDatabase: {fileID: 11400000, guid: 9f9b3d52a24d54d4fb03e991c4c13180, type: 2}
   autoSaveSlotIndex: 0
+--- !u!114 &5679219990886861967
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6944934117988549804}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
+  fontReference:
+    m_TableReference:
+      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
+    m_TableEntryReference:
+      m_KeyId: 69676597248
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+  applyToChildren: 1
 --- !u!1 &7237345197913984729
 GameObject:
   m_ObjectHideFlags: 0
