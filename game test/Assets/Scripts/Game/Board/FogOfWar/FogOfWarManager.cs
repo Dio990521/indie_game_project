@@ -169,6 +169,16 @@ namespace IndieGame.Gameplay.Board.FogOfWar
             _fogTexture.Apply(false);
         }
 
+        /// <summary>以自定义半径揭开指定位置的迷雾（供雷达格等特殊 Tile 调用）。</summary>
+        public void RevealAreaAt(Vector3 worldPos, float radius)
+        {
+            int res = _config.textureResolution;
+            int r   = CalculateRadiusPixels(res, radius);
+            NativeArray<byte> raw = _fogTexture.GetRawTextureData<byte>();
+            WriteCircle(raw, WorldToPixelX(worldPos.x), WorldToPixelZ(worldPos.z), r, res);
+            _fogTexture.Apply(false);
+        }
+
         /// <summary>
         /// 直线路径批量揭开（大炮弹射落地后调用）。
         /// 沿 XZ 直线采样若干圆圈后一次性上传，避免逐帧 Apply 开销。
@@ -194,14 +204,17 @@ namespace IndieGame.Gameplay.Board.FogOfWar
             _fogTexture.Apply(false);
         }
 
-        // 世界半径 → 像素半径，基于运行时计算的边界比例
-        private int CalculateRadiusPixels(int res)
+        // 世界半径 → 像素半径（使用 config 默认半径）
+        private int CalculateRadiusPixels(int res) => CalculateRadiusPixels(res, _config.revealRadius);
+
+        // 世界半径 → 像素半径（接受任意世界单位半径）
+        private int CalculateRadiusPixels(int res, float worldRadius)
         {
             Vector2 worldSize = _worldMax - _worldMin;
             // 防止边界未初始化导致除零
             if (worldSize.x <= 0 || worldSize.y <= 0) return 1;
             float ppu = (res / worldSize.x + res / worldSize.y) * 0.5f;
-            return Mathf.Max(1, Mathf.RoundToInt(_config.revealRadius * ppu));
+            return Mathf.Max(1, Mathf.RoundToInt(worldRadius * ppu));
         }
 
         // 向原始字节数组写入实心圆（不调用 Apply，供批量操作使用）

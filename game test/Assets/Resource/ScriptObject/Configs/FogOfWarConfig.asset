@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c467f3c1c97e41c4ebe6a8a77bbf5768, type: 3}
   m_Name: FogOfWarConfig
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.FogOfWar.FogOfWarConfig
-  worldCenter: {x: 0, y: 0.18}
+  worldCenter: {x: 0, y: 0}
   worldSize: {x: 200, y: 200}
   textureResolution: 128
   revealRadius: 5
