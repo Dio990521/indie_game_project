@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using IndieGame.Core;
+using IndieGame.Gameplay.Board.FogOfWar;
 using UnityEngine;
 
 namespace IndieGame.Gameplay.Board.Runtime
@@ -492,6 +493,15 @@ namespace IndieGame.Gameplay.Board.Runtime
                 yield break;
             }
 
+            // [扭曲格] 大炮落点为扭曲格时触发强制滑行，补充1步并交由 AdvanceToNextStep 消费方向锁
+            if (_fx.ForcedNextNodeId >= 0)
+            {
+                ComboMoveSystem.IncrementCombo();
+                _stepsRemaining = 1;
+                AdvanceToNextStep();
+                yield break;
+            }
+
             FinishMove();
         }
 
@@ -623,7 +633,12 @@ namespace IndieGame.Gameplay.Board.Runtime
             MapWaypoint target = allNodes[UnityEngine.Random.Range(0, allNodes.Count)];
             DebugTools.Log($"<color=orange>[Cannon Tile]</color> 弹射目标：{target.nodeID} ({target.name})");
 
+            // 记录弹射起点，落地后一次性揭开整段 XZ 轨迹（单次 GPU 上传，性能最优）
+            Vector3 launchStartPos = _activeEntity.transform.position;
+
             yield return _activeEntity.LaunchParabolic(target, _fx.CannonArcHeight, _fx.CannonLaunchSpeed);
+
+            FogOfWarManager.Instance?.RevealLine(launchStartPos, target.transform.position);
 
             // 触发落点格子效果（作为最终落点处理）
             yield return HandleNodeArrival(target, true);
