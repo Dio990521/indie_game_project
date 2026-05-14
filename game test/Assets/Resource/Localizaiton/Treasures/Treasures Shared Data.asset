@@ -19,6 +19,10 @@ MonoBehaviour:
     m_Key: WING
     m_Metadata:
       m_Items: []
+  - m_Id: 1804864267780096
+    m_Key: WOODEN_PUPPET
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

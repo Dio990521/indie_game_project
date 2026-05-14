@@ -22,6 +22,10 @@ MonoBehaviour:
     m_Localized: Wing
     m_Metadata:
       m_Items: []
+  - m_Id: 1804864267780096
+    m_Localized: Wooden Puppet
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

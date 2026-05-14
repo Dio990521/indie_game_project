@@ -190,14 +190,29 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         /// </summary>
         private void HandleTreasureSelected(TreasureItemSelectedEvent evt)
         {
-            if (evt.TreasureId == "wing" && _context != null && _context.wingTreasureData != null)
+            // 从 TreasureSystem 按 ID 查找 SO，避免在 BoardGameManager 上维护各宝具引用
+            TreasureSO so = null;
+            var owned = TreasureSystem.Instance?.OwnedTreasures;
+            if (owned != null)
             {
-                _context.ChangeState(new WingTreasureState(_context.wingTreasureData));
+                foreach (var t in owned)
+                {
+                    if (t.TreasureId == evt.TreasureId) { so = t; break; }
+                }
+            }
+
+            if (so is WingTreasureSO wingData && _context != null)
+            {
+                _context.ChangeState(new WingTreasureState(wingData));
+            }
+            else if (so is WoodenPuppetTreasureSO puppetData && _context != null)
+            {
+                _context.ChangeState(new WoodenPuppetTreasureState(puppetData));
             }
             else
             {
-                // 未知宝具或数据缺失：回退到操作菜单
-                DebugTools.LogWarning($"[PlayerTurnState] 未知宝具 ID \"{evt.TreasureId}\" 或缺少配置，返回操作菜单。");
+                // 未知宝具 ID 或 SO 未注册到 TreasureSystem：回退到操作菜单
+                DebugTools.LogWarning($"[PlayerTurnState] 未知宝具 ID \"{evt.TreasureId}\" 或未注册，返回操作菜单。");
                 _menu?.Show(BuildDefaultMenuData());
             }
         }
