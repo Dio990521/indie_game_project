@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c9c85c9069706df4a8c51383e4f0950c, type: 3}
+  m_Name: ReverseCardTreasureSO
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Treasure.ReverseCardTreasureSO
+  TreasureId: reverse_card
+  DisplayName:
+    m_TableReference:
+      m_TableCollectionName: GUID:a3001736ad943b543bff7eef5492e1cb
+    m_TableEntryReference:
+      m_KeyId: 1826566351650816
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+  ActionPointCost: 1
+  AnimationDuration: 0.5
+  JumpHeight: 1.5
+  references:
+    version: 2
+    RefIds: []

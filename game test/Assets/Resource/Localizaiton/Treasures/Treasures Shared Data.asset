@@ -27,6 +27,10 @@ MonoBehaviour:
     m_Key: IMMOVABILE_BELL
     m_Metadata:
       m_Items: []
+  - m_Id: 1826566351650816
+    m_Key: REVERSE_CARD
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

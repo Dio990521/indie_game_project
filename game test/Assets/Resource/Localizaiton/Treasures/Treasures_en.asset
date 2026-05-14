@@ -30,6 +30,10 @@ MonoBehaviour:
     m_Localized: Immovable Bell
     m_Metadata:
       m_Items: []
+  - m_Id: 1826566351650816
+    m_Localized: Reverse Card
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
