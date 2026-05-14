@@ -209,6 +209,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             {
                 _context.ChangeState(new WoodenPuppetTreasureState(puppetData));
             }
+            else if (so is ImmovableBellTreasureSO bellData && _context != null)
+            {
+                _context.ChangeState(new ImmovableBellTreasureState(bellData));
+            }
             else
             {
                 // 未知宝具 ID 或 SO 未注册到 TreasureSystem：回退到操作菜单

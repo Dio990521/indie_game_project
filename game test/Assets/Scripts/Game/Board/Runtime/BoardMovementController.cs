@@ -49,6 +49,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private TileEffectPendingState _fx = TileEffectPendingState.Default;
         // [传送格] 防止连锁传送标志（不属于 pending，在协程执行期间持续有效）
         private bool _isTeleporting = false;
+        // [不动铃铛] 激活后，本次移动结束前所有位移格效果将被忽略
+        private bool _immovableBellActive = false;
 
         private void OnDisable()
         {
@@ -353,6 +355,26 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 消耗一步
             _stepsRemaining--;
 
+            // [不动铃铛] 激活时：清除所有位移类效果，强制停在骰子结果格
+            if (_immovableBellActive)
+            {
+                _fx.ExtraSteps        = 0;
+                _fx.ForcedNextNodeId  = -1;
+                _fx.DirectionalSteps  = 0;
+                _fx.DirectionalNodeId = -1;
+                _fx.CannonLaunch      = false;
+                _fx.Teleport          = false;
+
+                if (_stepsRemaining <= 0)
+                {
+                    _immovableBellActive = false; // 一次性消耗
+                    FinishMove();
+                    yield break;
+                }
+                AdvanceToNextStep();
+                yield break;
+            }
+
             // 各类格子状态效果（不涉及 yield 的部分）按顺序处理
             ApplyForcedNextEffect(isFinalStep);
             ApplyExtraStepsEffect();
@@ -531,6 +553,12 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
+        /// 激活不动铃铛效果：下一次移动将忽略所有位移格效果（大炮、传送、行进、扭曲格强制滑行等），
+        /// 强制玩家停在骰子点数对应的格子上。效果在移动结束时自动消耗。
+        /// </summary>
+        public void ActivateImmovableBell() => _immovableBellActive = true;
+
+        /// <summary>
         /// 原地掉头：反转玩家当前行进方向（供技能系统等外部逻辑复用）。
         /// 调用后下一次移动将朝反方向行进；若当前在死胡同则等效于允许首步掉头。
         /// </summary>
@@ -581,6 +609,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 广播全局事件：移动已结束（供主状态机监听，切回玩家待机或结算状态）
             EventBus.Raise(new BoardMovementEndedEvent { Entity = _activeEntity });
             _activeEntity = null;
+            // 保险清除：防止 StopMoveImmediate 等异常路径导致标志残留
+            _immovableBellActive = false;
         }
 
         /// <summary>

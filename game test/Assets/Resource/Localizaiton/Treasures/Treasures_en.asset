@@ -26,6 +26,10 @@ MonoBehaviour:
     m_Localized: Wooden Puppet
     m_Metadata:
       m_Items: []
+  - m_Id: 1820728119558144
+    m_Localized: Immovable Bell
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []
