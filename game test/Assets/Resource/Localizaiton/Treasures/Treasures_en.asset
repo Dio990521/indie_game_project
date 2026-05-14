@@ -34,6 +34,10 @@ MonoBehaviour:
     m_Localized: Reverse Card
     m_Metadata:
       m_Items: []
+  - m_Id: 1838568780365824
+    m_Localized: Shadow Dice
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

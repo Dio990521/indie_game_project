@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b2f0c6536c10f9f4d9de1a5bb575329b, type: 3}
+  m_Name: ShadowDiceTreasureSO
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Treasure.ShadowDiceTreasureSO
+  TreasureId: shadow_dice
+  DisplayName:
+    m_TableReference:
+      m_TableCollectionName: GUID:a3001736ad943b543bff7eef5492e1cb
+    m_TableEntryReference:
+      m_KeyId: 1838568780365824
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 10915, guid: 0000000000000000f000000000000000, type: 0}
+  ActionPointCost: 1
+  references:
+    version: 2
+    RefIds: []

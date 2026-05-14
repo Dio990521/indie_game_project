@@ -51,6 +51,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         private bool _isTeleporting = false;
         // [不动铃铛] 激活后，本次移动结束前所有位移格效果将被忽略
         private bool _immovableBellActive = false;
+        // [影骰子] 激活后，下一次掷骰子点数翻倍，消耗后自动清除
+        private bool _shadowDiceActive = false;
 
         private void OnDisable()
         {
@@ -559,6 +561,22 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void ActivateImmovableBell() => _immovableBellActive = true;
 
         /// <summary>
+        /// 激活影骰子效果：下一次掷骰子点数翻倍，消耗后自动清除。
+        /// </summary>
+        public void ActivateShadowDice() => _shadowDiceActive = true;
+
+        /// <summary>
+        /// 消耗影骰子效果：若激活则清除标志并返回 true，否则返回 false。
+        /// 由 PlayerTurnState 在掷骰后调用，原子性地检测并重置标志。
+        /// </summary>
+        public bool ConsumeShadowDice()
+        {
+            if (!_shadowDiceActive) return false;
+            _shadowDiceActive = false;
+            return true;
+        }
+
+        /// <summary>
         /// 原地掉头：反转玩家当前行进方向（供技能系统等外部逻辑复用）。
         /// 调用后下一次移动将朝反方向行进；若当前在死胡同则等效于允许首步掉头。
         /// </summary>
@@ -611,6 +629,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             _activeEntity = null;
             // 保险清除：防止 StopMoveImmediate 等异常路径导致标志残留
             _immovableBellActive = false;
+            _shadowDiceActive = false;
         }
 
         /// <summary>

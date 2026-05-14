@@ -124,9 +124,16 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // --- 核心游戏逻辑：掷骰子 ---
             // 随机生成 1 到 4 之间的点数
             int steps = UnityEngine.Random.Range(1, 5);
-            DebugTools.Log($"<color=cyan>🎲 掷骰子: {steps}</color>");
 
-            // 切换状态机：进入“移动状态”，并将计算出的步数传递过去
+            // 影骰子效果：若已激活，本次点数翻倍（一次性消耗）
+            bool shadowDiceConsumed = context.movementController != null
+                && context.movementController.ConsumeShadowDice();
+            if (shadowDiceConsumed)
+                steps *= 2;
+
+            DebugTools.Log($"<color=cyan>[掷骰子] {steps} 步</color>");
+
+            // 切换状态机：进入”移动状态”，并将计算出的步数传递过去
             context.ChangeState(new MovementState(steps));
         }
 
@@ -216,6 +223,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             else if (so is ReverseCardTreasureSO reverseData && _context != null)
             {
                 _context.ChangeState(new ReverseCardTreasureState(reverseData));
+            }
+            else if (so is ShadowDiceTreasureSO shadowDiceData && _context != null)
+            {
+                _context.ChangeState(new ShadowDiceTreasureState(shadowDiceData));
             }
             else
             {
