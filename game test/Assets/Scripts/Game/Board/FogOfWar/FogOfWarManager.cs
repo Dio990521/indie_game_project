@@ -180,6 +180,25 @@ namespace IndieGame.Gameplay.Board.FogOfWar
         }
 
         /// <summary>
+        /// 查询世界坐标是否已被迷雾揭开。
+        /// R8 纹理：像素值 > 127 视为已揭开（白），否则视为仍在迷雾中（黑）。
+        /// 使用 GetRawTextureData 直接读取原始字节，不触发 CPU 回读开销。
+        /// </summary>
+        /// <param name="worldPos">要查询的世界坐标（Y 轴忽略，只用 X/Z）</param>
+        public bool IsRevealedAt(Vector3 worldPos)
+        {
+            if (_fogTexture == null) return false;
+
+            int res = _config.textureResolution;
+            int px  = Mathf.Clamp(WorldToPixelX(worldPos.x), 0, res - 1);
+            int pz  = Mathf.Clamp(WorldToPixelZ(worldPos.z), 0, res - 1);
+
+            // R8 格式行主序：索引 pz * res + px（pz 对应行/Y，px 对应列/X）
+            Unity.Collections.NativeArray<byte> raw = _fogTexture.GetRawTextureData<byte>();
+            return raw[pz * res + px] > 127;
+        }
+
+        /// <summary>
         /// 直线路径批量揭开（大炮弹射落地后调用）。
         /// 沿 XZ 直线采样若干圆圈后一次性上传，避免逐帧 Apply 开销。
         /// </summary>

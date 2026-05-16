@@ -8,9 +8,20 @@ using IndieGame.Gameplay.Treasure;
 namespace IndieGame.UI.Treasure
 {
     /// <summary>
+    /// 通用菜单条目：供非宝具场景（如斗篷传送目标）复用此菜单时使用。
+    /// Id 将作为 TreasureItemSelectedEvent.TreasureId 发布，由调用方解析含义。
+    /// </summary>
+    public struct SimpleMenuItem
+    {
+        public string Id;
+        public string DisplayText;
+    }
+
+    /// <summary>
     /// 宝具菜单视图：自管理 UI（仿 ShopUIController 模式）。
     /// 订阅 BoardTreasureMenuRequestedEvent 后自动展示宝具列表，
     /// 玩家确认后发布 TreasureItemSelectedEvent，取消后发布 TreasureMenuCancelledEvent。
+    /// 也可通过 ShowSimple() 以纯文本列表形式复用此菜单（如斗篷传送目标选择）。
     /// </summary>
     public class TreasureMenuView : MonoBehaviour
     {
@@ -32,8 +43,16 @@ namespace IndieGame.UI.Treasure
         public float inputRepeatDelay = 0.2f;
 
         // --- 运行时状态 ---
-        private readonly List<TreasureSlotUI> _slots = new List<TreasureSlotUI>();
-        private readonly List<TreasureSO> _options = new List<TreasureSO>();
+        private readonly List<TreasureSlotUI> _slots   = new List<TreasureSlotUI>();
+        private readonly List<TreasureSO>     _options = new List<TreasureSO>();
+        // 简单模式（ShowSimple）的条目列表；两种模式互斥，_simpleMode 标记当前生效的
+        private readonly List<SimpleMenuItem> _simpleOptions = new List<SimpleMenuItem>();
+        private bool _simpleMode;
+        // 用于跳过 ShowSimple 显示后的第一次 InputInteractCanceledEvent：
+        // 玩家按确认键从宝具菜单选中斗篷，键未松开时状态切换到 CloakTreasureState，
+        // ShowSimple 重新订阅输入，此时松开确认键会被误判为"取消"。
+        // 设置此标志让第一次取消事件静默，与 WingTreasureState 用 UICancelEvent 的原因相同。
+        private bool _suppressNextCancel;
         private int _selectedIndex = -1;
         private float _nextInputTime;
         private bool _isVisible;
@@ -70,14 +89,33 @@ namespace IndieGame.UI.Treasure
 
         // ── 公开接口 ──────────────────────────────────────────────────────
 
+        // 当前列表总条目数（统一两种模式）
+        private int OptionCount => _simpleMode ? _simpleOptions.Count : _options.Count;
+
         /// <summary>
         /// 展示宝具菜单（幂等：已显示时忽略）。
         /// </summary>
         public void Show(IReadOnlyList<TreasureSO> treasures)
         {
             if (_isVisible) return;
-
+            _simpleMode = false;
             RefreshSlots(treasures);
+            SelectIndex(0, instant: true);
+            PlayShowAnimation();
+            _isVisible = true;
+            SubscribeInput();
+        }
+
+        /// <summary>
+        /// 以纯文本列表展示菜单（复用宝具菜单 UI，适用于斗篷等传送目标选择）。
+        /// 确认时仍发布 TreasureItemSelectedEvent，TreasureId 为对应条目的 Id 字段。
+        /// </summary>
+        public void ShowSimple(IReadOnlyList<SimpleMenuItem> items)
+        {
+            if (_isVisible) return;
+            _simpleMode = true;
+            _suppressNextCancel = true;
+            RefreshSlotsSimple(items);
             SelectIndex(0, instant: true);
             PlayShowAnimation();
             _isVisible = true;
@@ -99,30 +137,41 @@ namespace IndieGame.UI.Treasure
 
         private void OnMoveInput(InputMoveEvent evt)
         {
-            if (_options.Count == 0 || Time.time < _nextInputTime) return;
+            int count = OptionCount;
+            if (count == 0 || Time.time < _nextInputTime) return;
 
             if (evt.Value.y > 0.5f)
             {
                 _nextInputTime = Time.time + inputRepeatDelay;
-                SelectIndex((_selectedIndex - 1 + _options.Count) % _options.Count);
+                SelectIndex((_selectedIndex - 1 + count) % count);
             }
             else if (evt.Value.y < -0.5f)
             {
                 _nextInputTime = Time.time + inputRepeatDelay;
-                SelectIndex((_selectedIndex + 1) % _options.Count);
+                SelectIndex((_selectedIndex + 1) % count);
             }
         }
 
         private void OnInteractInput(InputInteractEvent evt)
         {
-            if (_selectedIndex < 0 || _selectedIndex >= _options.Count) return;
-            TreasureSO selected = _options[_selectedIndex];
+            string id;
+            if (_simpleMode)
+            {
+                if (_selectedIndex < 0 || _selectedIndex >= _simpleOptions.Count) return;
+                id = _simpleOptions[_selectedIndex].Id;
+            }
+            else
+            {
+                if (_selectedIndex < 0 || _selectedIndex >= _options.Count) return;
+                id = _options[_selectedIndex].TreasureId;
+            }
             Hide();
-            EventBus.Raise(new TreasureItemSelectedEvent { TreasureId = selected.TreasureId });
+            EventBus.Raise(new TreasureItemSelectedEvent { TreasureId = id });
         }
 
         private void OnCancelInput(InputInteractCanceledEvent evt)
         {
+            if (_suppressNextCancel) { _suppressNextCancel = false; return; }
             Hide();
             EventBus.Raise(new TreasureMenuCancelledEvent());
         }
@@ -162,14 +211,37 @@ namespace IndieGame.UI.Treasure
 
         private void SelectIndex(int index, bool instant = false)
         {
-            if (_options.Count == 0) return;
-            _selectedIndex = Mathf.Clamp(index, 0, _options.Count - 1);
+            int count = OptionCount;
+            if (count == 0) return;
+            _selectedIndex = Mathf.Clamp(index, 0, count - 1);
 
             for (int i = 0; i < _slots.Count; i++)
             {
                 if (_slots[i] == null || !_slots[i].gameObject.activeSelf) continue;
                 _slots[i].SetHighlighted(i == _selectedIndex);
             }
+        }
+
+        private void RefreshSlotsSimple(IReadOnlyList<SimpleMenuItem> items)
+        {
+            _simpleOptions.Clear();
+
+            if (binder == null || binder.SlotPrefab == null || binder.SlotContainer == null) return;
+
+            foreach (var slot in _slots)
+                if (slot != null) slot.gameObject.SetActive(false);
+
+            for (int i = 0; i < items.Count; i++)
+            {
+                TreasureSlotUI slot = i < _slots.Count ? _slots[i] : CreateSlot();
+                if (slot == null) break;
+
+                slot.SetupSimple(items[i].DisplayText);
+                slot.gameObject.SetActive(true);
+                _simpleOptions.Add(items[i]);
+            }
+
+            _selectedIndex = -1;
         }
 
         // ── 动画 ──────────────────────────────────────────────────────────

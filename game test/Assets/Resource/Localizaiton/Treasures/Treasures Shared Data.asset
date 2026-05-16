@@ -35,6 +35,10 @@ MonoBehaviour:
     m_Key: SHADOW_DICE
     m_Metadata:
       m_Items: []
+  - m_Id: 2532674703753216
+    m_Key: CLOAK
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

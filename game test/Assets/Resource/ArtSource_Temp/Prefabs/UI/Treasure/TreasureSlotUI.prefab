@@ -55,7 +55,7 @@ MonoBehaviour:
   iconImage: {fileID: 5192771798988050250}
   nameLabel: {fileID: 2118065387131562921}
   costLabel: {fileID: 1789172160272568046}
-  highlightObject: {fileID: 5610884078883986163, guid: 9fbe61d1f4bc091439f25f985dd189a5, type: 3}
+  highlightObject: {fileID: 0}
 --- !u!114 &8930125931844978422
 MonoBehaviour:
   m_ObjectHideFlags: 0

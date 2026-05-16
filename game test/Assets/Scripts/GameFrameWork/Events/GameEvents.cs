@@ -799,4 +799,5 @@ namespace IndieGame.Core
         // 当前奖励倍率（= 1 + ComboCount）
         public float Multiplier;
     }
+
 }

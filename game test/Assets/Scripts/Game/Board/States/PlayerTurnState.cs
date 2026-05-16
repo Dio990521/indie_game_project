@@ -228,6 +228,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             {
                 _context.ChangeState(new ShadowDiceTreasureState(shadowDiceData));
             }
+            else if (so is CloakTreasureSO cloakData && _context != null)
+            {
+                _context.ChangeState(new CloakTreasureState(cloakData));
+            }
             else
             {
                 // 未知宝具 ID 或 SO 未注册到 TreasureSystem：回退到操作菜单

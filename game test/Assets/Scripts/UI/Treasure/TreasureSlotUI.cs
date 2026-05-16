@@ -60,5 +60,24 @@ namespace IndieGame.UI.Treasure
             if (highlightObject != null)
                 highlightObject.SetActive(highlighted);
         }
+
+        /// <summary>
+        /// 以纯文本填充本行（用于非宝具列表，如斗篷传送目标）。
+        /// 隐藏图标和代价标签，只显示传入的文字。
+        /// </summary>
+        public void SetupSimple(string displayText)
+        {
+            if (iconImage != null)
+            {
+                iconImage.sprite  = null;
+                iconImage.enabled = false;
+            }
+            if (nameLabel != null)
+                nameLabel.text = displayText;
+            if (costLabel != null)
+                costLabel.text = string.Empty;
+
+            SetHighlighted(false);
+        }
     }
 }
