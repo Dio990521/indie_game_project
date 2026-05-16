@@ -208,10 +208,22 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// <summary>
         /// 抛物线弹射协程：从当前位置高弧线飞往目标节点，不触发路径事件。
         /// 控制点取两端中点上方 arcHeight 处，形成炮弹抛物线效果。
+        ///
         /// originNode：飞跃的起点节点。传入时落地后 LastWaypoint 保留方向信息（飞翼等有方向性的跳跃）；
         ///             传 null 时落地后 LastWaypoint = null，不限制来路（大炮格随机落点）。
+        ///
+        /// spinSpeed：大于0时飞行中持续绕Y轴自转（度/秒），替代原来的面向目标旋转逻辑。
+        /// landingFacing：落地后的目标朝向，配合 spinSpeed 使用时会在落地后执行从快到慢的减速旋转动画。
+        /// settleExtraRotations：落地减速阶段在对齐 landingFacing 之前额外旋转的圈数。
         /// </summary>
-        public IEnumerator LaunchParabolic(MapWaypoint targetNode, float arcHeight, float launchSpeed, MapWaypoint originNode = null)
+        public IEnumerator LaunchParabolic(
+            MapWaypoint targetNode,
+            float arcHeight,
+            float launchSpeed,
+            MapWaypoint originNode = null,
+            float spinSpeed = 0f,
+            Quaternion? landingFacing = null,
+            float settleExtraRotations = 2f)
         {
             if (targetNode == null) yield break;
 
@@ -228,35 +240,75 @@ namespace IndieGame.Gameplay.Board.Runtime
                 transform.position = p2;
                 SetCurrentNode(targetNode, false, false);
                 LastWaypoint = originNode;
+                // 零距离传送时直接对齐落地朝向（无减速动画）
+                if (landingFacing.HasValue) transform.rotation = landingFacing.Value;
                 yield break;
             }
 
             float duration = approxDist / speed;
             float timer = 0f;
+            bool doSpin = spinSpeed > 0f && landingFacing.HasValue;
 
+            // ── 飞行阶段 ──────────────────────────────────────────────────────
             while (timer < duration)
             {
                 float dt = Time.deltaTime;
                 timer += dt;
                 float t = Mathf.Clamp01(timer / duration);
 
-                // 水平朝向目标节点（忽略 Y，避免随抛物线弧度出现俯仰）
-                Vector3 toTarget = p2 - transform.position;
-                toTarget.y = 0f;
-                if (toTarget != Vector3.zero)
+                if (doSpin)
                 {
-                    Quaternion targetRot = Quaternion.LookRotation(toTarget);
-                    transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * dt);
+                    // 空中持续绕Y轴自转，替代面向目标旋转
+                    transform.Rotate(0f, spinSpeed * dt, 0f, Space.World);
+                }
+                else
+                {
+                    // 原逻辑：水平朝向目标节点（忽略 Y，避免随抛物线弧度出现俯仰）
+                    Vector3 toTarget = p2 - transform.position;
+                    toTarget.y = 0f;
+                    if (toTarget != Vector3.zero)
+                    {
+                        Quaternion targetRot = Quaternion.LookRotation(toTarget);
+                        transform.rotation = Quaternion.Slerp(transform.rotation, targetRot, rotateSpeed * dt);
+                    }
                 }
 
                 transform.position = BezierUtils.GetQuadraticBezierPoint(t, p0, p1, p2);
                 yield return null;
             }
 
+            // 抵达落点，精确对齐位置并更新节点信息
             transform.position = p2;
-            // resetLastWaypoint = false，由外部传入的 originNode 决定来路（null = 无限制，非 null = 保留方向）
             SetCurrentNode(targetNode, false, false);
             LastWaypoint = originNode;
+
+            // ── 落地减速旋转阶段 ──────────────────────────────────────────────
+            // 仅在启用转体且有目标朝向时才播放减速定向动画
+            if (doSpin)
+            {
+                float currentY  = transform.eulerAngles.y;
+                float targetY   = landingFacing!.Value.eulerAngles.y;
+                // DeltaAngle 返回 [-180, 180]，取最短弧度差
+                float diff      = Mathf.DeltaAngle(currentY, targetY);
+                // 额外旋转圈数保持与飞行时一致的顺时针方向（+），使减速感更自然
+                // 公式保证 totalDelta >= (settleExtraRotations*360 - 180) > 0（settleExtraRotations >= 1 时成立）
+                float totalDelta    = settleExtraRotations * 360f + diff;
+                const float settleDuration = 0.75f;
+                float settleTimer   = 0f;
+
+                while (settleTimer < settleDuration)
+                {
+                    settleTimer += Time.deltaTime;
+                    float t     = Mathf.Clamp01(settleTimer / settleDuration);
+                    // easeOutCubic：开始快，结尾显著减速
+                    float eased = 1f - Mathf.Pow(1f - t, 3f);
+                    transform.rotation = Quaternion.Euler(0f, currentY + totalDelta * eased, 0f);
+                    yield return null;
+                }
+
+                // 精确对齐目标朝向，消除浮点误差
+                transform.rotation = landingFacing!.Value;
+            }
         }
 
         /// <summary>

@@ -771,6 +771,10 @@ namespace IndieGame.Core
         public float ArcHeight;
         // 弹射速度
         public float LaunchSpeed;
+        // 飞行时Y轴自转速度（度/秒），0=不转体（保持原来面向目标的旋转）
+        public float SpinSpeed;
+        // 落地减速阶段在对齐目标朝向前额外旋转的圈数（增强减速感）
+        public float SettleExtraRotations;
     }
 
     /// <summary>

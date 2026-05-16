@@ -53,6 +53,9 @@ namespace IndieGame.Gameplay.Board.Runtime
         private bool _immovableBellActive = false;
         // [影骰子] 激活后，下一次掷骰子点数翻倍，消耗后自动清除
         private bool _shadowDiceActive = false;
+        // [人体大炮] 落地时预选的首步方向节点ID。跨移动序列持久，在下次BeginMove首步消耗后清除。
+        // 确保落地后下次投骰直接移动，不弹出岔路选择UI。-1表示未激活。
+        private int _cannonPresetFirstStepNodeId = -1;
 
         private void OnDisable()
         {
@@ -100,6 +103,14 @@ namespace IndieGame.Gameplay.Board.Runtime
             _stepsRemaining    = totalSteps;
             _fx                = TileEffectPendingState.Default;
             ComboMoveSystem.ResetCombo(); // 每次掷骰开始时清零连锁计数
+
+            // [人体大炮] 消耗上一次弹射落地时预选的首步方向，注入 ForcedNextNodeId。
+            // AdvanceToNextStep 首次调用时会读取该值并跳过岔路UI直接走向预设节点，消耗后清除。
+            if (_cannonPresetFirstStepNodeId >= 0)
+            {
+                _fx.ForcedNextNodeId       = _cannonPresetFirstStepNodeId;
+                _cannonPresetFirstStepNodeId = -1;
+            }
 
             // 同步底层属性：实体在移动时是否检测路径上的事件（如连线中间的交互）
             _activeEntity.TriggerConnectionEvents = triggerNodeEvents;
@@ -666,7 +677,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
-        /// 执行炮弹弹射：随机选目标节点 → 抛物线飞行 → 触发目标格子效果。
+        /// 执行炮弹弹射：随机选目标节点 → 在起飞前预选落地朝向 → 抛物线飞行（空中转体）→ 落地减速定向 → 触发目标格子效果。
         /// </summary>
         private IEnumerator DoCannonLaunch()
         {
@@ -682,10 +693,36 @@ namespace IndieGame.Gameplay.Board.Runtime
             MapWaypoint target = allNodes[UnityEngine.Random.Range(0, allNodes.Count)];
             DebugTools.Log($"<color=orange>[Cannon Tile]</color> 弹射目标：{target.nodeID} ({target.name})");
 
+            // 在起飞前就决定落地朝向，这样旋转动画的终点在空中就已确定。
+            // 从目标节点所有出口中随机选一个作为落地后首步方向。
+            Quaternion? landingFacing = null;
+            List<MapWaypoint> exits = target.GetValidNextNodes(null);
+            if (exits.Count > 0)
+            {
+                MapWaypoint chosenExit = exits[UnityEngine.Random.Range(0, exits.Count)];
+                // 存储预选方向，下次BeginMove时注入首步强制节点，避免弹出岔路UI
+                _cannonPresetFirstStepNodeId = chosenExit.nodeID;
+                // 计算朝向：从落点指向选定出口，忽略Y轴高度差
+                Vector3 dir = chosenExit.transform.position - target.transform.position;
+                dir.y = 0f;
+                if (dir != Vector3.zero)
+                    landingFacing = Quaternion.LookRotation(dir.normalized);
+                DebugTools.Log($"<color=orange>[Cannon Tile]</color> 预选落地朝向：出口节点 {chosenExit.nodeID}");
+            }
+
             // 记录弹射起点，落地后一次性揭开整段 XZ 轨迹（单次 GPU 上传，性能最优）
             Vector3 launchStartPos = _activeEntity.transform.position;
 
-            yield return _activeEntity.LaunchParabolic(target, _fx.CannonArcHeight, _fx.CannonLaunchSpeed);
+            // 执行抛物线飞行：传入自转参数和落地目标朝向
+            yield return _activeEntity.LaunchParabolic(
+                target,
+                _fx.CannonArcHeight,
+                _fx.CannonLaunchSpeed,
+                originNode: null,
+                spinSpeed: _fx.CannonSpinSpeed,
+                landingFacing: landingFacing,
+                settleExtraRotations: _fx.CannonSettleExtraRotations
+            );
 
             FogOfWarManager.Instance?.RevealLine(launchStartPos, target.transform.position);
 
@@ -698,9 +735,11 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// </summary>
         private void OnCannonLaunchRequested(BoardCannonLaunchRequestedEvent evt)
         {
-            _fx.CannonLaunch      = true;
-            _fx.CannonArcHeight   = evt.ArcHeight;
-            _fx.CannonLaunchSpeed = evt.LaunchSpeed;
+            _fx.CannonLaunch               = true;
+            _fx.CannonArcHeight            = evt.ArcHeight;
+            _fx.CannonLaunchSpeed          = evt.LaunchSpeed;
+            _fx.CannonSpinSpeed            = evt.SpinSpeed;
+            _fx.CannonSettleExtraRotations = evt.SettleExtraRotations;
         }
 
         /// <summary>

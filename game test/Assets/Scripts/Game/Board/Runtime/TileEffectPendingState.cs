@@ -22,6 +22,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         public bool CannonLaunch;
         public float CannonArcHeight;
         public float CannonLaunchSpeed;
+        // 飞行时Y轴自转速度（度/秒）
+        public float CannonSpinSpeed;
+        // 落地减速阶段额外旋转圈数
+        public float CannonSettleExtraRotations;
 
         // [传送格] 是否有待执行的传送请求及目标节点
         public bool Teleport;
@@ -39,9 +43,11 @@ namespace IndieGame.Gameplay.Board.Runtime
             ExtraSteps        = 0,
             ForcedNextNodeId  = -1,
             ProtectedNodeId   = -1,
-            CannonLaunch      = false,
-            CannonArcHeight   = 5f,
-            CannonLaunchSpeed = 12f,
+            CannonLaunch               = false,
+            CannonArcHeight            = 5f,
+            CannonLaunchSpeed          = 12f,
+            CannonSpinSpeed            = 720f,
+            CannonSettleExtraRotations = 2f,
             Teleport          = false,
             TeleportTargetId  = -1,
             DirectionalNodeId = -1,
