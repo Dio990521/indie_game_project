@@ -13,6 +13,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     {
         private BoardGameManager _context;
         private Action<TownLeaveRequestedEvent> _onLeave;
+        private Action<CloseShopUIRequestEvent> _onShopClosed;
 
         /// <summary>
         /// 进入城镇状态：显示城镇 UI 并等待玩家离开。
@@ -35,6 +36,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 订阅"离开城镇"事件
             _onLeave = _ => LeaveTown();
             EventBus.Subscribe(_onLeave);
+
+            // 商店关闭后返回城镇菜单
+            _onShopClosed = _ => ReturnToTownMenu();
+            EventBus.Subscribe(_onShopClosed);
         }
 
         /// <summary>
@@ -48,6 +53,12 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 _onLeave = null;
             }
 
+            if (_onShopClosed != null)
+            {
+                EventBus.Unsubscribe(_onShopClosed);
+                _onShopClosed = null;
+            }
+
             UIManager.Instance?.TownUIInstance?.Hide();
             _context = null;
         }
@@ -58,6 +69,15 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private void LeaveTown()
         {
             _context?.ChangeState(new PlayerTurnState());
+        }
+
+        /// <summary>
+        /// 商店关闭后重新显示城镇菜单。
+        /// </summary>
+        private void ReturnToTownMenu()
+        {
+            if (_context == null) return;
+            UIManager.Instance?.TownUIInstance?.Show();
         }
     }
 }

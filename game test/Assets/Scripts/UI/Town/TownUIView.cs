@@ -18,6 +18,10 @@ namespace IndieGame.UI.Town
         [Header("Binder")]
         [SerializeField] private TownUIBinder binder;
 
+        [Header("商店配置")]
+        [SerializeField] private string _materialShopID = "town_material_shop";
+        [SerializeField] private string _itemShopID     = "town_item_shop";
+
         // CanvasGroup 控制淡入淡出
         private CanvasGroup _canvasGroup;
 
@@ -122,6 +126,20 @@ namespace IndieGame.UI.Town
         }
 
         /// <summary>
+        /// 隐藏城镇菜单并发送打开商店请求。
+        /// </summary>
+        private void OpenShop(string shopId)
+        {
+            if (string.IsNullOrWhiteSpace(shopId))
+            {
+                DebugTools.LogWarning("[TownUIView] 商店 ID 未配置。");
+                return;
+            }
+            Hide();
+            EventBus.Raise(new OpenShopUIRequestEvent { ShopID = shopId });
+        }
+
+        /// <summary>
         /// 按钮点击处理：通过索引映射到功能 ID，分派对应逻辑。
         /// </summary>
         private void HandleButtonClick(TownActionButtonClickEvent evt)
@@ -133,10 +151,10 @@ namespace IndieGame.UI.Town
             switch (id)
             {
                 case TownActionID.MaterialShop:
-                    DebugTools.Log("[城镇] 素材店 —— 功能待实现");
+                    OpenShop(_materialShopID);
                     break;
                 case TownActionID.ItemShop:
-                    DebugTools.Log("[城镇] 道具店 —— 功能待实现");
+                    OpenShop(_itemShopID);
                     break;
                 case TownActionID.Tavern:
                     DebugTools.Log("[城镇] 酒馆 —— 功能待实现");
