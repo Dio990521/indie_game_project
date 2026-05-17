@@ -505,9 +505,46 @@ namespace IndieGame.Core
         public int Index;
     }
 
+    // ===================== 城镇 UI 事件 =====================
+
+    /// <summary>
+    /// 城镇动作按钮 Hover 事件：
+    /// 由 TownActionButton 在鼠标进入时触发。
+    /// </summary>
+    public struct TownActionButtonHoverEvent
+    {
+        public int Index;
+    }
+
+    /// <summary>
+    /// 城镇动作按钮 Click 事件：
+    /// 由 TownActionButton 在点击时触发。
+    /// </summary>
+    public struct TownActionButtonClickEvent
+    {
+        public int Index;
+    }
+
+    /// <summary>
+    /// 城镇动作按钮 Exit 事件：
+    /// 由 TownActionButton 在鼠标移出时触发。
+    /// </summary>
+    public struct TownActionButtonExitEvent
+    {
+        public int Index;
+    }
+
+    /// <summary>
+    /// 离开城镇请求事件：
+    /// 由 TownUIView 在玩家点击”离开”时触发，TownState 监听后切回玩家回合。
+    /// </summary>
+    public struct TownLeaveRequestedEvent { }
+
+    // ===================== 存档系统事件 =====================
+
     /// <summary>
     /// 自动存档触发来源：
-    /// 该枚举用于描述“自动存档请求是由哪个业务场景发起”的。
+    /// 该枚举用于描述”自动存档请求是由哪个业务场景发起”的。
     /// 设计价值：
     /// 1) 让 AutoSaveService 可以按来源应用不同槽位策略；
     /// 2) 让日志与问题定位更清晰（例如 Sleep 自动存档失败）；

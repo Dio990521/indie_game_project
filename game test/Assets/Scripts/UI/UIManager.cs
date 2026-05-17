@@ -9,6 +9,7 @@ using IndieGame.UI.Dialogue;
 using IndieGame.UI.Hud;
 using IndieGame.UI.Shop;
 using IndieGame.UI.Treasure;
+using IndieGame.UI.Town;
 
 namespace IndieGame.UI
 {
@@ -60,6 +61,8 @@ namespace IndieGame.UI
         [SerializeField] private ShopUIController shopUIPrefab;
         // 宝具菜单 UI（仅由 UIManager 负责实例化）
         [SerializeField] private TreasureMenuView treasureMenuPrefab;
+        // 城镇菜单 UI（仅由 UIManager 负责实例化）
+        [SerializeField] private TownUIView townUIPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -72,6 +75,7 @@ namespace IndieGame.UI
         public PlayerHudController PlayerHudInstance { get; private set; }
         public ShopUIController ShopUIInstance { get; private set; }
         public TreasureMenuView TreasureMenuInstance { get; private set; }
+        public TownUIView TownUIInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -242,6 +246,12 @@ namespace IndieGame.UI
             {
                 TreasureMenuInstance = SpawnOnLayer(treasureMenuPrefab, UILayerPriority.Top75);
                 if (TreasureMenuInstance != null) TreasureMenuInstance.gameObject.SetActive(true);
+            }
+
+            if (townUIPrefab != null && TownUIInstance == null)
+            {
+                TownUIInstance = SpawnOnLayer(townUIPrefab, UILayerPriority.Top75);
+                if (TownUIInstance != null) TownUIInstance.gameObject.SetActive(true);
             }
 
             // 生成全屏遮罩，确保始终在 UI 最上层

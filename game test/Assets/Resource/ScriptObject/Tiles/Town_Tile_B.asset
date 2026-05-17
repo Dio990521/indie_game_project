@@ -1,0 +1,17 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ab3848f163b3e844db50803c7d5d0ca8, type: 3}
+  m_Name: Town_Tile_B
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.TownTile
+  tileName: 
+  gizmoColor: {r: 0.3690103, g: 0.35777843, b: 0.84276724, a: 1}
+  townName: TownB

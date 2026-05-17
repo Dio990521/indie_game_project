@@ -106,7 +106,8 @@ namespace IndieGame.Gameplay.Board.Runtime
 
             // [人体大炮] 消耗上一次弹射落地时预选的首步方向，注入 ForcedNextNodeId。
             // AdvanceToNextStep 首次调用时会读取该值并跳过岔路UI直接走向预设节点，消耗后清除。
-            if (_cannonPresetFirstStepNodeId >= 0)
+            // 仅对玩家实体生效：NPC 移动不应消费玩家的炮弹落地朝向，否则方向锁会错误注入 NPC 路径。
+            if (_cannonPresetFirstStepNodeId >= 0 && entity == _playerEntity)
             {
                 _fx.ForcedNextNodeId       = _cannonPresetFirstStepNodeId;
                 _cannonPresetFirstStepNodeId = -1;
