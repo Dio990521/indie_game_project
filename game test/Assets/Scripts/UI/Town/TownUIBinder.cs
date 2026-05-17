@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace IndieGame.UI.Town
 {
@@ -18,6 +19,10 @@ namespace IndieGame.UI.Town
         // 透明度与交互控制
         [SerializeField] private CanvasGroup canvasGroup;
 
+        [Header("背景图")]
+        // 城镇背景图（各城镇可在对应 TownTile SO 中单独配置 Sprite）
+        [SerializeField] private Image bgImage;
+
         /// <summary>菜单根节点</summary>
         public RectTransform RootRect => rootRect;
         /// <summary>按钮容器</summary>
@@ -26,5 +31,7 @@ namespace IndieGame.UI.Town
         public TownActionButton ButtonPrefab => buttonPrefab;
         /// <summary>CanvasGroup 控制器</summary>
         public CanvasGroup CanvasGroup => canvasGroup;
+        /// <summary>城镇背景图组件</summary>
+        public Image BgImage => bgImage;
     }
 }

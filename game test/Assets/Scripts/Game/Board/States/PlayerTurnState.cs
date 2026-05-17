@@ -4,6 +4,7 @@ using IndieGame.Core.Utilities;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.UI;
+using IndieGame.Gameplay.Board.Data;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.ActionPoint;
 using IndieGame.Gameplay.Treasure;
@@ -250,38 +251,54 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         /// <summary>
         /// 构建默认菜单数据：定义玩家回合开始时菜单里有哪些按钮。
-        /// 这里使用了本地化字符串 (LocalizedString)，确保 UI 文字支持多语言。
+        /// 站在城镇格时不显示营地按钮——城镇提供专属服务，无法在此扎营。
         /// </summary>
-        /// <returns>操作选项数据列表</returns>
-        private System.Collections.Generic.List<BoardActionOptionData> BuildDefaultMenuData()
+        private List<BoardActionOptionData> BuildDefaultMenuData()
         {
-            return new System.Collections.Generic.List<BoardActionOptionData>
+            var options = new List<BoardActionOptionData>
             {
-                // 1. 掷骰子选项
                 new BoardActionOptionData
                 {
-                    Id = BoardActionId.RollDice,
+                    Id   = BoardActionId.RollDice,
                     Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "RollDice" }
                 },
-                // 2. 背包选项
                 new BoardActionOptionData
                 {
-                    Id = BoardActionId.Item,
+                    Id   = BoardActionId.Item,
                     Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Bag" }
                 },
-                // 3. 宝具选项
                 new BoardActionOptionData
                 {
-                    Id = BoardActionId.Treasure,
+                    Id   = BoardActionId.Treasure,
                     Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Treasure" }
                 },
-                // 4. 营地/整备选项
-                new BoardActionOptionData
-                {
-                    Id = BoardActionId.Camp,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Camp" }
-                }
             };
+
+            // 城镇格上不提供营地：玩家应通过城镇旅馆休息，而非露营
+            if (!IsStandingOnTownTile())
+            {
+                options.Add(new BoardActionOptionData
+                {
+                    Id   = BoardActionId.Camp,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Camp" }
+                });
+            }
+
+            return options;
+        }
+
+        /// <summary>
+        /// 检测玩家当前所在节点是否为城镇格。
+        /// </summary>
+        private bool IsStandingOnTownTile()
+        {
+            if (_context == null) return false;
+            var mc = _context.movementController;
+            if (mc == null) return false;
+            var mapMgr = BoardMapManager.Instance;
+            if (mapMgr == null) return false;
+            var node = mapMgr.GetNode(mc.CurrentNodeId);
+            return node != null && node.tileData is TownTile;
         }
     }
 }

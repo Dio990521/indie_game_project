@@ -1,18 +1,22 @@
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using IndieGame.Core;
+using IndieGame.Core.CameraSystem;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.ActionPoint;
+using IndieGame.Gameplay.Board.Data;
+using IndieGame.Gameplay.Board.Runtime;
 using IndieGame.Gameplay.Town;
 using IndieGame.UI.Camp;
+using IndieGame.UI.Treasure;
 
 namespace IndieGame.UI.Town
 {
     /// <summary>
-    /// 城镇 UI 视图：
-    /// 全屏覆盖的城镇菜单，包含 6 个功能按钮。
-    /// 当前仅【离开】按钮有实际功能，其余按钮输出 Log 占位。
+    /// 城镇 UI 视图：全屏覆盖的城镇菜单，包含 6 个功能按钮。
+    /// 支持背景图（由 TownTile.townBackground 配置）、传送选单（复用 TreasureMenuView.ShowSimple）。
     /// </summary>
     public class TownUIView : View
     {
@@ -35,6 +39,19 @@ namespace IndieGame.UI.Town
 
         // CanvasGroup 控制淡入淡出
         private CanvasGroup _canvasGroup;
+
+        // 当前城镇数据（由 TownState.OnEnter → Configure() 注入）
+        private int _currentNodeId = -1;
+        private TownTile _currentTownTile;
+
+        // 传送流程：字段级委托，OnDisable 兜底清理（协程被 StopAllCoroutines 终止时不执行 finally）
+        private System.Action<TreasureItemSelectedEvent>  _onTeleportSelected;
+        private System.Action<TreasureMenuCancelledEvent> _onTeleportCancelled;
+
+        // 传送协程的轮询标志
+        private bool _teleportNodeSelected;
+        private bool _teleportCancelled;
+        private int  _teleportTargetNodeId;
 
         // 旅馆自动存档请求追踪（与 CampUIView 的 Sleep 机制对称）
         private static int _innAutoSaveRequestSerial;
@@ -88,6 +105,35 @@ namespace IndieGame.UI.Town
         {
             EventBus.Unsubscribe<TownActionButtonClickEvent>(HandleButtonClick);
             EventBus.Unsubscribe<AutoSaveCompletedEvent>(HandleInnAutoSaveCompleted);
+
+            // 兜底清理传送委托（协程被外部 StopAllCoroutines 终止时不会执行正常的注销路径）
+            if (_onTeleportSelected != null)
+            {
+                EventBus.Unsubscribe(_onTeleportSelected);
+                _onTeleportSelected = null;
+            }
+            if (_onTeleportCancelled != null)
+            {
+                EventBus.Unsubscribe(_onTeleportCancelled);
+                _onTeleportCancelled = null;
+            }
+        }
+
+        /// <summary>
+        /// 配置当前城镇数据，在 Show() 之前由 TownState.OnEnter 调用。
+        /// 传送完成后也会调用此方法热切换背景图，无需退出重进 TownState。
+        /// </summary>
+        public void Configure(int nodeId, TownTile townTile)
+        {
+            _currentNodeId   = nodeId;
+            _currentTownTile = townTile;
+
+            if (binder != null && binder.BgImage != null)
+            {
+                Sprite bg = townTile != null ? townTile.townBackground : null;
+                binder.BgImage.sprite  = bg;
+                binder.BgImage.enabled = bg != null;
+            }
         }
 
         /// <summary>
@@ -270,13 +316,136 @@ namespace IndieGame.UI.Town
                     StartCoroutine(InnSleepRoutine());
                     break;
                 case TownActionID.Teleport:
-                    DebugTools.Log("[城镇] 传送 —— 功能待实现");
+                    StartCoroutine(TeleportMenuRoutine());
                     break;
                 case TownActionID.Leave:
                     // 通知 TownState 退出城镇，回到玩家回合
                     EventBus.Raise(new TownLeaveRequestedEvent());
                     break;
             }
+        }
+        /// <summary>
+        /// 城镇传送流程：
+        /// 1. 收集已解锁城镇（排除当前）→ 2. 弹出选单（复用 TreasureMenuView.ShowSimple）
+        /// → 3. 等待选择 → 4. 黑屏淡入 → 5. 移动玩家 + 更新背景图 → 6. 黑屏淡出，显示目标城镇菜单。
+        /// 全程不退出 TownState，传送后直接热更新城镇数据。
+        /// </summary>
+        private IEnumerator TeleportMenuRoutine()
+        {
+            // ① 获取已解锁城镇列表（排除当前城镇）
+            var unlockMgr = TownUnlockManager.Instance;
+            if (unlockMgr == null)
+            {
+                DebugTools.LogWarning("[城镇] TownUnlockManager 未就绪，传送中止。");
+                yield break;
+            }
+
+            List<(int nodeId, TownTile tile)> targets = unlockMgr.GetUnlockedTowns(excludeNodeId: _currentNodeId);
+            if (targets.Count == 0)
+            {
+                DebugTools.Log("[城镇] 没有其他已解锁城镇，无法传送。");
+                yield break;
+            }
+
+            var menu = UIManager.Instance != null ? UIManager.Instance.TreasureMenuInstance : null;
+            if (menu == null)
+            {
+                DebugTools.LogWarning("[城镇] TreasureMenuInstance 未就绪，传送中止。");
+                yield break;
+            }
+
+            // ② 淡出城镇菜单（防止遮挡传送选单），并禁用交互
+            _canvasGroup.interactable   = false;
+            _canvasGroup.blocksRaycasts = false;
+            _canvasGroup.DOKill();
+            _canvasGroup.DOFade(0f, 0.15f);
+            // 同时将传送选单移到 UI 层最顶层，确保渲染在最前
+            UIManager.Instance.TreasureMenuInstance.transform.SetAsLastSibling();
+            yield return new WaitForSeconds(0.15f);  // 等待淡出完成再显示选单
+
+            // ③ 注册字段级委托（OnDisable 时兜底清理）
+            _teleportNodeSelected  = false;
+            _teleportCancelled     = false;
+            _teleportTargetNodeId  = -1;
+
+            _onTeleportSelected = evt =>
+            {
+                if (int.TryParse(evt.TreasureId, out int id))
+                {
+                    _teleportTargetNodeId = id;
+                    _teleportNodeSelected = true;
+                }
+            };
+            _onTeleportCancelled = _ => { _teleportCancelled = true; };
+            EventBus.Subscribe(_onTeleportSelected);
+            EventBus.Subscribe(_onTeleportCancelled);
+
+            // ④ 构建条目并展示（复用 TreasureMenuView.ShowSimple，与斗篷宝具传送同一模式）
+            var items = new List<SimpleMenuItem>(targets.Count);
+            foreach (var (nodeId, tile) in targets)
+                items.Add(new SimpleMenuItem { Id = nodeId.ToString(), DisplayText = tile != null ? tile.townName : $"城镇 #{nodeId}" });
+            menu.ShowSimple(items);
+
+            // ⑤ 等待玩家选择或取消
+            while (!_teleportNodeSelected && !_teleportCancelled)
+                yield return null;
+
+            // ⑥ 正常路径注销委托（OnDisable 是兜底）
+            EventBus.Unsubscribe(_onTeleportSelected);  _onTeleportSelected  = null;
+            EventBus.Unsubscribe(_onTeleportCancelled); _onTeleportCancelled = null;
+
+            if (_teleportCancelled)
+            {
+                // 取消：将城镇菜单淡回来并恢复交互
+                _canvasGroup.DOKill();
+                _canvasGroup.DOFade(1f, 0.15f);
+                yield return new WaitForSeconds(0.15f);
+                _canvasGroup.interactable   = true;
+                _canvasGroup.blocksRaycasts = true;
+                yield break;
+            }
+
+            // ⑦ 找到目标 TownTile
+            TownTile targetTile = null;
+            foreach (var (nodeId, tile) in targets)
+            {
+                if (nodeId == _teleportTargetNodeId) { targetTile = tile; break; }
+            }
+
+            // ⑧ 黑屏淡入
+            float fadeDuration = 1f;
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
+            yield return new WaitForSeconds(fadeDuration);
+
+            // ⑨ 移动玩家到目标节点
+            var board = BoardGameManager.Instance;
+            if (board != null)
+                board.movementController?.SetCurrentNodeById(_teleportTargetNodeId);
+
+            // ⑩ 同步相机
+            if (CameraManager.Instance != null && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+            {
+                CameraManager.Instance.SetFollowTarget(GameManager.Instance.CurrentPlayer.transform);
+                CameraManager.Instance.WarpCameraToTarget();
+            }
+
+            // ⑪ 在黑屏期间热更新城镇数据（背景图切换）
+            Configure(_teleportTargetNodeId, targetTile);
+
+            // ⑫ 在黑屏内重新初始化按钮并恢复交互
+            //    不调用 Show()，因为 Show() 内含 StopAllCoroutines() 会杀死本协程
+            InitializeButtons();
+            _canvasGroup.blocksRaycasts = true;
+            _canvasGroup.interactable   = true;
+            _canvasGroup.DOKill();
+            _canvasGroup.alpha = 0f;
+            _canvasGroup.DOFade(1f, 0.25f);
+            yield return new WaitForSeconds(0.25f);
+
+            // ⑬ 黑屏淡出，目标城镇菜单呈现（背景图已在 Configure 中切换）
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+
+            DebugTools.Log($"[城镇] 传送完成 → {targetTile?.townName ?? $"节点 {_teleportTargetNodeId}"}");
         }
     }
 }

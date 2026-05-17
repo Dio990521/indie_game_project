@@ -1,6 +1,7 @@
 using System;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
+using IndieGame.Gameplay.Board.Data;
 using IndieGame.UI;
 
 namespace IndieGame.Gameplay.Board.Runtime.States
@@ -8,24 +9,39 @@ namespace IndieGame.Gameplay.Board.Runtime.States
     /// <summary>
     /// 城镇状态：玩家进入城镇后的棋盘状态。
     /// 负责显示城镇 UI，并在玩家点击"离开"后切回玩家回合。
+    /// 持有当前城镇的 nodeId 与 TownTile 数据，供 TownUIView 渲染背景图和传送功能使用。
     /// </summary>
     public class TownState : BoardState
     {
+        private readonly int _townNodeId;
+        private readonly TownTile _townTile;
+
         private BoardGameManager _context;
         private Action<TownLeaveRequestedEvent> _onLeave;
         private Action<CloseShopUIRequestEvent> _onShopClosed;
 
+        /// <summary>无参重载：保留兼容性。</summary>
+        public TownState() : this(-1, null) { }
+
+        /// <summary>携带城镇数据进入：nodeId 用于传送定位，townTile 提供名称与背景图。</summary>
+        public TownState(int nodeId, TownTile townTile)
+        {
+            _townNodeId = nodeId;
+            _townTile   = townTile;
+        }
+
         /// <summary>
-        /// 进入城镇状态：显示城镇 UI 并等待玩家离开。
+        /// 进入城镇状态：配置城镇数据后显示城镇 UI，等待玩家离开。
         /// </summary>
         public override void OnEnter(BoardGameManager context)
         {
             _context = context;
 
-            // 显示城镇 UI
+            // 配置并显示城镇 UI
             var townUI = UIManager.Instance?.TownUIInstance;
             if (townUI != null)
             {
+                townUI.Configure(_townNodeId, _townTile);   // 传入城镇数据（背景图等）
                 townUI.Show();
             }
             else

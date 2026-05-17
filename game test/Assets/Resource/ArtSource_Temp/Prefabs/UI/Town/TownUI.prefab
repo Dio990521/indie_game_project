@@ -56,6 +56,7 @@ MonoBehaviour:
   buttonContainer: {fileID: 7142282315953682537}
   buttonPrefab: {fileID: 5222526352912393644, guid: c989037a6f06b7646949befb0b3cc0ba, type: 3}
   canvasGroup: {fileID: 1564175901624234920}
+  bgImage: {fileID: 3501809498658725098}
 --- !u!114 &6246464611815323495
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -69,6 +70,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Town.TownUIView
   binder: {fileID: 3004938688538066832}
+  _materialShopID: town_material_shop
+  _itemShopID: town_item_shop
+  enableInnAutoSave: 1
+  innAutoSaveSlotIndex: 0
+  innAutoSaveNote: AutoSave-Inn
+  innAutoSaveTimeoutSeconds: 8
 --- !u!225 &1564175901624234920
 CanvasGroup:
   m_ObjectHideFlags: 0
