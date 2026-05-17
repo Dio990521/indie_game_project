@@ -3,6 +3,7 @@ using UnityEngine;
 using DG.Tweening;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
+using IndieGame.Gameplay.ActionPoint;
 using IndieGame.Gameplay.Town;
 using IndieGame.UI.Camp;
 
@@ -22,8 +23,25 @@ namespace IndieGame.UI.Town
         [SerializeField] private string _materialShopID = "town_material_shop";
         [SerializeField] private string _itemShopID     = "town_item_shop";
 
+        [Header("旅馆 Auto Save")]
+        [Tooltip("是否在住宿时自动触发一次存档。")]
+        [SerializeField] private bool enableInnAutoSave = true;
+        [Tooltip("住宿自动存档写入槽位。")]
+        [SerializeField] private int innAutoSaveSlotIndex = 0;
+        [Tooltip("住宿自动存档备注。")]
+        [SerializeField] private string innAutoSaveNote = "AutoSave-Inn";
+        [Tooltip("等待自动存档完成的超时时长（秒）。超时后继续流程，避免卡死。")]
+        [SerializeField] private float innAutoSaveTimeoutSeconds = 8f;
+
         // CanvasGroup 控制淡入淡出
         private CanvasGroup _canvasGroup;
+
+        // 旅馆自动存档请求追踪（与 CampUIView 的 Sleep 机制对称）
+        private static int _innAutoSaveRequestSerial;
+        private int _pendingInnAutoSaveRequestId = -1;
+        private bool _pendingInnAutoSaveCompleted;
+        private bool _pendingInnAutoSaveSuccess;
+        private string _pendingInnAutoSaveError;
 
         // 硬编码按钮配置：(功能ID, 显示名称)
         private static readonly (TownActionID Id, string Label)[] ButtonDefs =
@@ -63,11 +81,13 @@ namespace IndieGame.UI.Town
         private void OnEnable()
         {
             EventBus.Subscribe<TownActionButtonClickEvent>(HandleButtonClick);
+            EventBus.Subscribe<AutoSaveCompletedEvent>(HandleInnAutoSaveCompleted);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<TownActionButtonClickEvent>(HandleButtonClick);
+            EventBus.Unsubscribe<AutoSaveCompletedEvent>(HandleInnAutoSaveCompleted);
         }
 
         /// <summary>
@@ -140,6 +160,93 @@ namespace IndieGame.UI.Town
         }
 
         /// <summary>
+        /// 旅馆住宿流程：黑屏 → 恢复行动点 → 自动存档 → 重显城镇菜单 → 淡出。
+        /// 与营地 Sleep 逻辑相同，区别在于最终返回城镇菜单而非棋盘。
+        /// </summary>
+        private IEnumerator InnSleepRoutine()
+        {
+            float fadeDuration = 1f;
+
+            // 1) 立即禁用交互，防止黑屏前重复点击
+            _canvasGroup.interactable = false;
+            _canvasGroup.blocksRaycasts = false;
+
+            // 2) 黑屏淡入
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
+            yield return new WaitForSeconds(fadeDuration);
+
+            // 3) 恢复全部行动点
+            ActionPointSystem.Instance?.RefillActionPoints("Inn");
+
+            // 4) 自动存档（带超时保护）
+            yield return RequestInnAutoSaveRoutine();
+
+            // 5) 在黑屏状态下重新初始化菜单按钮并恢复交互
+            //    不调用 Show()，因为 Show() 内含 StopAllCoroutines() 会杀死本协程
+            InitializeButtons();
+            _canvasGroup.blocksRaycasts = true;
+            _canvasGroup.interactable   = true;
+            _canvasGroup.DOKill();
+            _canvasGroup.alpha = 0f;
+            _canvasGroup.DOFade(1f, 0.25f);
+            yield return new WaitForSeconds(0.25f);
+
+            // 6) 黑屏淡出，城镇菜单呈现
+            EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+        }
+
+        /// <summary>
+        /// 请求旅馆住宿自动存档并等待完成，逻辑与 CampUIView.RequestSleepAutoSaveRoutine 对称。
+        /// </summary>
+        private IEnumerator RequestInnAutoSaveRoutine()
+        {
+            if (!enableInnAutoSave) yield break;
+
+            if (!EventBus.HasSubscribers<AutoSaveRequestedEvent>())
+            {
+                DebugTools.LogWarning("[TownUIView] Inn auto-save skipped: no AutoSaveRequestedEvent subscriber.");
+                yield break;
+            }
+
+            _pendingInnAutoSaveCompleted = false;
+            _pendingInnAutoSaveSuccess   = false;
+            _pendingInnAutoSaveError     = null;
+            _pendingInnAutoSaveRequestId = ++_innAutoSaveRequestSerial;
+
+            EventBus.Raise(new AutoSaveRequestedEvent
+            {
+                RequestId       = _pendingInnAutoSaveRequestId,
+                Reason          = AutoSaveReason.Inn,
+                SlotIndex       = innAutoSaveSlotIndex,
+                Note            = innAutoSaveNote,
+                WaitForCompletion = true
+            });
+
+            float elapsed = 0f;
+            while (!_pendingInnAutoSaveCompleted && elapsed < Mathf.Max(0.1f, innAutoSaveTimeoutSeconds))
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            if (!_pendingInnAutoSaveCompleted)
+                DebugTools.LogWarning($"[TownUIView] Inn auto-save timed out after {innAutoSaveTimeoutSeconds}s.");
+            else if (!_pendingInnAutoSaveSuccess)
+                DebugTools.LogWarning($"[TownUIView] Inn auto-save failed: {_pendingInnAutoSaveError}");
+        }
+
+        /// <summary>
+        /// 接收自动存档完成回调，仅处理本次旅馆请求。
+        /// </summary>
+        private void HandleInnAutoSaveCompleted(AutoSaveCompletedEvent evt)
+        {
+            if (evt.RequestId != _pendingInnAutoSaveRequestId) return;
+            _pendingInnAutoSaveCompleted = true;
+            _pendingInnAutoSaveSuccess   = evt.Success;
+            _pendingInnAutoSaveError     = evt.Error;
+        }
+
+        /// <summary>
         /// 按钮点击处理：通过索引映射到功能 ID，分派对应逻辑。
         /// </summary>
         private void HandleButtonClick(TownActionButtonClickEvent evt)
@@ -160,7 +267,7 @@ namespace IndieGame.UI.Town
                     DebugTools.Log("[城镇] 酒馆 —— 功能待实现");
                     break;
                 case TownActionID.Inn:
-                    DebugTools.Log("[城镇] 旅馆 —— 功能待实现");
+                    StartCoroutine(InnSleepRoutine());
                     break;
                 case TownActionID.Teleport:
                     DebugTools.Log("[城镇] 传送 —— 功能待实现");

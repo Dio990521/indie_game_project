@@ -555,7 +555,9 @@ namespace IndieGame.Core
         // 未指定来源（兜底值，尽量不要在业务层主动使用）。
         None = 0,
         // 露营睡觉触发的自动存档。
-        Sleep = 1
+        Sleep = 1,
+        // 城镇旅馆住宿触发的自动存档。
+        Inn = 2
     }
 
     /// <summary>
