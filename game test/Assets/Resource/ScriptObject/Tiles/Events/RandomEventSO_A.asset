@@ -1,0 +1,23 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e4961ce88b645834a8779d267a5fb311, type: 3}
+  m_Name: RandomEventSO_A
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.RandomEvent.RandomEventSO
+  eventID: event_A
+  eventTitle: event_A
+  description: gain 114514 gold
+  isPositive: 1
+  weight: 1
+  rewards:
+  - type: 0
+    item: {fileID: 0}
+    amount: 114514

@@ -1,0 +1,20 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a5218e494498eeb45ab6d1ed0e5fcc29, type: 3}
+  m_Name: RandomEventDatabaseSO
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.RandomEvent.RandomEventDatabaseSO
+  events:
+  - {fileID: 11400000, guid: 467d188c30404d149991318282baac01, type: 2}
+  - {fileID: 11400000, guid: e97c47d70d004e842aca4146852613ff, type: 2}
+  - {fileID: 11400000, guid: 542290662cf11dd4cae9a6cbdc391f31, type: 2}
+  - {fileID: 11400000, guid: 63f720d9d2eb36b4a92a945ab35b8292, type: 2}
+  - {fileID: 11400000, guid: 4d17bcea331d8b047bae039163d55e6b, type: 2}

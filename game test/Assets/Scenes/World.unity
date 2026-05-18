@@ -2296,7 +2296,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
   nodeID: 2
-  tileData: {fileID: 11400000, guid: da64e7c03aeac824c88f510621da5b47, type: 2}
+  tileData: {fileID: 11400000, guid: ad0f0870c9f41c242908ae9155c1b12f, type: 2}
   connections:
   - targetNode: {fileID: 1464109575}
     controlPointOffset: {x: -1.74, y: -0.17418912, z: -0.5250001}
