@@ -7,6 +7,9 @@ using IndieGame.Gameplay.Economy;
 using IndieGame.Gameplay.Shop;
 using IndieGame.Gameplay.ActionPoint;
 using IndieGame.Core.CameraSystem;
+using IndieGame.Gameplay.Dialogue;
+using IndieGame.Gameplay.Town;
+using IndieGame.Gameplay.Date;
 
 namespace IndieGame.Core
 {
@@ -37,6 +40,9 @@ namespace IndieGame.Core
         [SerializeField] private GameObject goldSystemPrefab;
         [SerializeField] private GameObject shopSystemPrefab;
         [SerializeField] private GameObject actionPointSystemPrefab;
+        [SerializeField] private GameObject dialogueManagerPrefab;
+        [SerializeField] private GameObject townUnlockManagerPrefab;
+        [SerializeField] private GameObject dateSystemPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -52,6 +58,9 @@ namespace IndieGame.Core
         private GoldSystem _goldSystemInstance;
         private ShopSystem _shopSystemInstance;
         private ActionPointSystem _actionPointSystemInstance;
+        private DialogueManager _dialogueManagerInstance;
+        private TownUnlockManager _townUnlockManagerInstance;
+        private DateSystem _dateSystemInstance;
 
         private void Awake()
         {
@@ -92,6 +101,12 @@ namespace IndieGame.Core
             EnsureManagerFromPrefab(root, shopSystemPrefab, "ShopSystem", ref _shopSystemInstance);
             // 行动点系统：控制每回合可投掷骰子次数，支持存档与培养提升上限。
             EnsureManagerFromPrefab(root, actionPointSystemPrefab, "ActionPointSystem", ref _actionPointSystemInstance);
+            // 对话系统：管理打字机效果、词条解析与对话状态切换。
+            EnsureManagerFromPrefab(root, dialogueManagerPrefab, "DialogueManager", ref _dialogueManagerInstance);
+            // 城镇解锁管理：追踪已解锁城镇节点，支持传送菜单与存档。
+            EnsureManagerFromPrefab(root, townUnlockManagerPrefab, "TownUnlockManager", ref _townUnlockManagerInstance);
+            // 日期系统：追踪游戏内日期，每次 Sleep/Inn 推进一天，支持存档。
+            EnsureManagerFromPrefab(root, dateSystemPrefab, "DateSystem", ref _dateSystemInstance);
 
             // 2. 可以在这里查找场景里的其他依赖
             // var ui = FindObjectOfType<UIManager>();

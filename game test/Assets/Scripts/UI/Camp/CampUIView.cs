@@ -188,8 +188,9 @@ namespace IndieGame.UI.Camp
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
             yield return new WaitForSeconds(fadeDuration);
 
-            // 2) 睡觉结算：恢复全部行动点
+            // 2) 睡觉结算：恢复全部行动点，推进游戏日期
             ActionPointSystem.Instance?.RefillActionPoints("Sleep");
+            IndieGame.Gameplay.Date.DateSystem.Instance?.AdvanceDay();
 
             // 3) 在返回棋盘前执行一次自动存档：
             //    注意这里不直接调用 SaveManager，而是通过 EventBus 请求全局 AutoSaveService 处理。

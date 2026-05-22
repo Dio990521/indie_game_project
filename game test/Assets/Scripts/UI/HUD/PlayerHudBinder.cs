@@ -27,10 +27,14 @@ namespace IndieGame.UI.Hud
         [SerializeField] private Image expFillImage;
         [SerializeField] private TMP_Text expValueText;
 
+        [Header("Date")]
+        [SerializeField] private TMP_Text dateText;
+
         public GameObject RootNode => rootNode;
         public Image HpFillImage => hpFillImage;
         public TMP_Text HpValueText => hpValueText;
         public Image ExpFillImage => expFillImage;
         public TMP_Text ExpValueText => expValueText;
+        public TMP_Text DateText => dateText;
     }
 }

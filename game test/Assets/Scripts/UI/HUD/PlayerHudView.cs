@@ -71,6 +71,16 @@ namespace IndieGame.UI.Hud
         }
 
         /// <summary>
+        /// 刷新日期显示：
+        /// 直接替换文本内容，格式由 DateSystem 传入（如 "第1年1月2日"）。
+        /// </summary>
+        public void RefreshDate(string formattedDate)
+        {
+            if (binder == null || binder.DateText == null) return;
+            binder.DateText.text = formattedDate;
+        }
+
+        /// <summary>
         /// 计算进度条比例并做安全约束。
         /// </summary>
         private static float CalculateFillAmount(int current, int max)

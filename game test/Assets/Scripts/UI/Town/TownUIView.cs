@@ -221,8 +221,9 @@ namespace IndieGame.UI.Town
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
             yield return new WaitForSeconds(fadeDuration);
 
-            // 3) 恢复全部行动点
+            // 3) 恢复全部行动点，推进游戏日期
             ActionPointSystem.Instance?.RefillActionPoints("Inn");
+            IndieGame.Gameplay.Date.DateSystem.Instance?.AdvanceDay();
 
             // 4) 自动存档（带超时保护）
             yield return RequestInnAutoSaveRoutine();

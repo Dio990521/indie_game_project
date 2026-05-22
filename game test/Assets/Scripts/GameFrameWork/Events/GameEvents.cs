@@ -839,4 +839,20 @@ namespace IndieGame.Core
         public float Multiplier;
     }
 
+    /// <summary>
+    /// 日期变更事件：
+    /// DateSystem 在每次 Sleep/Inn 推进一天后广播，供 HUD、存档、特效等系统监听。
+    /// </summary>
+    public struct DateChangedEvent
+    {
+        // 当前年份
+        public int Year;
+        // 当前月份（1-12）
+        public int Month;
+        // 当前日（1-30）
+        public int Day;
+        // 已格式化的日期字符串，如 "第1年1月2日"
+        public string FormattedDate;
+    }
+
 }

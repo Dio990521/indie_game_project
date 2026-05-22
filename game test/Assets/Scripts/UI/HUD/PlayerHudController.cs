@@ -62,6 +62,7 @@ namespace IndieGame.UI.Hud
             Subscribe<GameModeChangedEvent>(HandleGameModeChangedEvent);
             Subscribe<DialogueStartedEvent>(HandleDialogueStartedEvent);
             Subscribe<DialogueEndedEvent>(HandleDialogueEndedEvent);
+            Subscribe<DateChangedEvent>(HandleDateChangedEvent);
         }
 
         protected override void OnEnable()
@@ -165,6 +166,16 @@ namespace IndieGame.UI.Hud
         }
 
         /// <summary>
+        /// 处理日期变更事件：
+        /// 直接将格式化日期交给 View 显示，无需额外过滤。
+        /// </summary>
+        private void HandleDateChangedEvent(DateChangedEvent evt)
+        {
+            if (view == null) return;
+            view.RefreshDate(evt.FormattedDate);
+        }
+
+        /// <summary>
         /// 处理经验值事件：
         /// 同样只接受当前玩家事件。
         /// </summary>
@@ -207,6 +218,13 @@ namespace IndieGame.UI.Hud
 
             view.RefreshHealth(_currentPlayerStats.CurrentHP, _currentPlayerStats.MaxHP);
             view.RefreshExp(_currentPlayerStats.CurrentEXP, _currentPlayerStats.CurrentRequiredEXP);
+
+            // 首帧兜底：主动拉取当前日期，避免等待事件到来前的空白显示
+            IndieGame.Gameplay.Date.DateSystem dateSystem = IndieGame.Gameplay.Date.DateSystem.Instance;
+            if (dateSystem != null)
+            {
+                view.RefreshDate(dateSystem.GetFormattedDate());
+            }
         }
 
         /// <summary>
