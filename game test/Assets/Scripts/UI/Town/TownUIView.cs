@@ -60,6 +60,12 @@ namespace IndieGame.UI.Town
         private bool _pendingInnAutoSaveSuccess;
         private string _pendingInnAutoSaveError;
 
+        // 长协程互斥引用（非 null 即代表对应流程正在进行）。
+        // 旅馆住宿与传送是两条独立流程，玩家在黑屏/淡入期间快速重复点击同一按钮会触发
+        // 并行协程：旅馆并行 → 日期推进两次；传送并行 → 两个 TreasureMenu 互相覆盖。
+        private Coroutine _innSleepCoroutine;
+        private Coroutine _teleportCoroutine;
+
         // 硬编码按钮配置：(功能ID, 显示名称)
         private static readonly (TownActionID Id, string Label)[] ButtonDefs =
         {
@@ -117,6 +123,25 @@ namespace IndieGame.UI.Town
                 EventBus.Unsubscribe(_onTeleportCancelled);
                 _onTeleportCancelled = null;
             }
+
+            // 兜底：组件被禁用/销毁时强制停止旅馆与传送协程，并清空互斥引用，
+            // 否则下次启用 View 时陈旧的 Coroutine 引用会让互斥保护误判为"已在执行"。
+            if (_innSleepCoroutine != null)
+            {
+                StopCoroutine(_innSleepCoroutine);
+                _innSleepCoroutine = null;
+            }
+            if (_teleportCoroutine != null)
+            {
+                StopCoroutine(_teleportCoroutine);
+                _teleportCoroutine = null;
+            }
+
+            // 自动存档等待状态一并复位，避免下次回到城镇时旧 RequestId 错误匹配。
+            _pendingInnAutoSaveRequestId = -1;
+            _pendingInnAutoSaveCompleted = false;
+            _pendingInnAutoSaveSuccess = false;
+            _pendingInnAutoSaveError = null;
         }
 
         /// <summary>
@@ -240,6 +265,10 @@ namespace IndieGame.UI.Town
 
             // 6) 黑屏淡出，城镇菜单呈现
             EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
+
+            // 正常完成：清空互斥引用，允许下一次旅馆住宿。
+            // 协程被 OnDisable 中途 Stop 的情况由 OnDisable 兜底清理。
+            _innSleepCoroutine = null;
         }
 
         /// <summary>
@@ -314,10 +343,24 @@ namespace IndieGame.UI.Town
                     DebugTools.Log("[城镇] 酒馆 —— 功能待实现");
                     break;
                 case TownActionID.Inn:
-                    StartCoroutine(InnSleepRoutine());
+                    // 互斥保护：旅馆 Sleep 包含黑屏淡入、自动存档等待、推进日期等多步骤，
+                    // 玩家若在中途重复点击会触发并行流程（日期推进两次 / 存档冲突）。
+                    if (_innSleepCoroutine != null)
+                    {
+                        DebugTools.LogWarning("[TownUIView] 旅馆住宿流程已在进行中，忽略重复请求。");
+                        break;
+                    }
+                    _innSleepCoroutine = StartCoroutine(InnSleepRoutine());
                     break;
                 case TownActionID.Teleport:
-                    StartCoroutine(TeleportMenuRoutine());
+                    // 互斥保护：传送菜单的事件委托是字段级单实例，若并发启动两个传送协程，
+                    // 第二个协程会覆盖第一个的委托引用，导致前者残留订阅无法清理。
+                    if (_teleportCoroutine != null)
+                    {
+                        DebugTools.LogWarning("[TownUIView] 传送流程已在进行中，忽略重复请求。");
+                        break;
+                    }
+                    _teleportCoroutine = StartCoroutine(TeleportMenuRoutine());
                     break;
                 case TownActionID.Leave:
                     // 通知 TownState 退出城镇，回到玩家回合
@@ -333,6 +376,13 @@ namespace IndieGame.UI.Town
         /// </summary>
         private IEnumerator TeleportMenuRoutine()
         {
+            // 用 try/finally 包裹整个协程，确保无论从哪一个 yield break 退出，
+            // 都能复位互斥引用并彻底清理事件委托。这样：
+            // - 取消传送、目标列表为空、UI 资源缺失等异常分支不会留下"已在执行"的伪状态；
+            // - 也避免委托订阅在异常路径上残留。
+            // 注：try/finally 中可以包含 yield return，但 try/catch 不可，因此这里只用 finally。
+            try
+            {
             // ① 获取已解锁城镇列表（排除当前城镇）
             var unlockMgr = TownUnlockManager.Instance;
             if (unlockMgr == null)
@@ -447,6 +497,25 @@ namespace IndieGame.UI.Town
             EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
 
             DebugTools.Log($"[城镇] 传送完成 → {targetTile?.townName ?? $"节点 {_teleportTargetNodeId}"}");
+            }
+            finally
+            {
+                // 任何退出路径（正常完成 / 取消 / 异常 / unlockMgr 缺失等）都执行：
+                // 1) 清空互斥引用，允许下一次传送；
+                // 2) 兜底清理字段级事件委托，防止在异常分支上残留订阅。
+                _teleportCoroutine = null;
+
+                if (_onTeleportSelected != null)
+                {
+                    EventBus.Unsubscribe(_onTeleportSelected);
+                    _onTeleportSelected = null;
+                }
+                if (_onTeleportCancelled != null)
+                {
+                    EventBus.Unsubscribe(_onTeleportCancelled);
+                    _onTeleportCancelled = null;
+                }
+            }
         }
     }
 }

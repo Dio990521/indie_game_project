@@ -38,8 +38,11 @@ namespace IndieGame.Gameplay.Board.Runtime
         // 初始化标记：防止单次场景加载中重复初始化
         private bool _isInitialized;
 
-        // 重写单例属性：当切换场景时，由于棋盘模式通常是独立模式，设置为销毁以防数据残留
-        protected override bool DestroyOnLoad => true;
+        // 重写单例属性：保持与历史代码一致的运行时行为（跨场景保留）。
+        // 注：原代码使用旧 DestroyOnLoad => true，由于基类的语义反向 Bug，该值实际触发了
+        // DontDestroyOnLoad，使得本管理器跨场景常驻。迁移到 KeepAcrossScenes 时直接对齐
+        // 实际运行时行为（保留），避免任何回归。
+        protected override bool KeepAcrossScenes => true;
 
         private void Start()
         {

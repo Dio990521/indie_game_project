@@ -14,9 +14,11 @@ namespace IndieGame.Gameplay.Inventory
     /// </summary>
     public class InventoryManager : MonoSingleton<InventoryManager>
     {
-        // 覆盖单例属性：在加载新场景时销毁。
-        // 这通常意味着背包数据由存档系统另行管理，或者背包仅存在于特定模式。
-        protected override bool DestroyOnLoad => true;
+        // 覆盖单例属性：跨场景保留。
+        // 注：原代码使用旧 DestroyOnLoad => true，由于基类语义反向 Bug，该值实际触发了
+        // DontDestroyOnLoad，本管理器一直跨场景常驻。迁移到 KeepAcrossScenes 时保持实际
+        // 运行时行为不变（保留），避免回归。
+        protected override bool KeepAcrossScenes => true;
 
         [Header("数据")]
         [Tooltip("背包最大容量（槽位数）。")]

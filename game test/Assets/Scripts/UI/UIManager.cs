@@ -84,8 +84,10 @@ namespace IndieGame.UI
         // 是否已初始化
         private bool _isInitialized;
 
-        // UI 管理器在场景切换时销毁（由 GameBootstrapper 重新创建）
-        protected override bool DestroyOnLoad => true;
+        // UI 管理器在历史代码中通过旧 DestroyOnLoad => true 跨场景保留（基类语义反向）。
+        // 迁移到 KeepAcrossScenes 时保持运行时行为一致：跨场景常驻，由 GameBootstrapper
+        // 在新场景中复用同一个实例。
+        protected override bool KeepAcrossScenes => true;
 
         protected override void Awake()
         {

@@ -14,8 +14,10 @@ namespace IndieGame.Core
     /// </summary>
     public class GameManager : MonoSingleton<GameManager>
     {
-        // GameManager 作为全局管理器需常驻，不随场景切换销毁
-        protected override bool DestroyOnLoad => false;
+        // GameManager 作为全局管理器需常驻，不随场景切换销毁。
+        // 实际跨场景保留依赖 GameBootstrapper 把它挂在 [GameSystem] 常驻根节点下；
+        // 这里同时显式声明 KeepAcrossScenes，以便在 root 之外单独存在时也能正确保留。
+        protected override bool KeepAcrossScenes => true;
         // 当前游戏状态（由本类统一维护）
         public GameState CurrentState { get; private set; } = GameState.Initialization;
 

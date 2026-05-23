@@ -53,6 +53,11 @@ namespace IndieGame.UI.Camp
         // 当前等待请求错误信息。
         private string _pendingSleepAutoSaveError;
 
+        // 当前 Sleep 协程引用（非 null 即代表流程正在进行）。
+        // 用于防止玩家在黑屏淡入期间快速重复点击 Sleep 按钮触发并行流程，
+        // 这种并行会让日期推进两次、行动点恢复两次，并触发两次返回棋盘协程。
+        private Coroutine _sleepCoroutine;
+
         private void Awake()
         {
             if (binder == null)
@@ -78,6 +83,19 @@ namespace IndieGame.UI.Camp
         {
             EventBus.Unsubscribe<CampActionButtonClickEvent>(HandleButtonClickEvent);
             EventBus.Unsubscribe<AutoSaveCompletedEvent>(HandleSleepAutoSaveCompletedEvent);
+
+            // 兜底：组件被禁用/销毁时若 Sleep 协程仍在跑，强制停止并清状态，
+            // 否则下次启用 View 时 _sleepCoroutine 仍保留陈旧引用，互斥保护会误判。
+            if (_sleepCoroutine != null)
+            {
+                StopCoroutine(_sleepCoroutine);
+                _sleepCoroutine = null;
+            }
+            // 等待中的自动存档状态一并复位，避免下次重新打开露营时旧 RequestId 干扰匹配。
+            _pendingSleepAutoSaveRequestId = -1;
+            _pendingSleepAutoSaveCompleted = false;
+            _pendingSleepAutoSaveSuccess = false;
+            _pendingSleepAutoSaveError = null;
         }
 
         /// <summary>
@@ -176,7 +194,14 @@ namespace IndieGame.UI.Camp
                     break;
                 case CampActionID.Sleep:
                     DebugTools.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
-                    StartCoroutine(SleepRoutine());
+                    // 互斥保护：若 Sleep 流程已在进行中（黑屏淡入、自动存档等待、场景切换等阶段），
+                    // 忽略重复点击，避免并行触发"推进日期 / 恢复行动点 / 返回棋盘"等高代价操作。
+                    if (_sleepCoroutine != null)
+                    {
+                        DebugTools.LogWarning("[CampUIView] Sleep 流程已在进行中，忽略重复请求。");
+                        break;
+                    }
+                    _sleepCoroutine = StartCoroutine(SleepRoutine());
                     break;
             }
         }
@@ -212,6 +237,11 @@ namespace IndieGame.UI.Camp
             {
                 GameManager.Instance.EndLoading();
             }
+
+            // 流程正常结束：清空互斥标记，允许下一次 Sleep。
+            // （若协程被 OnDisable 中途 Stop，则由 OnDisable 兜底清理；
+            //  这里只覆盖"协程跑到自然结束"的路径。）
+            _sleepCoroutine = null;
         }
 
         /// <summary>

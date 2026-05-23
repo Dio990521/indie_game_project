@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using IndieGame.Core.Utilities;
 
 namespace IndieGame.Core
 {
@@ -57,12 +58,32 @@ namespace IndieGame.Core
         /// <summary>
         /// 派发事件：
         /// 会同步调用所有订阅该类型的处理器。
+        /// <para>
+        /// 单个处理器抛出的异常会被捕获并记入日志，**不会**中断后续处理器的执行。
+        /// 这避免了"某个 UI 处理器异常 → 整条订阅链断裂 → 其他系统静默丢更新"的级联故障。
+        /// </para>
         /// </summary>
         public static void Raise<T>(T evt)
         {
             Type type = typeof(T);
             if (!Handlers.TryGetValue(type, out Delegate existing)) return;
-            ((Action<T>)existing)?.Invoke(evt);
+            if (existing is not Action<T> chain) return;
+
+            // 遍历委托调用链，逐个调用并隔离异常：
+            // GetInvocationList 返回的是按订阅顺序的委托数组，遍历期间即便某个处理器抛异常，
+            // 也不会影响后续处理器；异常会被记录在日志中以便定位。
+            Delegate[] invocationList = chain.GetInvocationList();
+            for (int i = 0; i < invocationList.Length; i++)
+            {
+                try
+                {
+                    ((Action<T>)invocationList[i])(evt);
+                }
+                catch (Exception ex)
+                {
+                    DebugTools.LogError($"[EventBus] Handler {invocationList[i].Method.DeclaringType?.Name}.{invocationList[i].Method.Name} threw on {type.Name}: {ex}");
+                }
+            }
         }
 
         /// <summary>
