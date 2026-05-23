@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core.Utilities;
-using IndieGame.UI;
 using IndieGame.Core;
 
 namespace IndieGame.Gameplay.Inventory
@@ -27,21 +26,12 @@ namespace IndieGame.Gameplay.Inventory
         [Tooltip("当前背包槽位列表。每个槽位包含道具与数量。")]
         public List<InventorySlot> slots = new List<InventorySlot>();
 
-        // --- 事件回调 ---
-
-        /// <summary>
-        /// 当背包内容发生变化（或初次打开同步数据）时触发，传递最新的槽位列表。
-        /// 已弃用：新代码请改用 EventBus 的 OnInventoryChanged 事件。
-        /// 保留此事件仅为兼容旧 UI 监听，未来可移除。
-        /// </summary>
-        [Obsolete("Use EventBus.Subscribe<OnInventoryChanged> instead. Will be removed in future cleanup.")]
-        public static event Action<List<InventorySlot>> OnInventoryUpdated;
-
-        /// <summary> 当背包界面被请求打开时触发 </summary>
-        public static event Action OnInventoryOpened;
-
-        /// <summary> 当背包界面被请求关闭时触发 </summary>
-        public static event Action OnInventoryClosed;
+        // 通信方式说明：
+        // - 内容变化  → EventBus.Raise(new OnInventoryChanged { Slots = slots });
+        // - 已打开    → EventBus.Raise(new InventoryOpenedEvent());
+        // - 已关闭    → EventBus.Raise(new InventoryClosedEvent());
+        // 旧的静态委托（OnInventoryUpdated/OnInventoryOpened/OnInventoryClosed）已移除，
+        // 历史订阅方应改为 EventBus.Subscribe<...> 形式（详见 P1-3 迁移说明）。
 
         // 初始化标记
         private bool _isInitialized;
@@ -85,8 +75,8 @@ namespace IndieGame.Gameplay.Inventory
         {
             // 1. 发送槽位数据同步事件，UI 将根据 slots 列表渲染
             NotifyInventoryChanged();
-            // 2. 发送打开指令，触发 UI 动画或显示 Canvas
-            OnInventoryOpened?.Invoke();
+            // 2. 广播"已打开"状态通知，UI 据此显示界面/播放动画
+            EventBus.Raise(new InventoryOpenedEvent());
         }
 
         /// <summary>
@@ -94,7 +84,7 @@ namespace IndieGame.Gameplay.Inventory
         /// </summary>
         public void CloseInventory()
         {
-            OnInventoryClosed?.Invoke();
+            EventBus.Raise(new InventoryClosedEvent());
         }
 
         /// <summary>
@@ -307,15 +297,10 @@ namespace IndieGame.Gameplay.Inventory
 
         /// <summary>
         /// 统一背包变更通知出口：
-        /// 同时兼容旧版静态事件（OnInventoryUpdated）与新版 EventBus 事件（OnInventoryChanged）。
+        /// 仅通过 EventBus 广播，旧的静态委托已删除（订阅方一律走 OnInventoryChanged）。
         /// </summary>
         private void NotifyInventoryChanged()
         {
-            // 兼容已有背包 UI 监听逻辑（待 UI 全部迁移到 EventBus 后可移除此分支）
-#pragma warning disable CS0618
-            OnInventoryUpdated?.Invoke(slots);
-#pragma warning restore CS0618
-            // 提供给新系统（如打造系统）做解耦监听
             EventBus.Raise(new OnInventoryChanged
             {
                 Slots = slots

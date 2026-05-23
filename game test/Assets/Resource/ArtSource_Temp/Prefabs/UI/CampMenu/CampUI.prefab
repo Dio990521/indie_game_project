@@ -75,6 +75,7 @@ GameObject:
   - component: {fileID: 9122202908034962345}
   - component: {fileID: 6639361712042982410}
   - component: {fileID: 8647597595488254956}
+  - component: {fileID: -5107286090012306640}
   m_Layer: 0
   m_Name: CampUI
   m_TagString: Untagged
@@ -117,10 +118,6 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 57e40069adb1a43cfaaf0b0645a37d7e, type: 2}
   - {fileID: 11400000, guid: 095764c005baa47ea8e892ddd70a8ded, type: 2}
   - {fileID: 11400000, guid: 0ab9f979e648c4b4b8e634bd90de3486, type: 2}
-  enableSleepAutoSave: 1
-  sleepAutoSaveSlotIndex: 0
-  sleepAutoSaveNote: AutoSave-Sleep
-  sleepAutoSaveTimeoutSeconds: 8
 --- !u!114 &9122202908034962345
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -170,3 +167,20 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
   applyToChildren: 1
+--- !u!114 &-5107286090012306640
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7209752545887478414}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5d5c34626b4148458d039c4c1212f4b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Camp.CampUIController
+  view: {fileID: 1043081701424219412}
+  enableSleepAutoSave: 1
+  sleepAutoSaveSlotIndex: 0
+  sleepAutoSaveNote: AutoSave-Sleep
+  sleepAutoSaveTimeoutSeconds: 8

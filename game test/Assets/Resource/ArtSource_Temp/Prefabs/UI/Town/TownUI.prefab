@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 3004938688538066832}
   - component: {fileID: 6246464611815323495}
   - component: {fileID: 1564175901624234920}
+  - component: {fileID: 1418662296221259836}
   m_Layer: 5
   m_Name: TownUI
   m_TagString: Untagged
@@ -72,10 +73,6 @@ MonoBehaviour:
   binder: {fileID: 3004938688538066832}
   _materialShopID: town_material_shop
   _itemShopID: town_item_shop
-  enableInnAutoSave: 1
-  innAutoSaveSlotIndex: 0
-  innAutoSaveNote: AutoSave-Inn
-  innAutoSaveTimeoutSeconds: 8
 --- !u!225 &1564175901624234920
 CanvasGroup:
   m_ObjectHideFlags: 0
@@ -88,6 +85,23 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &1418662296221259836
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 127594470824895156}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 868e7860a783f9745acbeb2e93140120, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Town.TownUIController
+  view: {fileID: 6246464611815323495}
+  enableInnAutoSave: 1
+  innAutoSaveSlotIndex: 0
+  innAutoSaveNote: AutoSave-Inn
+  innAutoSaveTimeoutSeconds: 8
 --- !u!1 &5338336818869308885
 GameObject:
   m_ObjectHideFlags: 0

@@ -4,14 +4,21 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using IndieGame.Gameplay.Camp;
-using IndieGame.Gameplay.ActionPoint;
 using IndieGame.Core;
 
 namespace IndieGame.UI.Camp
 {
     /// <summary>
-    /// 露营 UI 视图：
-    /// 负责显示/隐藏露营菜单，并在 Show 时做淡入动画。
+    /// 露营 UI 视图（View）：
+    /// <para>
+    /// 仅负责"如何显示"，不负责"业务编排"。具体职责包括：
+    /// - 动态生成按钮并维护索引映射；
+    /// - 淡入/淡出动画；
+    /// - 按钮点击事件 → 转发到对应的业务事件（如 Sleep 通过 EventBus 转发为 CampSleepRequestedEvent）。
+    /// </para>
+    /// <para>
+    /// 所有跨系统编排（恢复行动点、推进日期、自动存档、返回棋盘等）已迁移到 <see cref="CampUIController"/>。
+    /// </para>
     /// </summary>
     public class CampUIView : View
     {
@@ -24,39 +31,10 @@ namespace IndieGame.UI.Camp
         [Tooltip("默认解锁的动作列表（可在 Inspector 配置）")]
         [SerializeField] private List<CampActionSO> defaultActions = new List<CampActionSO>();
 
-        [Header("Sleep Auto Save")]
-        [Tooltip("是否在执行 Sleep 时自动触发一次存档。")]
-        [SerializeField] private bool enableSleepAutoSave = true;
-
-        [Tooltip("Sleep 自动存档写入槽位。")]
-        [SerializeField] private int sleepAutoSaveSlotIndex = 0;
-
-        [Tooltip("Sleep 自动存档备注（用于标题读档列表识别该存档来源）。")]
-        [SerializeField] private string sleepAutoSaveNote = "AutoSave-Sleep";
-
-        [Tooltip("等待自动存档完成的超时时长（秒）。超时后会继续返回棋盘，避免流程卡死。")]
-        [SerializeField] private float sleepAutoSaveTimeoutSeconds = 8f;
-
         // CanvasGroup 控制淡入淡出
         private CanvasGroup _canvasGroup;
         // 当前解锁动作缓存（用于索引映射）
         private readonly List<CampActionSO> _currentActions = new List<CampActionSO>();
-
-        // 自动存档请求递增序号（静态）：用于把“本次 Sleep 请求”与“完成事件”精准匹配。
-        private static int _sleepAutoSaveRequestSerial;
-        // 当前 Sleep 流程正在等待的 RequestId（-1 表示当前没有等待中的自动存档）。
-        private int _pendingSleepAutoSaveRequestId = -1;
-        // 当前等待请求是否已收到 AutoSaveCompletedEvent 回调。
-        private bool _pendingSleepAutoSaveCompleted;
-        // 当前等待请求成功标记。
-        private bool _pendingSleepAutoSaveSuccess;
-        // 当前等待请求错误信息。
-        private string _pendingSleepAutoSaveError;
-
-        // 当前 Sleep 协程引用（非 null 即代表流程正在进行）。
-        // 用于防止玩家在黑屏淡入期间快速重复点击 Sleep 按钮触发并行流程，
-        // 这种并行会让日期推进两次、行动点恢复两次，并触发两次返回棋盘协程。
-        private Coroutine _sleepCoroutine;
 
         private void Awake()
         {
@@ -76,26 +54,11 @@ namespace IndieGame.UI.Camp
         private void OnEnable()
         {
             EventBus.Subscribe<CampActionButtonClickEvent>(HandleButtonClickEvent);
-            EventBus.Subscribe<AutoSaveCompletedEvent>(HandleSleepAutoSaveCompletedEvent);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<CampActionButtonClickEvent>(HandleButtonClickEvent);
-            EventBus.Unsubscribe<AutoSaveCompletedEvent>(HandleSleepAutoSaveCompletedEvent);
-
-            // 兜底：组件被禁用/销毁时若 Sleep 协程仍在跑，强制停止并清状态，
-            // 否则下次启用 View 时 _sleepCoroutine 仍保留陈旧引用，互斥保护会误判。
-            if (_sleepCoroutine != null)
-            {
-                StopCoroutine(_sleepCoroutine);
-                _sleepCoroutine = null;
-            }
-            // 等待中的自动存档状态一并复位，避免下次重新打开露营时旧 RequestId 干扰匹配。
-            _pendingSleepAutoSaveRequestId = -1;
-            _pendingSleepAutoSaveCompleted = false;
-            _pendingSleepAutoSaveSuccess = false;
-            _pendingSleepAutoSaveError = null;
         }
 
         /// <summary>
@@ -167,7 +130,8 @@ namespace IndieGame.UI.Camp
 
         /// <summary>
         /// 处理按钮点击事件：
-        /// 通过索引映射回动作数据，实现解耦。
+        /// 通过索引映射回动作数据，按 ActionID 转发为对应业务事件，让 Controller / 系统处理。
+        /// View 自身不再调用系统级 API。
         /// </summary>
         private void HandleButtonClickEvent(CampActionButtonClickEvent evt)
         {
@@ -178,12 +142,11 @@ namespace IndieGame.UI.Camp
             switch (action.ActionID)
             {
                 case CampActionID.Crafting:
-                    // 打开打造界面：
-                    // 按架构要求通过 EventBus 通知，由 CraftingUIController 自行控制 show/hide。
+                    // 打开打造界面：由 CraftingUIController 自行控制 show/hide。
                     EventBus.Raise(new OpenCraftingUIEvent());
                     break;
                 case CampActionID.Inventory:
-                    // 与 ActionMenu 走相同事件通路，由 InventoryManager 统一处理打开逻辑
+                    // 与 ActionMenu 走相同事件通路，由 InventoryManager 统一处理打开逻辑。
                     EventBus.Raise(new OpenInventoryEvent());
                     break;
                 case CampActionID.Memory:
@@ -193,120 +156,12 @@ namespace IndieGame.UI.Camp
                     DebugTools.Log("Log: 打开技能配置界面...");
                     break;
                 case CampActionID.Sleep:
-                    DebugTools.Log("Log: 根据剩余时间计算翌日状态，执行黑屏转场退出露营...");
-                    // 互斥保护：若 Sleep 流程已在进行中（黑屏淡入、自动存档等待、场景切换等阶段），
-                    // 忽略重复点击，避免并行触发"推进日期 / 恢复行动点 / 返回棋盘"等高代价操作。
-                    if (_sleepCoroutine != null)
-                    {
-                        DebugTools.LogWarning("[CampUIView] Sleep 流程已在进行中，忽略重复请求。");
-                        break;
-                    }
-                    _sleepCoroutine = StartCoroutine(SleepRoutine());
+                    // 转发为业务事件：由 CampUIController 接管编排（黑屏 / 存档 / 返回棋盘）。
+                    // View 不再直接编排跨系统流程，符合 MVB 模式职责分离。
+                    DebugTools.Log("Log: 玩家请求 Sleep，事件已转发给 CampUIController。");
+                    EventBus.Raise(new CampSleepRequestedEvent());
                     break;
             }
-        }
-
-        private IEnumerator SleepRoutine()
-        {
-            float fadeDuration = 1f;
-            // 1) 黑屏淡入
-            EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
-            yield return new WaitForSeconds(fadeDuration);
-
-            // 2) 睡觉结算：恢复全部行动点，推进游戏日期
-            ActionPointSystem.Instance?.RefillActionPoints("Sleep");
-            IndieGame.Gameplay.Date.DateSystem.Instance?.AdvanceDay();
-
-            // 3) 在返回棋盘前执行一次自动存档：
-            //    注意这里不直接调用 SaveManager，而是通过 EventBus 请求全局 AutoSaveService 处理。
-            //    这样可保证 CampUIView 只负责编排流程，不承担存档策略与执行细节。
-            yield return RequestSleepAutoSaveRoutine();
-
-            // 4) 关闭露营 UI（避免与棋盘 UI 叠加）
-            Hide();
-
-            // 5) 返回棋盘（不重复触发淡入淡出）
-            if (SceneLoader.Instance != null)
-            {
-                yield return SceneLoader.Instance.ReturnToBoardRoutine(false, fadeDuration, false);
-            }
-
-            // 6) 黑屏淡出（等待棋盘加载完成后执行）
-            EventBus.Raise(new FadeRequestedEvent { FadeIn = false, Duration = fadeDuration });
-            if (GameManager.Instance != null)
-            {
-                GameManager.Instance.EndLoading();
-            }
-
-            // 流程正常结束：清空互斥标记，允许下一次 Sleep。
-            // （若协程被 OnDisable 中途 Stop，则由 OnDisable 兜底清理；
-            //  这里只覆盖"协程跑到自然结束"的路径。）
-            _sleepCoroutine = null;
-        }
-
-        /// <summary>
-        /// 请求并等待“睡觉自动存档”完成：
-        /// - 若关闭自动存档：直接跳过；
-        /// - 若无监听方：记录警告并跳过；
-        /// - 若超时：记录警告并继续流程，避免卡死在黑屏。
-        /// </summary>
-        private IEnumerator RequestSleepAutoSaveRoutine()
-        {
-            if (!enableSleepAutoSave) yield break;
-
-            if (!EventBus.HasSubscribers<AutoSaveRequestedEvent>())
-            {
-                DebugTools.LogWarning("[CampUIView] Sleep auto-save skipped: no AutoSaveRequestedEvent subscriber.");
-                yield break;
-            }
-
-            _pendingSleepAutoSaveCompleted = false;
-            _pendingSleepAutoSaveSuccess = false;
-            _pendingSleepAutoSaveError = null;
-            _pendingSleepAutoSaveRequestId = ++_sleepAutoSaveRequestSerial;
-
-            EventBus.Raise(new AutoSaveRequestedEvent
-            {
-                RequestId = _pendingSleepAutoSaveRequestId,
-                Reason = AutoSaveReason.Sleep,
-                SlotIndex = sleepAutoSaveSlotIndex,
-                Note = sleepAutoSaveNote,
-                // Sleep 流程需要在黑屏阶段等待自动存档结果，再继续返回棋盘。
-                WaitForCompletion = true
-            });
-
-            float elapsed = 0f;
-            while (!_pendingSleepAutoSaveCompleted && elapsed < Mathf.Max(0.1f, sleepAutoSaveTimeoutSeconds))
-            {
-                elapsed += Time.unscaledDeltaTime;
-                yield return null;
-            }
-
-            if (!_pendingSleepAutoSaveCompleted)
-            {
-                DebugTools.LogWarning("[CampUIView] Sleep auto-save timed out. Continue return-to-board flow.");
-            }
-            else if (!_pendingSleepAutoSaveSuccess)
-            {
-                DebugTools.LogWarning($"[CampUIView] Sleep auto-save failed: {_pendingSleepAutoSaveError}");
-            }
-
-            _pendingSleepAutoSaveRequestId = -1;
-        }
-
-        /// <summary>
-        /// 接收自动存档完成事件：
-        /// 仅处理“当前 Sleep 流程等待中的 requestId”，避免其他系统的存档结果污染当前流程。
-        /// </summary>
-        private void HandleSleepAutoSaveCompletedEvent(AutoSaveCompletedEvent evt)
-        {
-            if (_pendingSleepAutoSaveRequestId < 0) return;
-            if (evt.RequestId != _pendingSleepAutoSaveRequestId) return;
-            if (evt.Reason != AutoSaveReason.Sleep) return;
-
-            _pendingSleepAutoSaveCompleted = true;
-            _pendingSleepAutoSaveSuccess = evt.Success;
-            _pendingSleepAutoSaveError = evt.Error;
         }
     }
 }

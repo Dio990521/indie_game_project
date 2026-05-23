@@ -44,6 +44,24 @@ namespace IndieGame.Core
     }
 
     /// <summary>
+    /// 背包已打开事件（状态通知）：
+    /// 由 InventoryManager 在执行 OpenInventory() 后广播，与命令式的 <see cref="OpenInventoryEvent"/> 严格区分：
+    /// - OpenInventoryEvent：请求 Manager 打开背包；
+    /// - InventoryOpenedEvent：通知所有订阅方"背包已打开"，UI 据此做动画/状态变化。
+    /// </summary>
+    public struct InventoryOpenedEvent
+    {
+    }
+
+    /// <summary>
+    /// 背包已关闭事件（状态通知）：
+    /// 由 InventoryManager 在执行 CloseInventory() 后广播。与 <see cref="CloseInventoryEvent"/> 的区别同上。
+    /// </summary>
+    public struct InventoryClosedEvent
+    {
+    }
+
+    /// <summary>
     /// 背包数据变更事件：
     /// 约定用于“依赖背包数量的系统”（例如打造系统）刷新可执行状态。
     /// </summary>
@@ -505,6 +523,14 @@ namespace IndieGame.Core
         public int Index;
     }
 
+    /// <summary>
+    /// 露营"睡觉"业务请求事件：
+    /// 由 CampUIView 在玩家点击 Sleep 按钮后发布，CampUIController 监听后执行完整流程
+    /// （黑屏 → 恢复行动点 → 推进日期 → 自动存档 → 隐藏菜单 → 返回棋盘）。
+    /// 设计意图：把"睡觉"这一业务编排从 View 中分离出去，避免 View 直接调用系统级 API。
+    /// </summary>
+    public struct CampSleepRequestedEvent { }
+
     // ===================== 城镇 UI 事件 =====================
 
     /// <summary>
@@ -539,6 +565,21 @@ namespace IndieGame.Core
     /// 由 TownUIView 在玩家点击”离开”时触发，TownState 监听后切回玩家回合。
     /// </summary>
     public struct TownLeaveRequestedEvent { }
+
+    /// <summary>
+    /// 旅馆住宿业务请求事件：
+    /// 由 TownUIView 在玩家点击"旅馆"按钮后发布，TownUIController 监听后执行完整流程
+    /// （黑屏 → 恢复行动点 → 推进日期 → 自动存档 → 黑屏淡出，菜单留在城镇）。
+    /// 设计意图：把跨系统业务编排从 View 中剥离出去，由 Controller 集中管理。
+    /// </summary>
+    public struct InnSleepRequestedEvent { }
+
+    /// <summary>
+    /// 城镇传送业务请求事件：
+    /// 由 TownUIView 在玩家点击"传送"按钮后发布，TownUIController 监听后接管整个传送流程
+    /// （显示选单 → 等待选择 → 黑屏 → 移动玩家 → 同步相机 → 切换背景 → 黑屏淡出）。
+    /// </summary>
+    public struct TownTeleportRequestedEvent { }
 
     // ===================== 存档系统事件 =====================
 

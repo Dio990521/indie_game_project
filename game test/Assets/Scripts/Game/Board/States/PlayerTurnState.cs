@@ -55,12 +55,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             // 2. 界面互斥逻辑：监听背包系统的状态切换。
             // 当玩家在回合内打开背包查看道具时，棋盘操作菜单应当暂时隐藏，避免视觉叠层混乱。
-            Action onInventoryOpened = () => HandleInventoryOpened(context);
-            Action onInventoryClosed = () => HandleInventoryClosed(context);
-            InventoryManager.OnInventoryOpened += onInventoryOpened;
-            InventoryManager.OnInventoryClosed += onInventoryClosed;
-            _eventUnsubscribers.Add(() => InventoryManager.OnInventoryOpened -= onInventoryOpened);
-            _eventUnsubscribers.Add(() => InventoryManager.OnInventoryClosed -= onInventoryClosed);
+            // 旧 InventoryManager 静态委托已统一迁移到 EventBus，订阅/反订阅都走 SubscribeEvent 模式。
+            SubscribeEvent<InventoryOpenedEvent>(_ => HandleInventoryOpened(context));
+            SubscribeEvent<InventoryClosedEvent>(_ => HandleInventoryClosed(context));
 
             // 订阅宝具菜单相关事件：
             // - BoardTreasureMenuRequested：操作菜单点击"宝具"时触发，由此处直接调用 TreasureMenuView.Show()

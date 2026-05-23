@@ -61,28 +61,19 @@ namespace IndieGame.UI.Inventory
             BindButtons();
         }
 
-        protected override void OnEnable()
-        {
-            base.OnEnable(); // 触发 Bind()
-            InventoryManager.OnInventoryOpened += HandleInventoryOpened;
-            InventoryManager.OnInventoryClosed += HandleInventoryClosed;
-        }
-
-        protected override void OnDisable()
-        {
-            base.OnDisable(); // 触发 Unbind()
-            InventoryManager.OnInventoryOpened -= HandleInventoryOpened;
-            InventoryManager.OnInventoryClosed -= HandleInventoryClosed;
-        }
-
         /// <summary>
         /// 通过 EventBusMonoBehaviour 的 Bind() 注册 EventBus 事件。
+        /// 旧的 InventoryManager.OnInventoryOpened/Closed 静态委托已废弃，
+        /// 改为统一 Subscribe 到 EventBus 的 InventoryOpenedEvent/InventoryClosedEvent，
+        /// 反订阅由 EventBusMonoBehaviour 在 OnDisable 中自动完成。
         /// </summary>
         protected override void Bind()
         {
             Subscribe<OnInventoryChanged>(HandleInventoryChanged);
             Subscribe<GoldChangedEvent>(HandleGoldChanged);
             Subscribe<CloseInventoryEvent>(HandleCloseInventoryEvent);
+            Subscribe<InventoryOpenedEvent>(HandleInventoryOpened);
+            Subscribe<InventoryClosedEvent>(HandleInventoryClosed);
         }
 
         // ── EventBus 处理器 ──────────────────────────────────────────────
@@ -111,7 +102,7 @@ namespace IndieGame.UI.Inventory
 
         // ── InventoryManager 静态事件处理器 ──────────────────────────────
 
-        private void HandleInventoryOpened()
+        private void HandleInventoryOpened(InventoryOpenedEvent evt)
         {
             // 同步初始金币（避免 GoldChangedEvent 尚未触发时显示 0）
             _currentGold = GoldSystem.Instance != null ? GoldSystem.Instance.CurrentGold : _currentGold;
@@ -122,7 +113,7 @@ namespace IndieGame.UI.Inventory
             RefreshGold();
         }
 
-        private void HandleInventoryClosed()
+        private void HandleInventoryClosed(InventoryClosedEvent evt)
         {
             SetVisible(false);
         }

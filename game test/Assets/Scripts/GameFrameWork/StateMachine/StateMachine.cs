@@ -1,5 +1,6 @@
+using System;
 using System.Collections.Generic;
-using System.Linq;
+using IndieGame.Core.Utilities;
 
 namespace IndieGame.Core
 {
@@ -74,28 +75,59 @@ namespace IndieGame.Core
 
         /// <summary>
         /// 将状态加入等待队列：
-        /// - 避免重复排队同类型状态
-        /// - 若已标记清理则不再排队
+        /// - 全队列去重：若队列中（任意位置）已含同类型状态，则不再入队，避免 [A, B, A] 残留；
+        /// - 同类型即当前状态：若新状态与 CurrentState 同类型，也直接忽略；
+        /// - 若已标记清理则不再排队；
+        /// - 队列容量上限保护：超过阈值时丢弃最早入队，避免高频切换无限堆积。
         /// </summary>
         private void EnqueuePending(BaseState<T> newState)
         {
             if (_pendingClear) return;
-            if (_pendingStates.Count == 0 && CurrentState != null && CurrentState.GetType() == newState.GetType()) return;
-            if (_pendingStates.Count > 0 && _pendingStates.Last().GetType() == newState.GetType()) return;
+
+            // 若新状态与当前一致，无需排队（避免重复切换到自身）。
+            if (CurrentState != null && CurrentState.GetType() == newState.GetType()) return;
+
+            // 全队列去重：遍历队列检查是否已有同类型，避免只看末端而漏掉队列中间的同类型。
+            Type targetType = newState.GetType();
+            foreach (BaseState<T> pending in _pendingStates)
+            {
+                if (pending != null && pending.GetType() == targetType) return;
+            }
+
+            // 队列容量上限保护：避免高频切换或调用链异常时无限堆积内存。
+            // 阈值 32 是经验值：正常游戏流程下排队深度极少超过 2-3。
+            const int maxPendingStates = 32;
+            if (_pendingStates.Count >= maxPendingStates)
+            {
+                DebugTools.LogWarning($"[StateMachine] 等待队列已达上限 {maxPendingStates}，丢弃最早入队的状态以避免堆积。");
+                _pendingStates.Dequeue();
+            }
+
             _pendingStates.Enqueue(newState);
         }
 
         /// <summary>
         /// 执行状态切换：
         /// 触发旧状态 OnExit，再触发新状态 OnEnter。
+        /// <para>
+        /// 关键修复：用 try/finally 确保 _isTransitioning 在任何情况下都会复位。
+        /// 否则 OnExit/OnEnter 中任意一处抛异常都会让标志卡在 true，后续所有 ChangeState
+        /// 都会走 Enqueue 分支，状态机僵死，且没有任何报错路径可以恢复。
+        /// </para>
         /// </summary>
         private void TransitionTo(BaseState<T> newState, T context)
         {
-            _isTransitioning = true;
-            CurrentState?.OnExit(context);
-            CurrentState = newState;
-            CurrentState.OnEnter(context);
-            _isTransitioning = false;
+            try
+            {
+                _isTransitioning = true;
+                CurrentState?.OnExit(context);
+                CurrentState = newState;
+                CurrentState.OnEnter(context);
+            }
+            finally
+            {
+                _isTransitioning = false;
+            }
         }
 
         /// <summary>

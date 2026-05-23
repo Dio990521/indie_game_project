@@ -50,6 +50,13 @@ namespace IndieGame.Core
         // 当前活跃的转场 Token
         private int _activeTransitionToken = -1;
 
+        // 本类自启动的转场协程（LoadScene / ReturnToBoard），用于：
+        // 1) 防止同一类 SceneLoader 自身发起的转场被并发启动；
+        // 2) OnDisable 时强制停止，避免组件销毁后协程继续访问已销毁的 Manager。
+        // 注意：外部直接 yield return ReturnToBoardRoutine 的协程不由本字段管理，
+        // 调用方各自负责其生命周期（CampUIController / TownUIController 已做互斥保护）。
+        private Coroutine _activeTransitionCoroutine;
+
         // --- 载荷读取接口 ---
         public bool HasPayload => _hasPayload;
         public bool IsReturnToBoard => _hasPayload && _payload.ReturnToBoard;
@@ -68,6 +75,14 @@ namespace IndieGame.Core
         {
             // 退订事件，避免重复触发
             SceneManager.sceneLoaded -= HandleSceneLoaded;
+
+            // 兜底：组件被禁用/销毁时若自启动的转场协程仍在跑，强制停止，
+            // 防止协程在后续帧里访问已销毁的 GameManager / 其他单例触发 NRE。
+            if (_activeTransitionCoroutine != null)
+            {
+                StopCoroutine(_activeTransitionCoroutine);
+                _activeTransitionCoroutine = null;
+            }
         }
 
         // 由 GameManager 按顺序调用，避免各系统抢跑。
@@ -100,7 +115,17 @@ namespace IndieGame.Core
         public Coroutine LoadScene(string sceneName, LocationID targetID, float fadeDuration = 1f)
         {
             if (string.IsNullOrEmpty(sceneName)) return null;
-            return StartCoroutine(LoadSceneRoutine(sceneName, targetID, fadeDuration));
+
+            // 互斥保护：若上一个自启动转场协程还没结束，先 Stop 再 Start，
+            // 否则两个并行的 LoadSceneRoutine 会互相覆盖 _payload 与 _activeTransitionToken。
+            if (_activeTransitionCoroutine != null)
+            {
+                DebugTools.LogWarning("[SceneLoader] 检测到上一次转场协程未结束，强制停止后启动新转场。");
+                StopCoroutine(_activeTransitionCoroutine);
+            }
+
+            _activeTransitionCoroutine = StartCoroutine(LoadSceneRoutine(sceneName, targetID, fadeDuration));
+            return _activeTransitionCoroutine;
         }
 
         /// <summary>
@@ -119,7 +144,15 @@ namespace IndieGame.Core
         /// </summary>
         public void ReturnToBoard()
         {
-            StartCoroutine(ReturnToBoardRoutine(true, 1f, true));
+            // 互斥保护：与 LoadScene 共用 _activeTransitionCoroutine，
+            // 既能防止重复点击"返回棋盘"，也能避免 LoadScene/ReturnToBoard 互相覆盖。
+            if (_activeTransitionCoroutine != null)
+            {
+                DebugTools.LogWarning("[SceneLoader] 已有转场协程在运行，强制停止后启动 ReturnToBoard。");
+                StopCoroutine(_activeTransitionCoroutine);
+            }
+
+            _activeTransitionCoroutine = StartCoroutine(ReturnToBoardRoutine(true, 1f, true));
         }
 
         /// <summary>

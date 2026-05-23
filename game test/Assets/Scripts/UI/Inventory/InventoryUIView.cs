@@ -2,6 +2,7 @@ using IndieGame.Core.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using IndieGame.Core;
 using IndieGame.Gameplay.Inventory;
 
 namespace IndieGame.UI.Inventory
@@ -59,24 +60,25 @@ namespace IndieGame.UI.Inventory
 
         private void OnEnable()
         {
-            // 订阅背包更新/打开/关闭事件
-            InventoryManager.OnInventoryUpdated += HandleRefresh;
-            InventoryManager.OnInventoryOpened += HandleOpen;
-            InventoryManager.OnInventoryClosed += HandleClose;
+            // 通过 EventBus 订阅背包内容变更与开关状态通知。
+            // 旧的 InventoryManager 静态委托已废弃，全部走 EventBus 统一通信。
+            EventBus.Subscribe<OnInventoryChanged>(HandleRefresh);
+            EventBus.Subscribe<InventoryOpenedEvent>(HandleOpen);
+            EventBus.Subscribe<InventoryClosedEvent>(HandleClose);
         }
 
         private void OnDisable()
         {
             // 退订事件，避免内存泄漏
-            InventoryManager.OnInventoryUpdated -= HandleRefresh;
-            InventoryManager.OnInventoryOpened -= HandleOpen;
-            InventoryManager.OnInventoryClosed -= HandleClose;
+            EventBus.Unsubscribe<OnInventoryChanged>(HandleRefresh);
+            EventBus.Unsubscribe<InventoryOpenedEvent>(HandleOpen);
+            EventBus.Unsubscribe<InventoryClosedEvent>(HandleClose);
         }
 
         /// <summary>
         /// 显示背包并刷新槽位内容。
         /// </summary>
-        public void Show(List<InventorySlot> slots)
+        public void Show(IReadOnlyList<InventorySlot> slots)
         {
             SetVisible(true);
             Rebuild(slots);
@@ -102,7 +104,7 @@ namespace IndieGame.UI.Inventory
         /// <summary>
         /// 根据物品列表重建槽位。
         /// </summary>
-        private void Rebuild(List<InventorySlot> slots)
+        private void Rebuild(IReadOnlyList<InventorySlot> slots)
         {
             ClearSlots();
             if (slots == null || binder.SlotPrefab == null || binder.ContentRoot == null) return;
@@ -127,15 +129,15 @@ namespace IndieGame.UI.Inventory
         /// <summary>
         /// 背包内容更新回调。
         /// </summary>
-        private void HandleRefresh(List<InventorySlot> slots)
+        private void HandleRefresh(OnInventoryChanged evt)
         {
-            Rebuild(slots);
+            Rebuild(evt.Slots);
         }
 
         /// <summary>
         /// 背包打开回调。
         /// </summary>
-        private void HandleOpen()
+        private void HandleOpen(InventoryOpenedEvent evt)
         {
             SetVisible(true);
         }
@@ -143,7 +145,7 @@ namespace IndieGame.UI.Inventory
         /// <summary>
         /// 背包关闭回调。
         /// </summary>
-        private void HandleClose()
+        private void HandleClose(InventoryClosedEvent evt)
         {
             SetVisible(false);
         }
