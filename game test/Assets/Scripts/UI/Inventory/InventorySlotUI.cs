@@ -57,10 +57,14 @@ namespace IndieGame.UI.Inventory
                     if (countLabel != null) countLabel.text = string.Empty;
                     return;
                 }
-                // 异步读取本地化“空”文本（使用 helper，此处保留 _slot != slot 的绑定校验防止异步漂移）
+                // 异步读取本地化“空”文本：
+                // 1) _slot != slot：异步期间槽位已被重新绑定到其他物品，丢弃旧结果；
+                // 2) this == null / nameLabel == null：GameObject 已被销毁或 nameLabel 被解除引用，
+                //    Unity 的 == 重载会把已销毁的 UnityEngine.Object 判定为 null，避免 NRE。
                 var emptyHandle = emptyLabel.GetLocalizedStringAsync();
                 emptyHandle.Completed += op =>
                 {
+                    if (this == null || nameLabel == null) return;
                     if (_slot != slot) return;
                     nameLabel.text = op.Result;
                     if (countLabel != null) countLabel.text = string.Empty;
@@ -77,9 +81,11 @@ namespace IndieGame.UI.Inventory
             else if (slot.Item.ItemName != null)
             {
                 // 异步读取物品名称（本地化）
+                // 防御性校验同上：先确认对象与 UI 引用仍存活，再校验槽位绑定未漂移。
                 var handle = slot.Item.ItemName.GetLocalizedStringAsync();
                 handle.Completed += op =>
                 {
+                    if (this == null || nameLabel == null) return;
                     if (_slot != slot) return;
                     nameLabel.text = op.Result;
                 };

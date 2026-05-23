@@ -46,21 +46,10 @@ namespace IndieGame.Core
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
-        // --- 已创建的管理器实例缓存 ---
-        private GameManager _gameManagerInstance;
-        private UIManager _uiManagerInstance;
-        private InventoryManager _inventoryManagerInstance;
-        private BoardGameManager _boardGameManagerInstance;
-        private CameraManager _cameraManagerInstance;
-        private SceneLoader _sceneLoaderInstance;
-        private BoardMapManager _boardMapManagerInstance;
-        private BoardEntityManager _boardEntityManagerInstance;
-        private GoldSystem _goldSystemInstance;
-        private ShopSystem _shopSystemInstance;
-        private ActionPointSystem _actionPointSystemInstance;
-        private DialogueManager _dialogueManagerInstance;
-        private TownUnlockManager _townUnlockManagerInstance;
-        private DateSystem _dateSystemInstance;
+        // 注：原本这里缓存了 13 个 _xxxManagerInstance 字段，但除了 GameManager（用于后续 InitGame）
+        // 外，其余 12 个字段在 Bootstrap 之外没有任何使用，纯粹是 ref 参数占位。
+        // P2-3 重构后改为：EnsureManagerFromPrefab 直接返回实例，Bootstrap 仅缓存真正需要的 gm，
+        // 其余系统单例由各自的 MonoSingleton.Instance 提供访问。
 
         private void Awake()
         {
@@ -81,38 +70,32 @@ namespace IndieGame.Core
         {
             DebugTools.Log("[GameBootstrapper] Starting Game Systems...");
 
-            // 1) 统一确保所有管理器在同一根节点下生成
+            // 1) 统一确保所有管理器在同一根节点下生成。
+            //    GameManager 是唯一需要后续使用的实例（InitGame、状态切换等），
+            //    其余 Manager 只需确保存在即可，访问由各自的 .Instance 提供。
             GameObject root = EnsureGameSystemRoot();
-            var gm = EnsureManagerFromPrefab(root, gameManagerPrefab, "GameManager", ref _gameManagerInstance);
-            EnsureManagerFromPrefab(root, uiManagerPrefab, "UIManager", ref _uiManagerInstance);
-            EnsureManagerFromPrefab(root, boardGameManagerPrefab, "BoardGameManager", ref _boardGameManagerInstance);
-            EnsureManagerFromPrefab(root, inventoryManagerPrefab, "InventoryManager", ref _inventoryManagerInstance);
-            EnsureManagerFromPrefab(root, cameraManagerPrefab, "CameraManager", ref _cameraManagerInstance);
-            EnsureManagerFromPrefab(root, sceneLoaderPrefab, "SceneLoader", ref _sceneLoaderInstance);
-            EnsureManagerFromPrefab(root, boardMapManagerPrefab, "BoardMapManager", ref _boardMapManagerInstance);
-            EnsureManagerFromPrefab(root, boardEntityManagerPrefab, "BoardEntityManager", ref _boardEntityManagerInstance);
-            // 金币系统也纳入统一引导：
-            // 1) 优先复用已有实例；
-            // 2) 若未配置预制体则自动创建并挂载 GoldSystem 组件；
-            // 3) 与其他系统同级放在 [GameSystem] 根节点下，便于运维与排查。
-            EnsureManagerFromPrefab(root, goldSystemPrefab, "GoldSystem", ref _goldSystemInstance);
-            // 商店系统统一纳入启动引导：
-            // 负责库存/限购动态状态与交易规则，要求常驻并参与存档。
-            EnsureManagerFromPrefab(root, shopSystemPrefab, "ShopSystem", ref _shopSystemInstance);
+            GameManager gm = EnsureManagerFromPrefab<GameManager>(root, gameManagerPrefab, "GameManager");
+            EnsureManagerFromPrefab<UIManager>(root, uiManagerPrefab, "UIManager");
+            EnsureManagerFromPrefab<BoardGameManager>(root, boardGameManagerPrefab, "BoardGameManager");
+            EnsureManagerFromPrefab<InventoryManager>(root, inventoryManagerPrefab, "InventoryManager");
+            EnsureManagerFromPrefab<CameraManager>(root, cameraManagerPrefab, "CameraManager");
+            EnsureManagerFromPrefab<SceneLoader>(root, sceneLoaderPrefab, "SceneLoader");
+            EnsureManagerFromPrefab<BoardMapManager>(root, boardMapManagerPrefab, "BoardMapManager");
+            EnsureManagerFromPrefab<BoardEntityManager>(root, boardEntityManagerPrefab, "BoardEntityManager");
+            // 金币系统：常驻并参与存档，承载所有金币变动事件。
+            EnsureManagerFromPrefab<GoldSystem>(root, goldSystemPrefab, "GoldSystem");
+            // 商店系统：库存/限购动态状态与交易规则，常驻并参与存档。
+            EnsureManagerFromPrefab<ShopSystem>(root, shopSystemPrefab, "ShopSystem");
             // 行动点系统：控制每回合可投掷骰子次数，支持存档与培养提升上限。
-            EnsureManagerFromPrefab(root, actionPointSystemPrefab, "ActionPointSystem", ref _actionPointSystemInstance);
+            EnsureManagerFromPrefab<ActionPointSystem>(root, actionPointSystemPrefab, "ActionPointSystem");
             // 对话系统：管理打字机效果、词条解析与对话状态切换。
-            EnsureManagerFromPrefab(root, dialogueManagerPrefab, "DialogueManager", ref _dialogueManagerInstance);
+            EnsureManagerFromPrefab<DialogueManager>(root, dialogueManagerPrefab, "DialogueManager");
             // 城镇解锁管理：追踪已解锁城镇节点，支持传送菜单与存档。
-            EnsureManagerFromPrefab(root, townUnlockManagerPrefab, "TownUnlockManager", ref _townUnlockManagerInstance);
+            EnsureManagerFromPrefab<TownUnlockManager>(root, townUnlockManagerPrefab, "TownUnlockManager");
             // 日期系统：追踪游戏内日期，每次 Sleep/Inn 推进一天，支持存档。
-            EnsureManagerFromPrefab(root, dateSystemPrefab, "DateSystem", ref _dateSystemInstance);
+            EnsureManagerFromPrefab<DateSystem>(root, dateSystemPrefab, "DateSystem");
 
-            // 2. 可以在这里查找场景里的其他依赖
-            // var ui = FindObjectOfType<UIManager>();
-            // ui.Init();
-
-            // 3. 正式启动游戏逻辑
+            // 2. 正式启动游戏逻辑
             if (gm != null)
             {
                 // 记录是否已初始化，避免重复进入测试逻辑
@@ -124,12 +107,12 @@ namespace IndieGame.Core
                 }
                 // 执行全局系统初始化
                 gm.InitGame();
-                
+
                 // 如果是测试场景，可能会强制覆盖状态
                 if (isTestScene && !wasInitialized)
                 {
                     // 确保刚开始是自由移动
-                    if(gm.CurrentState != GameState.FreeRoam) 
+                    if (gm.CurrentState != GameState.FreeRoam)
                         gm.ChangeState(GameState.FreeRoam);
                 }
             }
@@ -152,18 +135,21 @@ namespace IndieGame.Core
             return root;
         }
 
-        private T EnsureManagerFromPrefab<T>(GameObject root, GameObject prefab, string fallbackName, ref T instance)
+        /// <summary>
+        /// 统一的"确保某个 Manager 存在"入口：
+        /// 1) 若根节点下已有该组件，直接复用；
+        /// 2) 若提供了预制体，则实例化预制体；
+        /// 3) 若预制体缺失，创建空 GameObject 并 AddComponent 作为兜底；
+        /// 4) 兜底创建会打 Warning，提醒在 Inspector 配置预制体。
+        /// </summary>
+        private T EnsureManagerFromPrefab<T>(GameObject root, GameObject prefab, string fallbackName)
             where T : MonoBehaviour
         {
-            // 已有实例时直接返回
-            if (instance != null) return instance;
-
             // 优先查找根节点下已有组件（避免重复创建）
             T existing = root.GetComponentInChildren<T>(true);
             if (existing != null)
             {
-                instance = existing;
-                return instance;
+                return existing;
             }
 
             GameObject go;
@@ -180,7 +166,7 @@ namespace IndieGame.Core
                 go.transform.SetParent(root.transform, false);
             }
 
-            instance = go.GetComponent<T>();
+            T instance = go.GetComponent<T>();
             if (instance == null)
             {
                 // 预制体上没有目标组件时，动态添加

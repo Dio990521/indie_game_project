@@ -332,7 +332,10 @@ namespace IndieGame.UI.Inventory
                     var handle = item.ItemName.GetLocalizedStringAsync();
                     handle.Completed += op =>
                     {
-                        // 防止异步回调时选中项已变更
+                        // 防御性校验顺序：
+                        // 1) Controller 自身或 binder 已被销毁 → 直接放弃；
+                        // 2) 选中项已变更 → 旧异步结果丢弃，避免回写错位的名称。
+                        if (this == null || binder == null) return;
                         if (_selectedSlot?.Item != item) return;
                         if (binder.DetailNameText != null)
                             binder.DetailNameText.text = op.Result;
