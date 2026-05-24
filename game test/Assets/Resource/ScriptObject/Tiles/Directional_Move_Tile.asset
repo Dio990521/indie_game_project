@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 98a24b3a7141f6c4db7e745e0952af71, type: 3}
-  m_Name: Directional_Move_ID2_Tile
+  m_Name: Directional_Move_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.DirectionalMoveTile
-  tileName: 
-  gizmoColor: {r: 1, g: 1, b: 1, a: 1}
-  directionNodeId: 1
-  steps: 3
+  tileName: Directional_Move_Tile
+  gizmoColor: {r: 0.5283019, g: 0.28076416, b: 0.48315, a: 1}
+  minSteps: 1
+  maxSteps: 3

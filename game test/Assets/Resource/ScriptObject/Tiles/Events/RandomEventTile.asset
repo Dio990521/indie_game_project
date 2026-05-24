@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fc82de525c5da954a9b0f09a17765f55, type: 3}
   m_Name: RandomEventTile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.RandomEventTile
-  tileName: 
+  tileName: RandomEvent
   gizmoColor: {r: 0.9811321, g: 0.65100265, b: 0.6521128, a: 1}
   database: {fileID: 11400000, guid: 54b01412ef5e27044b1cc260a4c10981, type: 2}
   luckInfluence: 0.8
