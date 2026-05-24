@@ -1,13 +1,14 @@
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using IndieGame.Gameplay.Board.Data;
 using IndieGame.Gameplay.Board.Runtime;
 
 namespace IndieGame.Gameplay.Board.Editor
 {
     /// <summary>
     /// BoardRefreshManager 的自定义 Inspector。
-    /// 实时展示上次刷新的格子分布统计。
+    /// 实时展示上次刷新的格子分布统计，并标注是否满足 min/max 约束。
     /// </summary>
     [CustomEditor(typeof(BoardRefreshManager))]
     public class BoardRefreshManagerEditor : UnityEditor.Editor
@@ -80,9 +81,29 @@ namespace IndieGame.Gameplay.Board.Editor
             EditorGUILayout.LabelField($"共刷新节点：{total} 个", EditorStyles.miniLabel);
             EditorGUILayout.Space(4f);
 
+            // 从 config 收集约束用于对比显示（_config 是 SerializeField，可通过 SerializedProperty 访问）
+            var config = serializedObject.FindProperty("_config")?.objectReferenceValue as BoardRefreshConfigSO;
+
             foreach (var s in stats)
             {
                 Color tileColor = s.tile != null ? s.tile.gizmoColor : Color.gray;
+
+                // 查找该 tile 对应的 min/max 约束
+                int minCount = 0, maxCount = 0;
+                if (config != null && s.tile != null)
+                {
+                    foreach (var e in config.tilePool)
+                    {
+                        if (e.tile == s.tile) { minCount = e.minCount; maxCount = e.maxCount; break; }
+                    }
+                }
+
+                // 约束状态：绿色=满足，黄色=低于min，红色=超出max
+                bool belowMin = minCount > 0 && s.count < minCount;
+                bool aboveMax = maxCount > 0 && s.count > maxCount;
+                Color statusColor = aboveMax ? new Color(1f, 0.35f, 0.35f)
+                                  : belowMin ? new Color(1f, 0.85f, 0.2f)
+                                  :            new Color(0.4f, 0.9f, 0.4f);
 
                 EditorGUILayout.BeginHorizontal();
 
@@ -93,6 +114,16 @@ namespace IndieGame.Gameplay.Board.Editor
                 EditorGUILayout.LabelField(s.label, GUILayout.MinWidth(80f));
                 EditorGUILayout.LabelField($"{s.count} 个", GUILayout.Width(48f));
                 EditorGUILayout.LabelField($"{s.percentage * 100f:F1}%", GUILayout.Width(48f));
+
+                // 约束范围提示
+                string constraintLabel = minCount == 0 && maxCount == 0 ? "不限"
+                    : minCount > 0 && maxCount > 0 ? $"[{minCount}~{maxCount}]"
+                    : minCount > 0 ? $"≥{minCount}"
+                    : $"≤{maxCount}";
+                Color prevColor = GUI.color;
+                GUI.color = statusColor;
+                EditorGUILayout.LabelField(constraintLabel, GUILayout.Width(60f));
+                GUI.color = prevColor;
 
                 EditorGUILayout.EndHorizontal();
 

@@ -37,7 +37,8 @@ namespace IndieGame.Gameplay.Board.Runtime
         /// <summary> 上次执行刷新时的日期字符串（如"第1年1月2日"）。空字符串表示从未刷新。 </summary>
         private string _lastRefreshDate = string.Empty;
 
-        public override string SaveID => "BoardRefreshManager";
+        // 用 GameObject 名作为区分，允许多个地区各自独立存档
+        public override string SaveID => $"BoardRefreshManager_{gameObject.name}";
 
         // ------------------------------------------------------------------
         // 生命周期
@@ -99,11 +100,14 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             _lastAssignments.Clear();
-            foreach (var node in refreshable)
+
+            // 两阶段约束分配：先满足 minCount，再权重随机填充剩余（不超过 maxCount）
+            var assignments = _config.AllocateTiles(refreshable.Count);
+            for (int i = 0; i < refreshable.Count; i++)
             {
-                int idx = _config.PickRandomTileIndex();
-                node.tileData = _config.GetTileByIndex(idx);
-                _lastAssignments.Add(new NodeAssignment { nodeId = node.nodeID, poolIndex = idx });
+                int idx = i < assignments.Count ? assignments[i] : -1;
+                refreshable[i].tileData = _config.GetTileByIndex(idx);
+                _lastAssignments.Add(new NodeAssignment { nodeId = refreshable[i].nodeID, poolIndex = idx });
             }
 
             _lastRefreshDate = DateSystem.Instance != null
@@ -119,8 +123,9 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         private List<MapWaypoint> CollectRefreshableNodes()
         {
-            var all    = BoardMapManager.Instance.GetAllNodes();
-            var result = new List<MapWaypoint>(all.Count);
+            // 只收集挂在此 GameObject 下的子节点，实现各地区独立刷新
+            var all    = GetComponentsInChildren<MapWaypoint>();
+            var result = new List<MapWaypoint>(all.Length);
             foreach (var node in all)
             {
                 if (!node.fixedLayout &&

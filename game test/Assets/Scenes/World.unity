@@ -777,52 +777,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e12a7c307ef8945bc9fd7a8637cdba20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
---- !u!1 &133085580
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 133085582}
-  - component: {fileID: 133085581}
-  m_Layer: 0
-  m_Name: FogOfWarManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &133085581
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 133085580}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: c8a5aacd70e454d43aaeab4f5de14e7f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.FogOfWar.FogOfWarManager
-  _config: {fileID: 11400000, guid: a4a385c3489dcc34299f5d253a8d2e72, type: 2}
-  _fogQuadRenderer: {fileID: 1867322366}
---- !u!4 &133085582
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 133085580}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &142872370
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -3510,52 +3464,6 @@ MonoBehaviour:
   m_ShadowLayerMask: 1
   m_RenderingLayers: 1
   m_ShadowRenderingLayers: 1
---- !u!1 &438003427
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 438003429}
-  - component: {fileID: 438003428}
-  m_Layer: 0
-  m_Name: BoardRefreshManager
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &438003428
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 438003427}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9f4c6680a6ce9b142a19a976fa37f1c1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardRefreshManager
-  _enableRandomRefresh: 1
-  _config: {fileID: 11400000, guid: da0c2685988ccbb468b6d0133076caef, type: 2}
---- !u!4 &438003429
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 438003427}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &447934894
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -7060,6 +6968,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 922414960}
+  - component: {fileID: 922414961}
   m_Layer: 0
   m_Name: Board
   m_TagString: Untagged
@@ -7215,6 +7124,20 @@ Transform:
   - {fileID: 1521865573}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &922414961
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 922414959}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9f4c6680a6ce9b142a19a976fa37f1c1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardRefreshManager
+  _enableRandomRefresh: 1
+  _config: {fileID: 11400000, guid: da0c2685988ccbb468b6d0133076caef, type: 2}
 --- !u!1001 &953943562
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16109,60 +16032,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e12a7c307ef8945bc9fd7a8637cdba20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
---- !u!1 &2105600986
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 2105600988}
-  - component: {fileID: 2105600987}
-  m_Layer: 0
-  m_Name: BoardVisualizer
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!114 &2105600987
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2105600986}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ff4ccc3a33c64407ebcc13307c5c5ab8, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardVisualizer
-  bidirectionalColor: {r: 1, g: 1, b: 1, a: 0.6}
-  oneWayColor: {r: 0.3, g: 0.9, b: 1, a: 0.8}
-  arrowSize: 1
-  arrowAngle: 20
-  lineYOffset: 0.1
-  renderRuntimeLines: 1
-  lineWidth: 0.5
-  lineSegments: 20
-  lineMaterial: {fileID: 0}
-  syncBidirectionalOffsets: 1
---- !u!4 &2105600988
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2105600986}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1001 &2107093430
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16381,6 +16250,67 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e12a7c307ef8945bc9fd7a8637cdba20, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.MapWaypoint
+--- !u!1001 &2181801261115933476
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5013598909829546896, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5990781904791869212, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: m_Name
+      value: FogOfWarManager
+      objectReference: {fileID: 0}
+    - target: {fileID: 9044034110628456512, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
+      propertyPath: _fogQuadRenderer
+      value: 
+      objectReference: {fileID: 1867322366}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5d0b85d02bd3be34d8e1d533180372d4, type: 3}
 --- !u!1001 &5894858623778790010
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -16499,6 +16429,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 7e7a7e1990ec55248bcf54e9a5173550, type: 3}
+--- !u!1001 &9105051390199541297
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 116583816464528121, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6087439550026169254, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
+      propertyPath: m_Name
+      value: BoardVisualizer
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 220914b29ce5a3c449b4504ca06fc84b, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -16515,8 +16502,7 @@ SceneRoots:
   - {fileID: 142872370}
   - {fileID: 963694864}
   - {fileID: 1867322368}
-  - {fileID: 133085582}
+  - {fileID: 2181801261115933476}
   - {fileID: 6482467172168715447}
   - {fileID: 1255746692}
-  - {fileID: 2105600988}
-  - {fileID: 438003429}
+  - {fileID: 9105051390199541297}
