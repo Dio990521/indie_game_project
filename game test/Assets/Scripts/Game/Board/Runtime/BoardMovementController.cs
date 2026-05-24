@@ -11,8 +11,14 @@ namespace IndieGame.Gameplay.Board.Runtime
     /// <summary>
     /// 棋盘位移控制器：负责驱动棋盘实体（玩家或NPC）在地图上的步进式移动。
     /// 它是逻辑中枢，连接了地图数据（MapWaypoint）、实体表现（BoardEntity）和交互逻辑（BoardInteractionHandler）。
+    /// <para>
+    /// 本类用 partial 关键字拆分到多个文件以降低单文件长度：
+    /// - 本文件：核心移动逻辑（BeginMove / AdvanceToNextStep / HandleSegmentCompleted / FinishMove 等）；
+    /// - <c>BoardMovementController.Effects.cs</c>：格子效果事件订阅 + 大炮/传送等特效协程。
+    /// 字段与公开 API 都保留在本主文件，便于一眼看到所有状态。
+    /// </para>
     /// </summary>
-    public class BoardMovementController : MonoBehaviour
+    public partial class BoardMovementController : MonoBehaviour
     {
         [Header("外部依赖")]
         [Tooltip("分叉路口选择器，当移动到有多个出口的节点时调用")]
@@ -121,7 +127,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             _isMoving = true;
 
             // 检测当前实体是否停在死胡同。若是，允许本次移动的首步执行掉头（掉头机制）
-            _allowFirstStepUTurn = IsAtDeadEnd(entity);
+            _allowFirstStepUTurn = TileEffectApplier.IsAtDeadEnd(entity);
 
             // 订阅”路段完成”事件，用于在两点之间移动完后执行决策
             SubscribeSegmentEvent();
@@ -372,12 +378,7 @@ namespace IndieGame.Gameplay.Board.Runtime
             // [不动铃铛] 激活时：清除所有位移类效果，强制停在骰子结果格
             if (_immovableBellActive)
             {
-                _fx.ExtraSteps        = 0;
-                _fx.ForcedNextNodeId  = -1;
-                _fx.DirectionalSteps  = 0;
-                _fx.DirectionalNodeId = -1;
-                _fx.CannonLaunch      = false;
-                _fx.Teleport          = false;
+                TileEffectApplier.ClearAllMovementEffects(ref _fx);
 
                 if (_stepsRemaining <= 0)
                 {
@@ -389,10 +390,13 @@ namespace IndieGame.Gameplay.Board.Runtime
                 yield break;
             }
 
-            // 各类格子状态效果（不涉及 yield 的部分）按顺序处理
-            ApplyForcedNextEffect(isFinalStep);
-            ApplyExtraStepsEffect();
-            ApplyDirectionalStepsEffect(isFinalStep);
+            // 各类格子状态效果（不涉及 yield 的部分）按顺序处理。
+            // 这三步从原 ApplyXxxEffect 私有方法重构为 TileEffectApplier 的静态调用，
+            // 主流程更短，且每个 Apply 方法独立可测试。
+            TileEffectApplier.ApplyForcedNext(ref _fx, ref _stepsRemaining, isFinalStep);
+            TileEffectApplier.ApplyExtraSteps(ref _fx, ref _stepsRemaining, _activeEntity, out bool needFirstStepUTurn);
+            if (needFirstStepUTurn) _allowFirstStepUTurn = true;
+            TileEffectApplier.ApplyDirectionalSteps(ref _fx, ref _stepsRemaining, isFinalStep);
 
             // [人体大炮] 涉及协程 + 链式触发，单独抽出处理；返回 true 表示流程已自行结束
             if (_fx.CannonLaunch && isFinalStep)
@@ -421,138 +425,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             AdvanceToNextStep();
         }
 
-        /// <summary>
-        /// [扭曲格] 强制滑行仅在最终落点时生效，路过时丢弃。
-        /// </summary>
-        private void ApplyForcedNextEffect(bool isFinalStep)
-        {
-            if (_fx.ForcedNextNodeId < 0) return;
-
-            if (isFinalStep)
-            {
-                ComboMoveSystem.IncrementCombo(); // 扭曲格触发强制滑行，进入连锁
-                // 最终落点：补充1步，方向锁留给 AdvanceToNextStep 读取
-                if (_stepsRemaining <= 0) _stepsRemaining = 1;
-            }
-            else
-            {
-                // 路过：丢弃强制滑行（分叉过滤仍有效）
-                _fx.ForcedNextNodeId = -1;
-            }
-        }
-
-        /// <summary>
-        /// 消费格子请求的额外步数（前进格 / 后退格写入）。
-        /// </summary>
-        private void ApplyExtraStepsEffect()
-        {
-            if (_fx.ExtraSteps == 0) return;
-
-            int extra      = _fx.ExtraSteps;
-            _fx.ExtraSteps = 0;
-            ComboMoveSystem.IncrementCombo(); // 前进/后退格触发额外位移，进入连锁
-
-            if (extra > 0)
-            {
-                // 前进格：追加步数，自然向前继续移动
-                _stepsRemaining += extra;
-            }
-            else
-            {
-                // 后退格：重置为向后步数，然后通过原地掉头实现方向反转
-                _stepsRemaining = -extra;
-                if (IsAtDeadEnd(_activeEntity))
-                {
-                    // 死胡同节点：正向出口即来路，沿用首步掉头机制原路返回
-                    _allowFirstStepUTurn = true;
-                }
-                else
-                {
-                    // 普通节点：原地掉头，使 GetValidNextNodes 自然返回反向路径
-                    _activeEntity.ReverseDirection();
-                }
-            }
-        }
-
-        /// <summary>
-        /// 消费方向格请求（首步强制方向 + 指定步数，仅最终落点生效；路过时丢弃）。
-        /// </summary>
-        private void ApplyDirectionalStepsEffect(bool isFinalStep)
-        {
-            if (_fx.DirectionalSteps <= 0) return;
-
-            if (isFinalStep)
-            {
-                ComboMoveSystem.IncrementCombo(); // 方向格触发强制移动，进入连锁
-                _stepsRemaining      = _fx.DirectionalSteps;
-                _fx.ForcedNextNodeId = _fx.DirectionalNodeId;
-            }
-            _fx.DirectionalSteps  = 0;
-            _fx.DirectionalNodeId = -1;
-        }
-
-        /// <summary>
-        /// [人体大炮] 弹射协程：连续弹射 + 落点二次触发的格子效果（传送/方向格）。
-        /// 该协程负责自身的流程终止（FinishMove / AdvanceToNextStep），
-        /// 调用方在调用后应直接 yield break。
-        /// </summary>
-        private IEnumerator ProcessCannonChainCoroutine()
-        {
-            // 使用 while 循环支持连续弹射（落点也是大炮格时继续触发）
-            while (_fx.CannonLaunch)
-            {
-                _fx.CannonLaunch = false;
-                ComboMoveSystem.IncrementCombo(); // 大炮每次弹射计一次连锁
-                yield return DoCannonLaunch();
-            }
-
-            // 大炮落点可能触发了其他格子效果，依次检查并处理
-            if (_fx.Teleport && !_isTeleporting)
-            {
-                _fx.Teleport   = false;
-                _isTeleporting = true;
-                ComboMoveSystem.IncrementCombo(); // 大炮落点为传送格，再次连锁
-                yield return DoTeleport();
-                _isTeleporting = false;
-                FinishMove();
-                yield break;
-            }
-
-            if (_fx.DirectionalSteps > 0)
-            {
-                ComboMoveSystem.IncrementCombo(); // 大炮落点为方向格，再次连锁
-                _stepsRemaining       = _fx.DirectionalSteps;
-                _fx.ForcedNextNodeId  = _fx.DirectionalNodeId;
-                _fx.DirectionalSteps  = 0;
-                _fx.DirectionalNodeId = -1;
-                AdvanceToNextStep();
-                yield break;
-            }
-
-            // [扭曲格] 大炮落点为扭曲格时触发强制滑行，补充1步并交由 AdvanceToNextStep 消费方向锁
-            if (_fx.ForcedNextNodeId >= 0)
-            {
-                ComboMoveSystem.IncrementCombo();
-                _stepsRemaining = 1;
-                AdvanceToNextStep();
-                yield break;
-            }
-
-            FinishMove();
-        }
-
-        /// <summary>
-        /// [传送格] 执行单次传送：标记 _fx.Teleport 已消费，做一次 ComboMove 计数，并执行传送动画。
-        /// 调用方负责后续的 FinishMove。
-        /// </summary>
-        private IEnumerator ExecuteTeleportRoutine()
-        {
-            _fx.Teleport   = false;
-            _isTeleporting = true;
-            ComboMoveSystem.IncrementCombo(); // 传送格触发传送，进入连锁
-            yield return DoTeleport();
-            _isTeleporting = false;
-        }
+        // 注：ProcessCannonChainCoroutine / ExecuteTeleportRoutine 已迁移至
+        // BoardMovementController.Effects.cs（同一 partial class），主文件保持精简。
 
         /// <summary>
         /// 桥接逻辑：调用 InteractionHandler 来处理复杂的节点业务逻辑。
@@ -595,7 +469,7 @@ namespace IndieGame.Gameplay.Board.Runtime
         public void ReversePlayerDirection()
         {
             if (_playerEntity == null) return;
-            if (IsAtDeadEnd(_playerEntity))
+            if (TileEffectApplier.IsAtDeadEnd(_playerEntity))
             {
                 _allowFirstStepUTurn = true;
             }
@@ -657,16 +531,8 @@ namespace IndieGame.Gameplay.Board.Runtime
             return node.GetConnectionTo(validNodes[index]);
         }
 
-        /// <summary>
-        /// 判断实体当前是否停在死胡同（唯一可走方向是原路返回）。
-        /// 用于 BeginMove 时决定是否允许首步掉头。
-        /// </summary>
-        private bool IsAtDeadEnd(BoardEntity entity)
-        {
-            if (entity == null || entity.CurrentNode == null) return false;
-            List<MapWaypoint> validNodes = entity.CurrentNode.GetValidNextNodes(entity.LastWaypoint);
-            return validNodes.Count == 1 && entity.LastWaypoint != null && validNodes[0] == entity.LastWaypoint;
-        }
+        // 注：原 private bool IsAtDeadEnd(BoardEntity entity) 已移至 TileEffectApplier.IsAtDeadEnd，
+        // BeginMove / ReversePlayerDirection / TileEffectApplier.ApplyExtraSteps 均改为调用该静态方法。
 
         /// <summary>
         /// 确保交互处理器已实例化（懒加载模式）。
@@ -677,135 +543,10 @@ namespace IndieGame.Gameplay.Board.Runtime
             _interactionHandler = new BoardInteractionHandler();
         }
 
-        /// <summary>
-        /// 执行炮弹弹射：随机选目标节点 → 在起飞前预选落地朝向 → 抛物线飞行（空中转体）→ 落地减速定向 → 触发目标格子效果。
-        /// </summary>
-        private IEnumerator DoCannonLaunch()
-        {
-            List<MapWaypoint> allNodes = BoardMapManager.Instance != null
-                ? BoardMapManager.Instance.GetAllNodes()
-                : new List<MapWaypoint>();
-
-            MapWaypoint current = _activeEntity.CurrentNode;
-            allNodes.Remove(current);
-
-            if (allNodes.Count == 0) yield break;
-
-            MapWaypoint target = allNodes[UnityEngine.Random.Range(0, allNodes.Count)];
-            DebugTools.Log($"<color=orange>[Cannon Tile]</color> 弹射目标：{target.nodeID} ({target.name})");
-
-            // 在起飞前就决定落地朝向，这样旋转动画的终点在空中就已确定。
-            // 从目标节点所有出口中随机选一个作为落地后首步方向。
-            Quaternion? landingFacing = null;
-            List<MapWaypoint> exits = target.GetValidNextNodes(null);
-            if (exits.Count > 0)
-            {
-                MapWaypoint chosenExit = exits[UnityEngine.Random.Range(0, exits.Count)];
-                // 存储预选方向，下次BeginMove时注入首步强制节点，避免弹出岔路UI
-                _cannonPresetFirstStepNodeId = chosenExit.nodeID;
-                // 计算朝向：从落点指向选定出口，忽略Y轴高度差
-                Vector3 dir = chosenExit.transform.position - target.transform.position;
-                dir.y = 0f;
-                if (dir != Vector3.zero)
-                    landingFacing = Quaternion.LookRotation(dir.normalized);
-                DebugTools.Log($"<color=orange>[Cannon Tile]</color> 预选落地朝向：出口节点 {chosenExit.nodeID}");
-            }
-
-            // 记录弹射起点，落地后一次性揭开整段 XZ 轨迹（单次 GPU 上传，性能最优）
-            Vector3 launchStartPos = _activeEntity.transform.position;
-
-            // 执行抛物线飞行：传入自转参数和落地目标朝向
-            yield return _activeEntity.LaunchParabolic(
-                target,
-                _fx.CannonArcHeight,
-                _fx.CannonLaunchSpeed,
-                originNode: null,
-                spinSpeed: _fx.CannonSpinSpeed,
-                landingFacing: landingFacing,
-                settleExtraRotations: _fx.CannonSettleExtraRotations
-            );
-
-            FogOfWarManager.Instance?.RevealLine(launchStartPos, target.transform.position);
-
-            // 触发落点格子效果（作为最终落点处理）
-            yield return HandleNodeArrival(target, true);
-        }
-
-        /// <summary>
-        /// 接收人体大炮弹射请求事件（仅在移动期间订阅）。
-        /// </summary>
-        private void OnCannonLaunchRequested(BoardCannonLaunchRequestedEvent evt)
-        {
-            _fx.CannonLaunch               = true;
-            _fx.CannonArcHeight            = evt.ArcHeight;
-            _fx.CannonLaunchSpeed          = evt.LaunchSpeed;
-            _fx.CannonSpinSpeed            = evt.SpinSpeed;
-            _fx.CannonSettleExtraRotations = evt.SettleExtraRotations;
-        }
-
-        /// <summary>
-        /// 执行传送：按指定节点 ID 瞬间移动玩家 → 触发目标格子效果。
-        /// </summary>
-        private IEnumerator DoTeleport()
-        {
-            MapWaypoint target = BoardMapManager.Instance != null
-                ? BoardMapManager.Instance.GetNode(_fx.TeleportTargetId)
-                : null;
-
-            if (target == null)
-            {
-                DebugTools.LogWarning($"[Teleport Tile] 找不到节点 ID={_fx.TeleportTargetId}，跳过传送。");
-                yield break;
-            }
-
-            DebugTools.Log($"<color=cyan>[Teleport Tile]</color> 传送目标：{target.nodeID} ({target.name})");
-            // 瞬间传送：snap 坐标 + 重置来路（防止传送后被当成原路返回）
-            _activeEntity.SetCurrentNode(target, true, true);
-
-            yield return HandleNodeArrival(target, true);
-        }
-
-        /// <summary>
-        /// 接收方向格移动请求事件（仅在移动期间订阅）。
-        /// </summary>
-        private void OnDirectionalMoveRequested(BoardDirectionalMoveRequestedEvent evt)
-        {
-            _fx.DirectionalNodeId = evt.DirectionNodeId;
-            _fx.DirectionalSteps  = evt.Steps;
-        }
-
-        /// <summary>
-        /// 接收传送格传送请求事件（仅在移动期间订阅）。
-        /// </summary>
-        private void OnTeleportRequested(BoardTeleportRequestedEvent evt)
-        {
-            _fx.Teleport         = true;
-            _fx.TeleportTargetId = evt.TargetNodeId;
-        }
-
-        /// <summary>
-        /// 接收格子请求的额外步数事件（仅在移动期间订阅）。
-        /// </summary>
-        private void OnExtraMoveRequested(BoardExtraMoveRequestedEvent evt)
-        {
-            _fx.ExtraSteps = evt.Steps;
-        }
-
-        /// <summary>
-        /// 接收扭曲格的强制滑行请求（仅在移动期间订阅）。
-        /// </summary>
-        private void OnWarpSlideRequested(BoardWarpSlideRequestedEvent evt)
-        {
-            _fx.ForcedNextNodeId = evt.ForcedNodeId;
-        }
-
-        /// <summary>
-        /// 接收扭曲格的路径过滤请求（仅在移动期间订阅）。
-        /// </summary>
-        private void OnWarpFilterPathRequested(BoardWarpFilterPathEvent evt)
-        {
-            _fx.ProtectedNodeId = evt.ProtectedNodeId;
-        }
+        // 注：以下方法均已迁移至 BoardMovementController.Effects.cs（同一 partial class）：
+        // - 特效协程：DoCannonLaunch / DoTeleport / ProcessCannonChainCoroutine / ExecuteTeleportRoutine
+        // - 事件订阅处理器：OnCannonLaunchRequested / OnTeleportRequested / OnDirectionalMoveRequested /
+        //                   OnExtraMoveRequested / OnWarpSlideRequested / OnWarpFilterPathRequested
 
         /// <summary>
         /// 处理外部跳跃（如飞翼宝具）落点的完整格子效果管线。

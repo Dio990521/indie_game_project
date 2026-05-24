@@ -84,8 +84,8 @@ namespace IndieGame.Gameplay.Board.Runtime
 
                     // 检查是否存在反向连接
                     bool isBidirectional = HasConnection(to, from);
-                    // 绘制简单的 Gizmos 线条
-                    DrawConnection(from, to, isBidirectional);
+                    // 绘制贝塞尔曲线 Gizmos 线条
+                    DrawConnection(from, conn, to, isBidirectional);
                 }
             }
         }
@@ -234,47 +234,68 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
         /// <summary>
-        /// 绘制 Gizmos 连接线及箭头。
+        /// 绘制 Gizmos 连接线及箭头。使用贝塞尔曲线采样点，与运行时路径完全一致。
         /// </summary>
-        private void DrawConnection(MapWaypoint from, MapWaypoint to, bool isBidirectional)
+        private void DrawConnection(MapWaypoint from, WaypointConnection conn, MapWaypoint to, bool isBidirectional)
         {
-            Vector3 start = from.transform.position + Vector3.up * lineYOffset;
-            Vector3 end = to.transform.position + Vector3.up * lineYOffset;
+            Vector3 p0 = from.transform.position + Vector3.up * lineYOffset;
+            Vector3 p2 = to.transform.position + Vector3.up * lineYOffset;
+            Vector3 p1 = from.transform.position + conn.controlPointOffset + Vector3.up * lineYOffset;
 
-            Gizmos.color = isBidirectional ? bidirectionalColor : oneWayColor;
-            // 注意：Gizmos 仅支持绘制直线，无法直接绘制贝塞尔曲线
-            Gizmos.DrawLine(start, end);
+            Color lineColor = isBidirectional ? bidirectionalColor : oneWayColor;
 
 #if UNITY_EDITOR
-            // 如果是单向路径，绘制一个指示方向的箭头
-            if (!isBidirectional)
+            // 采样贝塞尔曲线上的点，用 Handles.DrawPolyLine 绘制平滑曲线
+            Vector3[] points = new Vector3[lineSegments + 1];
+            for (int i = 0; i <= lineSegments; i++)
             {
-                DrawArrow(start, end);
+                float t = i / (float)lineSegments;
+                points[i] = BezierUtils.GetQuadraticBezierPoint(t, p0, p1, p2);
             }
+
+            Handles.color = lineColor;
+            Handles.DrawPolyLine(points);
+
+            if (isBidirectional)
+            {
+                // 双向路径：两端各画一个箭头，确认 A→B 和 B→A 均存在
+                Vector3 forwardDir = (points[lineSegments] - points[lineSegments - 1]).normalized;
+                Vector3 backwardDir = (points[0] - points[1]).normalized;
+                DrawArrow(p2, forwardDir, lineColor);
+                DrawArrow(p0, backwardDir, lineColor);
+            }
+            else
+            {
+                // 单向路径：只在终点画箭头，取曲线末端切线以确保方向准确
+                Vector3 tangentDir = (points[lineSegments] - points[lineSegments - 1]).normalized;
+                DrawArrow(p2, tangentDir, lineColor);
+            }
+#else
+            // 非编辑器环境兜底：直接画直线
+            Gizmos.color = lineColor;
+            Gizmos.DrawLine(p0, p2);
 #endif
         }
 
 #if UNITY_EDITOR
         /// <summary>
-        /// 绘制方向箭头的具体逻辑（仅编辑器有效）。
+        /// 在指定位置沿给定方向绘制箭头（仅编辑器有效）。
         /// </summary>
-        private void DrawArrow(Vector3 start, Vector3 end)
+        /// <param name="tip">箭头尖端位置</param>
+        /// <param name="dir">箭头朝向（曲线切线方向）</param>
+        /// <param name="color">箭头颜色，与连接线保持一致</param>
+        private void DrawArrow(Vector3 tip, Vector3 dir, Color color)
         {
-            Vector3 dir = (end - start).normalized;
             if (dir == Vector3.zero) return;
 
-            // 计算箭头的底部基准点
-            Vector3 basePos = end - dir * arrowSize;
-            // 计算箭头两侧的分支旋转
             Quaternion leftRot = Quaternion.AngleAxis(arrowAngle, Vector3.up);
             Quaternion rightRot = Quaternion.AngleAxis(-arrowAngle, Vector3.up);
             Vector3 left = leftRot * -dir;
             Vector3 right = rightRot * -dir;
 
-            Handles.color = oneWayColor;
-            // 绘制两根线段组成箭头形状
-            Handles.DrawLine(end, basePos + left * (arrowSize * 0.5f));
-            Handles.DrawLine(end, basePos + right * (arrowSize * 0.5f));
+            Handles.color = color;
+            Handles.DrawLine(tip, tip + left * arrowSize);
+            Handles.DrawLine(tip, tip + right * arrowSize);
         }
 #endif
 
@@ -313,10 +334,18 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         /// <summary>
         /// 获取当前所有地块节点。
-        /// 统一委托给 BoardMapManager 处理，确保数据源一致且高效。
+        /// 编辑器未播放时直接扫描场景（BoardMapManager 尚未由 Bootstrapper 创建），
+        /// 运行时则通过 BoardMapManager 获取已缓存的数据。
         /// </summary>
         private List<MapWaypoint> GetAllNodes()
         {
+#if UNITY_EDITOR
+            if (!Application.isPlaying)
+            {
+                return new List<MapWaypoint>(
+                    FindObjectsByType<MapWaypoint>(FindObjectsSortMode.None));
+            }
+#endif
             if (BoardMapManager.Instance == null) return null;
             return BoardMapManager.Instance.GetAllNodes();
         }

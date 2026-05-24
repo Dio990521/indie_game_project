@@ -146,17 +146,19 @@ namespace IndieGame.Editor.Board
             if (from.connections.Exists(c => c.targetNode == to)) return;
 
             Undo.RecordObject(from, "Link Node");
-            
-            // ✅ 修改点：将偏移量改为两点之间的中点 (不加 Y 轴偏移)
-            // 这样默认就是一条直线。用户如果想弯曲，再去手动拖动 Handle。
+
+            // 默认控制点在连线中点，即直线。用户可手动拖动 Handle 来弯曲。
             Vector3 midPoint = (to.transform.position - from.transform.position) * 0.5f;
-            
+
             from.connections.Add(new WaypointConnection
             {
                 targetNode = to,
-                controlPointOffset = midPoint // 此时控制点就在连线正中间，即直线
+                controlPointOffset = midPoint
             });
-            
+
+            // 必须调用 SetDirty，否则 Unity 不会将 Scene 标记为已修改，
+            // 进入 Play Mode 时的快照将不包含此次连接，退出后连接会丢失。
+            EditorUtility.SetDirty(from);
         }
 
         private void ConnectNodesBidirectional(MapWaypoint a, MapWaypoint b)

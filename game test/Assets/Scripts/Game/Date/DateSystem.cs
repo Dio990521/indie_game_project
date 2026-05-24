@@ -26,7 +26,7 @@ namespace IndieGame.Gameplay.Date
         /// <summary> 存档模块唯一 ID。 </summary>
         public override string SaveID => "DateSystem";
 
-        private void Awake()
+        protected override void Awake()
         {
             base.Awake();
             EnsureInitialized();
