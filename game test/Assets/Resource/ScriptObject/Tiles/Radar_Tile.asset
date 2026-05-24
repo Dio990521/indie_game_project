@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6a50f607a5f166e4894aafa81a88681e, type: 3}
   m_Name: Radar_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.RadarTile
-  tileName: 
+  tileName: RadarTile
   gizmoColor: {r: 0.6840286, g: 0.8238993, b: 0.20986106, a: 1}
   revealRadius: 10

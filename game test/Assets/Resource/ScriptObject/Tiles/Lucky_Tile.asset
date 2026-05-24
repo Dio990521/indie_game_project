@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9de2762b84197ce429b0d4aa34d09803, type: 3}
   m_Name: Lucky_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.LuckyTile
-  tileName: 
+  tileName: LuckyTile
   gizmoColor: {r: 0.98742133, g: 0.53129846, b: 0, a: 1}
   effectPool:
   - effectType: 0

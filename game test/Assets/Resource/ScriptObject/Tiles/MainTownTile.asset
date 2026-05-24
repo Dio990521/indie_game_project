@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ab3848f163b3e844db50803c7d5d0ca8, type: 3}
-  m_Name: Town_Tile_B
+  m_Name: MainTownTile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.TownTile
-  tileName: TownBTile
-  gizmoColor: {r: 0.3690103, g: 0.35777843, b: 0.84276724, a: 1}
-  townName: TownB
-  townBackground: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  tileName: MainTownTile
+  gizmoColor: {r: 0.36862746, g: 0.35686275, b: 0.84313726, a: 1}
+  townName: MainTown
+  townBackground: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}

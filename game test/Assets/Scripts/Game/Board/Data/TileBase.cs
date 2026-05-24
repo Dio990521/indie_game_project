@@ -22,6 +22,12 @@ namespace IndieGame.Gameplay.Board.Data
         public virtual bool TriggerOnPass => false;
 
         /// <summary>
+        /// 是否永远固定，不参与随机刷新。
+        /// 扭曲格、传送格、城镇格覆写为 true。
+        /// </summary>
+        public virtual bool AlwaysFixed => false;
+
+        /// <summary>
         /// 当玩家进入该格子时触发（默认映射到 OnPlayerStop）
         /// </summary>
         public virtual void OnEnter(GameObject player)

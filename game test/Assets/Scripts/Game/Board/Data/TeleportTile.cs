@@ -10,6 +10,9 @@ namespace IndieGame.Gameplay.Board.Data
     [CreateAssetMenu(menuName = "BoardGame/Tiles/Teleport Tile")]
     public class TeleportTile : TileBase
     {
+        // 传送格依赖固定 targetNodeId，随机刷新会产生无效传送目标
+        public override bool AlwaysFixed => true;
+
         [Header("传送配置")]
         [Tooltip("目标节点 ID（填写 MapWaypoint 的 nodeID）")]
         public int targetNodeId;

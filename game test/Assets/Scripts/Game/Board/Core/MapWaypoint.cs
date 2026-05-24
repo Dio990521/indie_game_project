@@ -64,6 +64,10 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Tooltip("引用 TileBase 资源，定义该格子的类型（金币格、事件格等）及其视觉配置。")]
         public TileBase tileData;
 
+        [Header("随机刷新")]
+        [Tooltip("勾选后该节点始终保持原始格子配置，不参与任何随机刷新（适用于需要固定布局的关键节点）")]
+        public bool fixedLayout = false;
+
         [Header("连接关系")]
         [Tooltip("从该节点出发的所有可能路径。")]
         public List<WaypointConnection> connections = new List<WaypointConnection>();

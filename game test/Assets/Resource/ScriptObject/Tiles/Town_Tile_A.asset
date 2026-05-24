@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ab3848f163b3e844db50803c7d5d0ca8, type: 3}
   m_Name: Town_Tile_A
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.TownTile
-  tileName: 
+  tileName: TownATile
   gizmoColor: {r: 0.3690103, g: 0.35777843, b: 0.84276724, a: 1}
   townName: TownA
   townBackground: {fileID: 10913, guid: 0000000000000000f000000000000000, type: 0}

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e970dd008cd2c64490eff25951c6522, type: 3}
+  m_Name: BoardRefreshConfig
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.BoardRefreshConfigSO
+  enableRandomRefresh: 1
+  tilePool:
+  - tile: {fileID: 11400000, guid: 03eba329714e9b0498936a41ecf3b984, type: 2}
+    weight: 0.2
+  - tile: {fileID: 11400000, guid: e60374a8a1bba4e43b1243725438d38a, type: 2}
+    weight: 0.2
+  - tile: {fileID: 11400000, guid: 0864971fe15a542759e5e5ff267168ba, type: 2}
+    weight: 1
+  - tile: {fileID: 11400000, guid: cba5a323eb0b38d4eb1644b25e99ba20, type: 2}
+    weight: 0.3
+  - tile: {fileID: 11400000, guid: 1975ce1af44d7e646a339ce048e1fe8a, type: 2}
+    weight: 0.3
+  - tile: {fileID: 11400000, guid: fb29a9af0baf53945a2b8d7855d36d35, type: 2}
+    weight: 0.1
+  - tile: {fileID: 11400000, guid: 61463159634fc6e409cabaee7a5797d6, type: 2}
+    weight: 0.5
+  - tile: {fileID: 11400000, guid: 4548ed205d446a3489988ece4fa73016, type: 2}
+    weight: 0.1
+  - tile: {fileID: 11400000, guid: ad0f0870c9f41c242908ae9155c1b12f, type: 2}
+    weight: 1
+  - tile: {fileID: 11400000, guid: 6c7a73bd6c9f8a44985fd7dcb58ffb0b, type: 2}
+    weight: 0.5

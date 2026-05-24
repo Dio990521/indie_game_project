@@ -26,6 +26,9 @@ namespace IndieGame.Gameplay.Board.Data
         // 路过时也需触发，以便在分叉UI生效前排除被保护路径
         public override bool TriggerOnPass => true;
 
+        // 扭曲格强依赖 forcedSlideNodeId/protectedNodeId 配置，随机刷新会破坏路径逻辑
+        public override bool AlwaysFixed => true;
+
         public override void OnEnter(GameObject player)
         {
             // 路过和停下都发送路径过滤请求

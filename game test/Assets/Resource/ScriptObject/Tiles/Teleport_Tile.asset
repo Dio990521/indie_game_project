@@ -12,6 +12,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4d16428daa77c9a45987c3ecc26b3faa, type: 3}
   m_Name: Teleport_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.TeleportTile
-  tileName: 
+  tileName: TeleportTile
   gizmoColor: {r: 0.104643635, g: 0.899371, b: 0.6752641, a: 1}
   targetNodeId: 20

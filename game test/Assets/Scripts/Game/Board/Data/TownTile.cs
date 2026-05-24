@@ -16,6 +16,9 @@ namespace IndieGame.Gameplay.Board.Data
     [CreateAssetMenu(menuName = "BoardGame/Tiles/Town Tile")]
     public class TownTile : TileBase
     {
+        // 城镇格绑定具体城镇数据（名称/背景/传送解锁），随机刷新会破坏城镇系统
+        public override bool AlwaysFixed => true;
+
         [Header("城镇配置")]
         [Tooltip("城镇名称，显示在确认框中（如迷雾小镇）")]
         public string townName = "城镇";

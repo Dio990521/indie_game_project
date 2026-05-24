@@ -12,7 +12,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1b1c3370f4c7fea4d91e46497d104dea, type: 3}
   m_Name: Cannon_Tile
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.CannonTile
-  tileName: 
+  tileName: CannonTile
   gizmoColor: {r: 0.8070754, g: 0.08929622, b: 0.8113208, a: 1}
   arcHeight: 10
   launchSpeed: 12
+  spinSpeed: 720
+  settleExtraRotations: 2

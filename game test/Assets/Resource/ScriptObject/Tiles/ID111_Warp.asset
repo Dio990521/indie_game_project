@@ -10,9 +10,9 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: baf0f286dcab4bf46999bc14a4aed39a, type: 3}
-  m_Name: Warp_Tile_ID12
+  m_Name: ID111_Warp
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Data.WarpTile
-  tileName: ID12_Warp
+  tileName: ID111_Warp
   gizmoColor: {r: 0, g: 0, b: 0, a: 1}
-  forcedSlideNodeId: 13
-  protectedNodeId: 19
+  forcedSlideNodeId: 112
+  protectedNodeId: 116
