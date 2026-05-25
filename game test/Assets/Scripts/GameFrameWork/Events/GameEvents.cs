@@ -896,4 +896,16 @@ namespace IndieGame.Core
         public string FormattedDate;
     }
 
+    /// <summary>
+    /// 全局事件标志变更事件：
+    /// GameFlagSystem 在某个 Flag 值发生变化时广播，供关卡障碍物、任务系统等响应式监听。
+    /// </summary>
+    public struct GameFlagChangedEvent
+    {
+        // 变更的 Flag 唯一标识（字符串 Key，如 "village_gate_opened"）
+        public string Key;
+        // 变更后的新值
+        public bool NewValue;
+    }
+
 }

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Gameplay.Board.Events;
 using IndieGame.Gameplay.Board.Data;
+using IndieGame.Core;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -24,6 +25,25 @@ namespace IndieGame.Gameplay.Board.Runtime
         [Header("连接事件")]
         [Tooltip("在这条连线上触发的事件列表（例如：路过某处触发一段对话或扣除金币）")]
         public List<ConnectionEvent> events = new List<ConnectionEvent>();
+
+        [Header("障碍物")]
+        [Tooltip("关联的全局 Flag Key（留空 = 无障碍物）。\n" +
+                 "Flag=false → 此连接被封锁，无法通行；\n" +
+                 "Flag=true → 畅通无阻。\n" +
+                 "建议命名格式：snake_case，如 \"village_gate_opened\"")]
+        public string obstacleKey = "";
+
+        /// <summary>
+        /// 查询此连接当前是否被障碍物封锁。
+        /// obstacleKey 为空时永远返回 false（无障碍）。
+        /// </summary>
+        public bool IsBlocked()
+        {
+            if (string.IsNullOrEmpty(obstacleKey)) return false;
+            if (GameFlagSystem.Instance == null) return false;
+            // Flag=false 表示条件未完成 → 障碍物存在 → 封锁
+            return !GameFlagSystem.Instance.GetFlag(obstacleKey);
+        }
     }
 
     /// <summary>
@@ -97,6 +117,9 @@ namespace IndieGame.Gameplay.Board.Runtime
             List<MapWaypoint> results = new List<MapWaypoint>();
             for (int i = 0; i < connections.Count; i++)
             {
+                // 被障碍物封锁的连接不可通行
+                if (connections[i].IsBlocked()) continue;
+
                 MapWaypoint target = connections[i].targetNode;
                 if (target == null || target == incomingFrom) continue;
 
@@ -105,10 +128,13 @@ namespace IndieGame.Gameplay.Board.Runtime
             }
 
             // 特殊情况处理：如果是死胡同（只有一条路且就是来路）
+            // 注意：回退路同样需要通过封锁检查（若回路也被封则彻底无路可走）
             if (results.Count == 0 && incomingFrom != null)
             {
                 for (int i = 0; i < connections.Count; i++)
                 {
+                    if (connections[i].IsBlocked()) continue;
+
                     MapWaypoint target = connections[i].targetNode;
                     if (target == incomingFrom)
                     {

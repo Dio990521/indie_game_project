@@ -10,6 +10,7 @@ using IndieGame.Core.CameraSystem;
 using IndieGame.Gameplay.Dialogue;
 using IndieGame.Gameplay.Town;
 using IndieGame.Gameplay.Date;
+using IndieGame.Core;
 
 namespace IndieGame.Core
 {
@@ -43,6 +44,7 @@ namespace IndieGame.Core
         [SerializeField] private GameObject dialogueManagerPrefab;
         [SerializeField] private GameObject townUnlockManagerPrefab;
         [SerializeField] private GameObject dateSystemPrefab;
+        [SerializeField] private GameObject gameFlagSystemPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -94,6 +96,9 @@ namespace IndieGame.Core
             EnsureManagerFromPrefab<TownUnlockManager>(root, townUnlockManagerPrefab, "TownUnlockManager");
             // 日期系统：追踪游戏内日期，每次 Sleep/Inn 推进一天，支持存档。
             EnsureManagerFromPrefab<DateSystem>(root, dateSystemPrefab, "DateSystem");
+            // 全局事件标志数据库：存储任务开关、门是否开启等布尔状态，供障碍物和任务系统使用，支持存档。
+            // 注：需在其他读写 Flag 的系统之前初始化，故放在列表末尾（Bootstrap 顺序即初始化顺序）。
+            EnsureManagerFromPrefab<GameFlagSystem>(root, gameFlagSystemPrefab, "GameFlagSystem");
 
             // 2. 正式启动游戏逻辑
             if (gm != null)
