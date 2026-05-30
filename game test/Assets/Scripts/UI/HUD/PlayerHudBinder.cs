@@ -12,12 +12,15 @@ namespace IndieGame.UI.Hud
     /// 1) 不写任何业务逻辑；
     /// 2) 不订阅事件；
     /// 3) 不做数值计算；
-    /// 4) 仅作为 View/Controller 的“引用容器”。
+    /// 4) 仅作为 View/Controller 的"引用容器"。
     /// </summary>
     public class PlayerHudBinder : MonoBehaviour
     {
         [Header("Root")]
         [SerializeField] private GameObject rootNode;
+
+        [Header("Avatar")]
+        [SerializeField] private Image avatarImage;
 
         [Header("HP")]
         [SerializeField] private Image hpFillImage;
@@ -27,14 +30,21 @@ namespace IndieGame.UI.Hud
         [SerializeField] private Image expFillImage;
         [SerializeField] private TMP_Text expValueText;
 
-        [Header("Date")]
+        [Header("Action Points")]
+        [SerializeField] private Image apFillImage;
+        [SerializeField] private TMP_Text apValueText;
+
+        [Header("Date（右上角）")]
         [SerializeField] private TMP_Text dateText;
 
         public GameObject RootNode => rootNode;
+        public Image AvatarImage => avatarImage;
         public Image HpFillImage => hpFillImage;
         public TMP_Text HpValueText => hpValueText;
         public Image ExpFillImage => expFillImage;
         public TMP_Text ExpValueText => expValueText;
+        public Image ApFillImage => apFillImage;
+        public TMP_Text ApValueText => apValueText;
         public TMP_Text DateText => dateText;
     }
 }

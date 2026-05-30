@@ -4,40 +4,35 @@ using IndieGame.Gameplay.Board.Runtime;
 
 namespace IndieGame.Debugging
 {
+    /// <summary>
+    /// 状态机调试日志：
+    /// 监测 GlobalState / BoardState / OverlayState 变化，变化时通过 Debug.Log 输出。
+    /// 原 OnGUI 屏幕叠加已移除，改由 Console 日志记录。
+    /// </summary>
     public class StateDebugOverlay : MonoBehaviour
     {
-        private GUIStyle _labelStyle;
+        // 上一帧记录的状态字符串，用于比对是否发生变化
+        private string _lastGlobalState;
+        private string _lastBoardState;
+        private string _lastOverlayState;
 
-        private void OnGUI()
+        private void Update()
         {
             if (!Application.isPlaying) return;
 
-            // 1. 初始化样式（只做一次）
-            if (_labelStyle == null)
-            {
-                _labelStyle = new GUIStyle(GUI.skin.label)
-                {
-                    fontSize = 50,
-                    normal = { textColor = Color.white }, // 白色在深色背景上最清晰
-                    padding = new RectOffset(10, 10, 10, 10),
-                    alignment = TextAnchor.UpperLeft
-                };
-            }
-
-            // 获取数据（保持你原有的逻辑）
             string globalState = GameManager.Instance?.CurrentState.ToString() ?? "None";
             string boardState = BoardGameManager.Instance?.CurrentState?.GetType().Name ?? "None";
             string overlayState = BoardGameManager.Instance?.OverlayState?.GetType().Name ?? "None";
-            string text = $"[Global]: {globalState}\n[Board]: {boardState}\n[Overlay]: {overlayState}";
 
-            // 2. 绘制黑色半透明背景框
-            // 使用 GUI.Box 配合一个简单的背景色
-            GUI.backgroundColor = new Color(0, 0, 0, 0.9f); // 90% 透明度的黑色
-            Vector2 size = _labelStyle.CalcSize(new GUIContent(text)); // 自动计算文本所需的宽高
-            Rect boxRect = new Rect(10f, 10f, size.x + 20, size.y + 20);
+            // 任意一个状态发生变化时打印一次完整快照
+            if (globalState != _lastGlobalState || boardState != _lastBoardState || overlayState != _lastOverlayState)
+            {
+                _lastGlobalState = globalState;
+                _lastBoardState = boardState;
+                _lastOverlayState = overlayState;
 
-            GUI.Box(boxRect, ""); // 绘制背景
-            GUI.Label(boxRect, text, _labelStyle); // 绘制文字
+                Debug.Log($"[StateDebug] Global={globalState} | Board={boardState} | Overlay={overlayState}");
+            }
         }
     }
 }
