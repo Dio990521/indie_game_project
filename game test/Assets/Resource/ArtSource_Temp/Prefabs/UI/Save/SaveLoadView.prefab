@@ -11,7 +11,6 @@ GameObject:
   - component: {fileID: 7819523320950227308}
   - component: {fileID: 5468940714867105065}
   - component: {fileID: 8621870439497032322}
-  - component: {fileID: 6243488606116514940}
   m_Layer: 5
   m_Name: SaveLoadView
   m_TagString: Untagged
@@ -70,27 +69,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.TitleScreen.SaveLoadMenuView
   binder: {fileID: 5468940714867105065}
---- !u!114 &6243488606116514940
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 631668260870732445}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
-  fontReference:
-    m_TableReference:
-      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
-    m_TableEntryReference:
-      m_KeyId: 69676597248
-      m_Key: 
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-  applyToChildren: 1
 --- !u!1 &724933206940488916
 GameObject:
   m_ObjectHideFlags: 0
@@ -451,7 +429,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3445338389884412625}
   - component: {fileID: 2702133136640485963}
-  - component: {fileID: 6652169853461689677}
+  - component: {fileID: 4253547918963489708}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -486,7 +464,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4363606970844782087}
   m_CullTransparentMesh: 1
---- !u!114 &6652169853461689677
+--- !u!114 &4253547918963489708
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -495,9 +473,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 4363606970844782087}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c182f9e6bdf10842b9169de58cff866, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.LocalizedText
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -528,13 +506,13 @@ MonoBehaviour:
   m_spriteAsset: {fileID: 0}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
-  m_TextStyleHashCode: -1183493901
+  m_TextStyleHashCode: 0
   m_overrideHtmlColors: 0
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
   m_fontSize: 72
-  m_fontSizeBase: 24
+  m_fontSizeBase: 72
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
@@ -556,13 +534,13 @@ MonoBehaviour:
   m_linkedTextComponent: {fileID: 0}
   parentLinkedComponent: {fileID: 0}
   m_enableKerning: 0
-  m_ActiveFontFeatures: 6e72656b
+  m_ActiveFontFeatures: 00000000
   m_enableExtraPadding: 0
   checkPaddingRequired: 0
   m_isRichText: 1
   m_EmojiFallbackSupport: 1
   m_parseCtrlCharacters: 1
-  m_isOrthographic: 1
+  m_isOrthographic: 0
   m_isCullingEnabled: 0
   m_horizontalMapping: 0
   m_verticalMapping: 0
@@ -578,6 +556,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+  localizedKey:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &6751945605072703400
 GameObject:
   m_ObjectHideFlags: 0

@@ -56,3 +56,4 @@ MonoBehaviour:
   shopUIPrefab: {fileID: 5549291709720614763, guid: 362ad348136914466bb367a70aa3e4ed, type: 3}
   treasureMenuPrefab: {fileID: 7935050363261153765, guid: 37ceda32413a6c545a570316dc999431, type: 3}
   townUIPrefab: {fileID: 6246464611815323495, guid: 06e1d05603d3b014f8bcbb986865920b, type: 3}
+  systemMenuPrefab: {fileID: 2873604168823854586, guid: 48eaafbf49fc8724d8310e20992c049e, type: 3}

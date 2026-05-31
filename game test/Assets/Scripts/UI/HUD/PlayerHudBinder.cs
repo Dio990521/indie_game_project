@@ -21,6 +21,7 @@ namespace IndieGame.UI.Hud
 
         [Header("Avatar")]
         [SerializeField] private Image avatarImage;
+        [SerializeField] private TMP_Text levelText;
 
         [Header("HP")]
         [SerializeField] private Image hpFillImage;
@@ -39,6 +40,7 @@ namespace IndieGame.UI.Hud
 
         public GameObject RootNode => rootNode;
         public Image AvatarImage => avatarImage;
+        public TMP_Text LevelText => levelText;
         public Image HpFillImage => hpFillImage;
         public TMP_Text HpValueText => hpValueText;
         public Image ExpFillImage => expFillImage;

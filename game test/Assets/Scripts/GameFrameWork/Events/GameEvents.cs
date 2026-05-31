@@ -908,4 +908,16 @@ namespace IndieGame.Core
         public bool NewValue;
     }
 
+    /// <summary>
+    /// 系统菜单打开通知事件：
+    /// SystemMenuController 在面板弹出时广播，供其他系统感知（如音效、暂停逻辑等）。
+    /// </summary>
+    public struct SystemMenuOpenedEvent { }
+
+    /// <summary>
+    /// 系统菜单关闭通知事件：
+    /// SystemMenuController 在面板收起时广播。
+    /// </summary>
+    public struct SystemMenuClosedEvent { }
+
 }

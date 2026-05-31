@@ -42,6 +42,7 @@ namespace IndieGame.UI.Hud
         {
             Subscribe<HealthChangedEvent>(HandleHealthChanged);
             Subscribe<ExpChangedEvent>(HandleExpChanged);
+            Subscribe<LevelChangedEvent>(HandleLevelChanged);
             Subscribe<ActionPointChangedEvent>(HandleActionPointChanged);
             Subscribe<DateChangedEvent>(HandleDateChanged);
             Subscribe<GameModeChangedEvent>(HandleGameModeChanged);
@@ -84,6 +85,12 @@ namespace IndieGame.UI.Hud
         {
             if (!IsCurrentPlayer(evt.Owner)) return;
             if (view != null) view.RefreshExp(evt.Current, evt.Required);
+        }
+
+        private void HandleLevelChanged(LevelChangedEvent evt)
+        {
+            if (!IsCurrentPlayer(evt.Owner)) return;
+            if (view != null) view.RefreshLevel(evt.Level);
         }
 
         private void HandleActionPointChanged(ActionPointChangedEvent evt)
@@ -133,6 +140,7 @@ namespace IndieGame.UI.Hud
             if (!TryBindPlayer()) return;
             view.RefreshHealth(_currentPlayerStats.CurrentHP, _currentPlayerStats.MaxHP);
             view.RefreshExp(_currentPlayerStats.CurrentEXP, _currentPlayerStats.CurrentRequiredEXP);
+            view.RefreshLevel(_currentPlayerStats.CurrentLevel);
         }
 
         // ─── 工具 ────────────────────────────────────────────

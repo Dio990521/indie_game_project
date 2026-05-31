@@ -35,6 +35,15 @@ namespace IndieGame.UI.Hud
         }
 
         /// <summary>
+        /// 刷新等级显示，格式为 "Lv.N"，显示在头像旁边。
+        /// </summary>
+        public void RefreshLevel(int level)
+        {
+            if (binder == null || binder.LevelText == null) return;
+            binder.LevelText.text = $"Lv.{Mathf.Max(1, level)}";
+        }
+
+        /// <summary>
         /// 刷新头像显示。
         /// </summary>
         public void RefreshAvatar(Sprite avatar)

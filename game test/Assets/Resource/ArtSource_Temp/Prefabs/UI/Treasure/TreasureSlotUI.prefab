@@ -53,8 +53,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Treasure.TreasureSlotUI
   iconImage: {fileID: 5192771798988050250}
-  nameLabel: {fileID: 2118065387131562921}
-  costLabel: {fileID: 1789172160272568046}
+  nameLabel: {fileID: 3479807055525655725}
+  costLabel: {fileID: 420476713098892347}
   highlightObject: {fileID: 0}
 --- !u!114 &8930125931844978422
 MonoBehaviour:
@@ -92,7 +92,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4727562174851210489}
   - component: {fileID: 1826464153707293539}
-  - component: {fileID: 1789172160272568046}
+  - component: {fileID: 420476713098892347}
   m_Layer: 5
   m_Name: Cost
   m_TagString: Untagged
@@ -127,7 +127,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6740245194333800335}
   m_CullTransparentMesh: 1
---- !u!114 &1789172160272568046
+--- !u!114 &420476713098892347
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -136,9 +136,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 6740245194333800335}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c182f9e6bdf10842b9169de58cff866, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.LocalizedText
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -175,7 +175,7 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4294967295
   m_fontSize: 22.05
-  m_fontSizeBase: 36
+  m_fontSizeBase: 22.05
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
@@ -219,6 +219,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+  localizedKey:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &7881808481407054299
 GameObject:
   m_ObjectHideFlags: 0
@@ -304,7 +316,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8202849120230145471}
   - component: {fileID: 1339122698689646065}
-  - component: {fileID: 2118065387131562921}
+  - component: {fileID: 3479807055525655725}
   m_Layer: 5
   m_Name: Name
   m_TagString: Untagged
@@ -339,7 +351,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9089148170188801297}
   m_CullTransparentMesh: 1
---- !u!114 &2118065387131562921
+--- !u!114 &3479807055525655725
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -348,9 +360,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 9089148170188801297}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c182f9e6bdf10842b9169de58cff866, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.LocalizedText
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -387,7 +399,7 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4294967295
   m_fontSize: 22.05
-  m_fontSizeBase: 36
+  m_fontSizeBase: 22.05
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
@@ -431,3 +443,15 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+  localizedKey:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []

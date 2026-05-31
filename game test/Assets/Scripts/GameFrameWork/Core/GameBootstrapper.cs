@@ -31,6 +31,7 @@ namespace IndieGame.Core
         [Header("Manager Prefabs")]
         // 各类系统管理器的预制体（允许在 Inspector 中配置）
         [SerializeField] private GameObject gameManagerPrefab;
+        [SerializeField] private GameObject globalFontManagerPrefab;
         [SerializeField] private GameObject uiManagerPrefab;
         [SerializeField] private GameObject inventoryManagerPrefab;
         [SerializeField] private GameObject boardGameManagerPrefab;
@@ -77,6 +78,8 @@ namespace IndieGame.Core
             //    其余 Manager 只需确保存在即可，访问由各自的 .Instance 提供。
             GameObject root = EnsureGameSystemRoot();
             GameManager gm = EnsureManagerFromPrefab<GameManager>(root, gameManagerPrefab, "GameManager");
+            // 字体管理器必须在 UIManager 之前初始化，确保 UI 实例化时字体已就绪
+            EnsureManagerFromPrefab<GlobalFontManager>(root, globalFontManagerPrefab, "GlobalFontManager");
             EnsureManagerFromPrefab<UIManager>(root, uiManagerPrefab, "UIManager");
             EnsureManagerFromPrefab<BoardGameManager>(root, boardGameManagerPrefab, "BoardGameManager");
             EnsureManagerFromPrefab<InventoryManager>(root, inventoryManagerPrefab, "InventoryManager");

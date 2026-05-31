@@ -10,6 +10,7 @@ using IndieGame.UI.Hud;
 using IndieGame.UI.Shop;
 using IndieGame.UI.Treasure;
 using IndieGame.UI.Town;
+using IndieGame.UI.SystemMenu;
 
 namespace IndieGame.UI
 {
@@ -63,6 +64,8 @@ namespace IndieGame.UI
         [SerializeField] private TreasureMenuView treasureMenuPrefab;
         // 城镇菜单 UI（仅由 UIManager 负责实例化）
         [SerializeField] private TownUIView townUIPrefab;
+        // 系统菜单（语言切换）——始终常驻，挂在 Top75 层
+        [SerializeField] private SystemMenuController systemMenuPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -76,6 +79,7 @@ namespace IndieGame.UI
         public ShopUIController ShopUIInstance { get; private set; }
         public TreasureMenuView TreasureMenuInstance { get; private set; }
         public TownUIView TownUIInstance { get; private set; }
+        public SystemMenuController SystemMenuInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -254,6 +258,16 @@ namespace IndieGame.UI
             {
                 TownUIInstance = SpawnOnLayer(townUIPrefab, UILayerPriority.Top75);
                 if (TownUIInstance != null) TownUIInstance.gameObject.SetActive(true);
+            }
+
+            if (systemMenuPrefab != null && SystemMenuInstance == null)
+            {
+                SystemMenuInstance = SpawnOnLayer(systemMenuPrefab, UILayerPriority.Top75);
+                if (SystemMenuInstance != null)
+                {
+                    // UIManager 只负责生成实例，显示/隐藏规则由 SystemMenuController 监听 EventBus 自行控制。
+                    SystemMenuInstance.gameObject.SetActive(true);
+                }
             }
 
             // 生成全屏遮罩，确保始终在 UI 最上层

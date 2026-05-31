@@ -47,6 +47,7 @@ MonoBehaviour:
   autoInitOnStart: 1
   isTestScene: 1
   gameManagerPrefab: {fileID: 8054680310224825614, guid: 74b1e683aa7564c028ed340ac929624e, type: 3}
+  globalFontManagerPrefab: {fileID: 9181886914110743807, guid: 65e06bd53fc2948499fd9bb916f7fa5a, type: 3}
   uiManagerPrefab: {fileID: 7063492343718296212, guid: 125cf831d6c8244279279788cafc681a, type: 3}
   inventoryManagerPrefab: {fileID: 1706707719091005244, guid: d056c621c009e415eb847c6c9d2f7199, type: 3}
   boardGameManagerPrefab: {fileID: 4701626481749714120, guid: 2b86555b901994817bdbce9f0d88a220, type: 3}
