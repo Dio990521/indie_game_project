@@ -22,6 +22,11 @@ namespace IndieGame.Core.Utilities
         private static bool _applicationIsQuitting = false;
 
         /// <summary>
+        /// 轻量检测：实例是否存在。不触发 Find 也不打 Warning，专门用于 OnDestroy 等销毁期的安全判断。
+        /// </summary>
+        public static bool HasInstance => _instance != null && !_applicationIsQuitting;
+
+        /// <summary>
         /// 获取单例实例
         /// </summary>
         public static T Instance

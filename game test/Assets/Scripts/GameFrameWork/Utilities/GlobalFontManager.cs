@@ -12,6 +12,8 @@ namespace IndieGame.Core.Utilities
     /// 监听语言切换事件，统一将字体推送给所有已注册的 LocalizedText。
     /// 只需在场景中挂一个（跨场景常驻），无需给每个文字组件单独配置字体。
     /// </summary>
+    // 保证 Awake 先于所有默认顺序脚本（含 LocalizedText）执行，确保 _instance 已就绪
+    [DefaultExecutionOrder(-100)]
     public class GlobalFontManager : MonoSingleton<GlobalFontManager>
     {
         [Header("每种语言对应的字体资产")]

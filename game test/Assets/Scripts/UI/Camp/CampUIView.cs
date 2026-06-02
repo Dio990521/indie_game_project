@@ -153,7 +153,7 @@ namespace IndieGame.UI.Camp
                     DebugTools.Log("Log: 检索语料库，查看任务记录与对话日志...");
                     break;
                 case CampActionID.SkillTree:
-                    DebugTools.Log("Log: 打开技能配置界面...");
+                    EventBus.Raise(new OpenSkillTreeUIEvent());
                     break;
                 case CampActionID.Sleep:
                     // 转发为业务事件：由 CampUIController 接管编排（黑屏 / 存档 / 返回棋盘）。

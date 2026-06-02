@@ -30,7 +30,9 @@ namespace IndieGame.UI.Common
         protected override void OnDestroy()
         {
             base.OnDestroy();
-            GlobalFontManager.Instance?.Unregister(this);
+            // 用 HasInstance 避免在销毁期触发 Find 查找导致虚假 Warning
+            if (GlobalFontManager.HasInstance)
+                GlobalFontManager.Instance.Unregister(this);
         }
 
         /// <summary>GlobalFontManager 内部调用，外部请勿直接使用。</summary>

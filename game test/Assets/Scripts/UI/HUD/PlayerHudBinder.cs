@@ -38,6 +38,9 @@ namespace IndieGame.UI.Hud
         [Header("Date（右上角）")]
         [SerializeField] private TMP_Text dateText;
 
+        [Header("Skill Tree")]
+        [SerializeField] private Button skillTreeButton;
+
         public GameObject RootNode => rootNode;
         public Image AvatarImage => avatarImage;
         public TMP_Text LevelText => levelText;
@@ -48,5 +51,6 @@ namespace IndieGame.UI.Hud
         public Image ApFillImage => apFillImage;
         public TMP_Text ApValueText => apValueText;
         public TMP_Text DateText => dateText;
+        public Button SkillTreeButton => skillTreeButton;
     }
 }

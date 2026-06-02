@@ -149,7 +149,7 @@ public static class LocalizedTextMigrationTool
         var     savedColor       = src.color;
         var     savedAlignment   = src.alignment;
         bool    savedRaycast     = src.raycastTarget;
-        bool    savedWordWrap    = src.enableWordWrapping;
+        var     savedWordWrap    = src.textWrappingMode;
         var     savedOverflow    = src.overflowMode;
         var     savedStyle       = src.fontStyle;
         float   savedCharSpacing = src.characterSpacing;
@@ -169,7 +169,7 @@ public static class LocalizedTextMigrationTool
         lt.color             = savedColor;
         lt.alignment         = savedAlignment;
         lt.raycastTarget     = savedRaycast;
-        lt.enableWordWrapping = savedWordWrap;
+        lt.textWrappingMode  = savedWordWrap;
         lt.overflowMode      = savedOverflow;
         lt.fontStyle         = savedStyle;
         lt.characterSpacing  = savedCharSpacing;

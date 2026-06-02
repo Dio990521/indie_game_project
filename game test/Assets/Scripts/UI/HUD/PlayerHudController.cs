@@ -17,6 +17,7 @@ namespace IndieGame.UI.Hud
     {
         [Header("View")]
         [SerializeField] private PlayerHudView view;
+        [SerializeField] private PlayerHudBinder binder;
 
         [Header("场景名")]
         [SerializeField] private string worldSceneName = "World";
@@ -36,6 +37,11 @@ namespace IndieGame.UI.Hud
         {
             if (view == null)
                 view = GetComponent<PlayerHudView>();
+
+            // 绑定技能树入口按钮（HUD 上的快捷打开入口）
+            if (binder != null && binder.SkillTreeButton != null)
+                binder.SkillTreeButton.onClick.AddListener(
+                    () => EventBus.Raise(new OpenSkillTreeUIEvent()));
         }
 
         protected override void Bind()

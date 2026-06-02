@@ -920,4 +920,39 @@ namespace IndieGame.Core
     /// </summary>
     public struct SystemMenuClosedEvent { }
 
+    /// <summary>
+    /// 技能点变更事件：
+    /// SkillTreeSystem 在 SP 数值发生变化后广播。
+    /// Delta 为正 = 获得，为负 = 花费，为 0 = 仅同步（初始化/读档）。
+    /// </summary>
+    public struct SkillPointChangedEvent
+    {
+        // 变化后的当前 SP
+        public int Current;
+        // 本次变化量（正=获得，负=花费，0=仅同步）
+        public int Delta;
+    }
+
+    /// <summary>
+    /// 技能学习完成事件：
+    /// SkillTreeSystem 在技能成功解锁后广播，供 UI 刷新与日志系统监听。
+    /// </summary>
+    public struct SkillLearnedEvent
+    {
+        // 已学习技能的唯一 ID
+        public string SkillId;
+    }
+
+    /// <summary>
+    /// 打开技能树界面请求事件：
+    /// 由 HUD 按钮或外部业务入口发起，SkillTreeController 监听后执行显示逻辑。
+    /// </summary>
+    public struct OpenSkillTreeUIEvent { }
+
+    /// <summary>
+    /// 关闭技能树界面请求事件：
+    /// 由关闭按钮或 ESC 发起，SkillTreeController 监听后执行隐藏逻辑。
+    /// </summary>
+    public struct CloseSkillTreeUIEvent { }
+
 }
