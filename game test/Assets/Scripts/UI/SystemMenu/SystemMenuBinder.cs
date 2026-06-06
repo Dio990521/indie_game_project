@@ -36,21 +36,32 @@ namespace IndieGame.UI.SystemMenu
         [SerializeField] private Button btnEn;
         [SerializeField] private Button btnJa;
 
+        [Header("Action Buttons")]
+        // 存档按钮
+        [SerializeField] private Button btnSave;
+        // 读档按钮
+        [SerializeField] private Button btnLoad;
+        // 返回标题按钮
+        [SerializeField] private Button btnReturnToTitle;
+
         [Header("Highlight Colors")]
         [SerializeField] private Color selectedColor = Color.white;
         [SerializeField] private Color normalColor   = new Color(0.55f, 0.55f, 0.55f, 1f);
 
         // ── 只读属性 ─────────────────────────────────────────────────────────
-        public Button       SystemButton        => systemButton;
-        public CanvasGroup  ButtonCanvasGroup   => buttonCanvasGroup;
-        public CanvasGroup  PanelCanvasGroup    => panelCanvasGroup;
-        public RectTransform PanelRect          => panelRect;
-        public Button       BackdropButton      => backdropButton;
-        public Button       BtnZhHans           => btnZhHans;
-        public Button       BtnZhHant           => btnZhHant;
-        public Button       BtnEn               => btnEn;
-        public Button       BtnJa               => btnJa;
-        public Color        SelectedColor       => selectedColor;
-        public Color        NormalColor         => normalColor;
+        public Button        SystemButton        => systemButton;
+        public CanvasGroup   ButtonCanvasGroup   => buttonCanvasGroup;
+        public CanvasGroup   PanelCanvasGroup    => panelCanvasGroup;
+        public RectTransform PanelRect           => panelRect;
+        public Button        BackdropButton      => backdropButton;
+        public Button        BtnZhHans           => btnZhHans;
+        public Button        BtnZhHant           => btnZhHant;
+        public Button        BtnEn               => btnEn;
+        public Button        BtnJa               => btnJa;
+        public Button        BtnSave             => btnSave;
+        public Button        BtnLoad             => btnLoad;
+        public Button        BtnReturnToTitle    => btnReturnToTitle;
+        public Color         SelectedColor       => selectedColor;
+        public Color         NormalColor         => normalColor;
     }
 }

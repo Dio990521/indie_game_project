@@ -15,4 +15,4 @@ MonoBehaviour:
   tileName: TownBTile
   gizmoColor: {r: 0.3690103, g: 0.35777843, b: 0.84276724, a: 1}
   townName: TownB
-  townBackground: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  townBackground: {fileID: 21300000, guid: b1ba10fb0ef5949459d04022c2b96e75, type: 3}

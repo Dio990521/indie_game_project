@@ -1,6 +1,8 @@
 using System;
 using IndieGame.Core;
+using IndieGame.Core.SaveSystem;
 using IndieGame.Core.Utilities;
+using IndieGame.UI.Confirmation;
 using UnityEngine;
 using UnityEngine.Localization;
 using UnityEngine.Localization.Settings;
@@ -20,9 +22,17 @@ namespace IndieGame.UI.SystemMenu
         [SerializeField] private SystemMenuBinder binder;
         [SerializeField] private SystemMenuView   view;
 
+        [Header("Scene Settings")]
+        // 标题场景名，需与 SceneRegistry 中一致
+        [SerializeField] private string titleSceneName = "Title";
+        // 快速存档/读档使用的槽位索引
+        [SerializeField] private int quickSaveSlot = 0;
+
         // ─── 运行时状态 ───────────────────────────────────────────────────────
         private bool _isPanelOpen;
         private bool _isHiddenByDialogue;
+        // 是否正在等待读档完成后切换场景
+        private bool _pendingLoadScene;
 
         // ─── 生命周期 ─────────────────────────────────────────────────────────
 
@@ -42,10 +52,13 @@ namespace IndieGame.UI.SystemMenu
             // 绑定按钮事件（在 OnDestroy 中移除）
             if (binder.SystemButton   != null) binder.SystemButton.onClick.AddListener(HandleSystemButtonClicked);
             if (binder.BackdropButton != null) binder.BackdropButton.onClick.AddListener(HandleBackdropClicked);
-            if (binder.BtnZhHans     != null) binder.BtnZhHans.onClick.AddListener(() => HandleLanguageSelected("zh-Hans"));
-            if (binder.BtnZhHant     != null) binder.BtnZhHant.onClick.AddListener(() => HandleLanguageSelected("zh-Hant"));
-            if (binder.BtnEn         != null) binder.BtnEn.onClick.AddListener(()     => HandleLanguageSelected("en"));
-            if (binder.BtnJa         != null) binder.BtnJa.onClick.AddListener(()     => HandleLanguageSelected("ja"));
+            if (binder.BtnZhHans        != null) binder.BtnZhHans.onClick.AddListener(() => HandleLanguageSelected("zh-Hans"));
+            if (binder.BtnZhHant        != null) binder.BtnZhHant.onClick.AddListener(() => HandleLanguageSelected("zh-Hant"));
+            if (binder.BtnEn            != null) binder.BtnEn.onClick.AddListener(()     => HandleLanguageSelected("en"));
+            if (binder.BtnJa            != null) binder.BtnJa.onClick.AddListener(()     => HandleLanguageSelected("ja"));
+            if (binder.BtnSave          != null) binder.BtnSave.onClick.AddListener(HandleSaveClicked);
+            if (binder.BtnLoad          != null) binder.BtnLoad.onClick.AddListener(HandleLoadClicked);
+            if (binder.BtnReturnToTitle != null) binder.BtnReturnToTitle.onClick.AddListener(HandleReturnToTitleClicked);
         }
 
         private void OnDestroy()
@@ -53,10 +66,13 @@ namespace IndieGame.UI.SystemMenu
             if (binder == null) return;
             if (binder.SystemButton   != null) binder.SystemButton.onClick.RemoveAllListeners();
             if (binder.BackdropButton != null) binder.BackdropButton.onClick.RemoveAllListeners();
-            if (binder.BtnZhHans     != null) binder.BtnZhHans.onClick.RemoveAllListeners();
-            if (binder.BtnZhHant     != null) binder.BtnZhHant.onClick.RemoveAllListeners();
-            if (binder.BtnEn         != null) binder.BtnEn.onClick.RemoveAllListeners();
-            if (binder.BtnJa         != null) binder.BtnJa.onClick.RemoveAllListeners();
+            if (binder.BtnZhHans        != null) binder.BtnZhHans.onClick.RemoveAllListeners();
+            if (binder.BtnZhHant        != null) binder.BtnZhHant.onClick.RemoveAllListeners();
+            if (binder.BtnEn            != null) binder.BtnEn.onClick.RemoveAllListeners();
+            if (binder.BtnJa            != null) binder.BtnJa.onClick.RemoveAllListeners();
+            if (binder.BtnSave          != null) binder.BtnSave.onClick.RemoveAllListeners();
+            if (binder.BtnLoad          != null) binder.BtnLoad.onClick.RemoveAllListeners();
+            if (binder.BtnReturnToTitle != null) binder.BtnReturnToTitle.onClick.RemoveAllListeners();
         }
 
         protected override void OnEnable()
@@ -72,6 +88,8 @@ namespace IndieGame.UI.SystemMenu
             Subscribe<DialogueStartedEvent>(_ => OnDialogueStateChanged(true));
             Subscribe<DialogueEndedEvent>(_ => OnDialogueStateChanged(false));
             Subscribe<GameStateChangedEvent>(HandleGameStateChanged);
+            Subscribe<SaveCompletedEvent>(HandleSaveCompleted);
+            Subscribe<LoadCompletedEvent>(HandleLoadCompleted);
         }
 
         // ─── 按钮回调 ─────────────────────────────────────────────────────────
@@ -179,6 +197,110 @@ namespace IndieGame.UI.SystemMenu
             Locale current = LocalizationSettings.SelectedLocale;
             if (current == null) return;
             view.RefreshLanguageHighlight(current.Identifier.Code);
+        }
+
+        // ─── 存档 / 读档 / 返回标题 ───────────────────────────────────────────
+
+        private void HandleSaveClicked()
+        {
+            ConfirmationEvent.Request(new ConfirmationRequest
+            {
+                Message  = "Save game?",
+                OnConfirm = DoQuickSave
+            });
+        }
+
+        private void HandleLoadClicked()
+        {
+            // 检查目标槽位是否有存档，避免弹出无效确认框
+            if (SaveManager.Instance == null || !SaveManager.Instance.HasSlot(quickSaveSlot))
+            {
+                DebugTools.LogWarning("[SystemMenuController] 快速存档槽位不存在，无法读档。");
+                return;
+            }
+            ConfirmationEvent.Request(new ConfirmationRequest
+            {
+                Message  = "Load save data? Unsaved progress will be lost.",
+                OnConfirm = DoQuickLoad
+            });
+        }
+
+        private void HandleReturnToTitleClicked()
+        {
+            ConfirmationEvent.Request(new ConfirmationRequest
+            {
+                Message  = "Return to title? Unsaved progress will be lost.",
+                OnConfirm = DoReturnToTitle
+            });
+        }
+
+        /// <summary>
+        /// 异步快速存档到 quickSaveSlot，sourceTag 用于在事件回调中精准识别来源。
+        /// </summary>
+        private async void DoQuickSave()
+        {
+            if (SaveManager.Instance == null) return;
+            ClosePanel();
+            await SaveManager.Instance.SaveAsync(quickSaveSlot, sourceTag: "SystemMenu");
+        }
+
+        /// <summary>
+        /// 异步读取 quickSaveSlot，读取成功后由 HandleLoadCompleted 切换场景。
+        /// </summary>
+        private async void DoQuickLoad()
+        {
+            if (SaveManager.Instance == null) return;
+            if (!SaveManager.Instance.HasSlot(quickSaveSlot)) return;
+            ClosePanel();
+            _pendingLoadScene = true;
+            await SaveManager.Instance.LoadAsync(quickSaveSlot);
+        }
+
+        /// <summary>
+        /// 通过 SceneLoader 以淡入淡出切换到标题场景。
+        /// </summary>
+        private void DoReturnToTitle()
+        {
+            ClosePanel();
+            if (SceneLoader.Instance == null)
+            {
+                DebugTools.LogError("[SystemMenuController] SceneLoader 实例未找到，无法返回标题。");
+                return;
+            }
+            SceneLoader.Instance.LoadScene(titleSceneName, null);
+        }
+
+        /// <summary>
+        /// 存档完成回调：仅处理来自系统菜单且目标槽位匹配的事件。
+        /// </summary>
+        private void HandleSaveCompleted(SaveCompletedEvent evt)
+        {
+            if (evt.SlotIndex != quickSaveSlot) return;
+            if (!string.Equals(evt.SourceTag, "SystemMenu", StringComparison.Ordinal)) return;
+            if (evt.Success)
+                DebugTools.Log("[SystemMenuController] 快速存档成功。");
+            else
+                DebugTools.LogWarning($"[SystemMenuController] 快速存档失败：{evt.Error}");
+        }
+
+        /// <summary>
+        /// 读档完成回调：若由系统菜单发起（_pendingLoadScene），则跳转到存档元数据中记录的场景。
+        /// SaveManager 的 _lastLoadedData 缓存会在新场景的 ISaveable 注册时自动补恢复。
+        /// </summary>
+        private void HandleLoadCompleted(LoadCompletedEvent evt)
+        {
+            if (!_pendingLoadScene) return;
+            _pendingLoadScene = false;
+            if (!evt.Success) return;
+
+            // 读取元数据获取存档时所在的场景名
+            SaveMetaData meta = SaveManager.Instance?.GetSlotMeta(quickSaveSlot);
+            if (meta == null || string.IsNullOrEmpty(meta.SceneName))
+            {
+                DebugTools.LogWarning("[SystemMenuController] 存档元数据缺失场景名，无法跳转。");
+                return;
+            }
+            SceneLoader.Instance?.LoadScene(meta.SceneName, null);
         }
     }
 }

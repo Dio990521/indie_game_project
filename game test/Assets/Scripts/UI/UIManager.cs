@@ -17,14 +17,20 @@ namespace IndieGame.UI
 {
     /// <summary>
     /// UI 层级优先级：
-    /// 用于区分 UI 的不同渲染层（例如 Overlay vs Camera）。
+    /// 对应 UICanvas 下各独立子 Canvas 的 SortingOrder，数值越高渲染越靠前。
     /// </summary>
     public enum UILayerPriority
     {
-        // 顶部 Overlay 层（屏幕 UI）
+        // ScreenSpaceCamera，世界相机关联 UI
         Bottom25,
-        // 依赖 Camera 的 UI 层
-        Top75
+        // ScreenSpaceOverlay SortingOrder=10，游戏功能 UI（HUD、背包、商店等）
+        GameUI,
+        // ScreenSpaceOverlay SortingOrder=20，系统菜单（语言切换、存读档）
+        SystemUI,
+        // ScreenSpaceOverlay SortingOrder=30，确认弹窗（始终在菜单上方）
+        Popup,
+        // ScreenSpaceOverlay SortingOrder=40，全屏转场遮罩（始终最顶层）
+        Fullscreen
     }
 
     /// <summary>
@@ -33,10 +39,12 @@ namespace IndieGame.UI
     /// </summary>
     public class UIManager : MonoSingleton<UIManager>
     {
-        // 顶部 Overlay 根节点（通常为 ScreenSpaceOverlay）
-        private Transform screenOverlayTop75;
-        // Camera 渲染根节点（ScreenSpaceCamera）
-        private Transform screenCameraBottom25;
+        // 各层级根节点缓存（由 CacheRoots 从 UIPriorityRoots 读取）
+        private Transform layerCameraBottom25;
+        private Transform layerGameUI;
+        private Transform layerSystemUI;
+        private Transform layerPopup;
+        private Transform layerFullscreen;
         // Canvas 上的根节点组件
         private UIPriorityRoots uiRoots;
 
@@ -138,12 +146,18 @@ namespace IndieGame.UI
         /// </summary>
         public Transform GetRoot(UILayerPriority priority)
         {
-            if (screenOverlayTop75 == null || screenCameraBottom25 == null)
+            // 若根节点丢失，重新缓存
+            if (layerGameUI == null) CacheRoots();
+
+            return priority switch
             {
-                // 若根节点丢失，重新缓存
-                CacheRoots();
-            }
-            return priority == UILayerPriority.Top75 ? screenOverlayTop75 : screenCameraBottom25;
+                UILayerPriority.Bottom25   => layerCameraBottom25,
+                UILayerPriority.GameUI     => layerGameUI,
+                UILayerPriority.SystemUI   => layerSystemUI,
+                UILayerPriority.Popup      => layerPopup,
+                UILayerPriority.Fullscreen => layerFullscreen,
+                _                          => layerGameUI,
+            };
         }
 
         /// <summary>
@@ -183,37 +197,31 @@ namespace IndieGame.UI
         /// </summary>
         private void SpawnUI()
         {
-
+            // ── GameUI 层（SortingOrder=10）：游戏功能 UI ──────────────────────
             if (boardActionMenuPrefab != null && BoardActionMenuInstance == null)
             {
-                BoardActionMenuInstance = SpawnOnLayer(boardActionMenuPrefab, UILayerPriority.Top75);
+                BoardActionMenuInstance = SpawnOnLayer(boardActionMenuPrefab, UILayerPriority.GameUI);
                 if (BoardActionMenuInstance != null) BoardActionMenuInstance.gameObject.SetActive(true);
             }
 
             if (inventoryPrefab != null && InventoryInstance == null)
             {
-                InventoryInstance = SpawnOnLayer(inventoryPrefab, UILayerPriority.Top75);
+                InventoryInstance = SpawnOnLayer(inventoryPrefab, UILayerPriority.GameUI);
                 if (InventoryInstance != null) InventoryInstance.gameObject.SetActive(true);
-            }
-
-            if (confirmationPrefab != null && ConfirmationInstance == null)
-            {
-                ConfirmationInstance = SpawnOnLayer(confirmationPrefab, UILayerPriority.Top75);
-                if (ConfirmationInstance != null) ConfirmationInstance.gameObject.SetActive(true);
             }
 
             if (campUIPrefab != null && CampUIInstance == null)
             {
-                CampUIInstance = SpawnOnLayer(campUIPrefab, UILayerPriority.Top75);
+                CampUIInstance = SpawnOnLayer(campUIPrefab, UILayerPriority.GameUI);
                 if (CampUIInstance != null) CampUIInstance.gameObject.SetActive(true);
             }
 
             if (craftingUIPrefab != null && CraftingUIInstance == null)
             {
-                CraftingUIInstance = SpawnOnLayer(craftingUIPrefab, UILayerPriority.Top75);
+                CraftingUIInstance = SpawnOnLayer(craftingUIPrefab, UILayerPriority.GameUI);
                 if (CraftingUIInstance != null)
                 {
-                    // UIManager 仅负责“生成实例”：
+                    // UIManager 仅负责”生成实例”：
                     // 保持对象激活，让 CraftingUIController 能持续监听 EventBus 并自行控制 show/hide。
                     CraftingUIInstance.gameObject.SetActive(true);
                 }
@@ -221,7 +229,7 @@ namespace IndieGame.UI
 
             if (dialogueUIPrefab != null && DialogueUIInstance == null)
             {
-                DialogueUIInstance = SpawnOnLayer(dialogueUIPrefab, UILayerPriority.Top75);
+                DialogueUIInstance = SpawnOnLayer(dialogueUIPrefab, UILayerPriority.GameUI);
                 if (DialogueUIInstance != null)
                 {
                     // 统一由 UIManager 生成并保持激活，
@@ -232,7 +240,7 @@ namespace IndieGame.UI
 
             if (playerHudPrefab != null && PlayerHudInstance == null)
             {
-                PlayerHudInstance = SpawnOnLayer(playerHudPrefab, UILayerPriority.Top75);
+                PlayerHudInstance = SpawnOnLayer(playerHudPrefab, UILayerPriority.GameUI);
                 if (PlayerHudInstance != null)
                 {
                     // UIManager 只负责实例化与激活，显示规则由 PlayerHudController 自行控制。
@@ -242,7 +250,7 @@ namespace IndieGame.UI
 
             if (shopUIPrefab != null && ShopUIInstance == null)
             {
-                ShopUIInstance = SpawnOnLayer(shopUIPrefab, UILayerPriority.Top75);
+                ShopUIInstance = SpawnOnLayer(shopUIPrefab, UILayerPriority.GameUI);
                 if (ShopUIInstance != null)
                 {
                     // 与 Craft/Dialogue 一致：
@@ -254,29 +262,19 @@ namespace IndieGame.UI
 
             if (treasureMenuPrefab != null && TreasureMenuInstance == null)
             {
-                TreasureMenuInstance = SpawnOnLayer(treasureMenuPrefab, UILayerPriority.Top75);
+                TreasureMenuInstance = SpawnOnLayer(treasureMenuPrefab, UILayerPriority.GameUI);
                 if (TreasureMenuInstance != null) TreasureMenuInstance.gameObject.SetActive(true);
             }
 
             if (townUIPrefab != null && TownUIInstance == null)
             {
-                TownUIInstance = SpawnOnLayer(townUIPrefab, UILayerPriority.Top75);
+                TownUIInstance = SpawnOnLayer(townUIPrefab, UILayerPriority.GameUI);
                 if (TownUIInstance != null) TownUIInstance.gameObject.SetActive(true);
-            }
-
-            if (systemMenuPrefab != null && SystemMenuInstance == null)
-            {
-                SystemMenuInstance = SpawnOnLayer(systemMenuPrefab, UILayerPriority.Top75);
-                if (SystemMenuInstance != null)
-                {
-                    // UIManager 只负责生成实例，显示/隐藏规则由 SystemMenuController 监听 EventBus 自行控制。
-                    SystemMenuInstance.gameObject.SetActive(true);
-                }
             }
 
             if (skillTreeUIPrefab != null && SkillTreeUIInstance == null)
             {
-                SkillTreeUIInstance = SpawnOnLayer(skillTreeUIPrefab, UILayerPriority.Top75);
+                SkillTreeUIInstance = SpawnOnLayer(skillTreeUIPrefab, UILayerPriority.GameUI);
                 if (SkillTreeUIInstance != null)
                 {
                     // UIManager 只负责生成实例，显示/隐藏由 SkillTreeController 监听 EventBus 自行控制。
@@ -284,10 +282,28 @@ namespace IndieGame.UI
                 }
             }
 
-            // 生成全屏遮罩，确保始终在 UI 最上层
+            // ── SystemUI 层（SortingOrder=20）：系统菜单 ──────────────────────
+            if (systemMenuPrefab != null && SystemMenuInstance == null)
+            {
+                SystemMenuInstance = SpawnOnLayer(systemMenuPrefab, UILayerPriority.SystemUI);
+                if (SystemMenuInstance != null)
+                {
+                    // UIManager 只负责生成实例，显示/隐藏规则由 SystemMenuController 监听 EventBus 自行控制。
+                    SystemMenuInstance.gameObject.SetActive(true);
+                }
+            }
+
+            // ── Popup 层（SortingOrder=30）：确认弹窗，始终在菜单上方 ────────
+            if (confirmationPrefab != null && ConfirmationInstance == null)
+            {
+                ConfirmationInstance = SpawnOnLayer(confirmationPrefab, UILayerPriority.Popup);
+                if (ConfirmationInstance != null) ConfirmationInstance.gameObject.SetActive(true);
+            }
+
+            // ── Fullscreen 层（SortingOrder=40）：全屏遮罩，绝对最顶层 ────────
             if (fullscreenFadePrefab != null && FullscreenFadeInstance == null)
             {
-                FullscreenFadeInstance = SpawnOnLayer(fullscreenFadePrefab, UILayerPriority.Top75);
+                FullscreenFadeInstance = SpawnOnLayer(fullscreenFadePrefab, UILayerPriority.Fullscreen);
                 if (FullscreenFadeInstance != null)
                 {
                     FullscreenFadeInstance.gameObject.SetActive(true);
@@ -319,13 +335,9 @@ namespace IndieGame.UI
 
         private void RefreshWorldCamera()
         {
-            if (screenCameraBottom25 == null)
-            {
-                // 若根节点丢失，重新缓存
-                CacheRoots();
-            }
-            if (screenCameraBottom25 == null) return;
-            var canvas = screenCameraBottom25.GetComponent<Canvas>();
+            if (layerCameraBottom25 == null) CacheRoots();
+            if (layerCameraBottom25 == null) return;
+            var canvas = layerCameraBottom25.GetComponent<Canvas>();
             if (canvas != null && canvas.renderMode == RenderMode.ScreenSpaceCamera)
             {
                 // 绑定主相机，确保 UI 与场景 Camera 同步
@@ -347,8 +359,11 @@ namespace IndieGame.UI
                 }
             }
 
-            screenOverlayTop75 = uiRoots.OverlayTop75;
-            screenCameraBottom25 = uiRoots.CameraBottom25;
+            layerCameraBottom25 = uiRoots.CameraBottom25;
+            layerGameUI          = uiRoots.OverlayGameUI;
+            layerSystemUI        = uiRoots.OverlaySystemUI;
+            layerPopup           = uiRoots.OverlayPopup;
+            layerFullscreen      = uiRoots.OverlayFullscreen;
         }
 
         private void EnsureCanvasInstance()

@@ -37,7 +37,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 160, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1663705083778110079
 CanvasRenderer:
@@ -67,8 +67,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: -840416151, guid: b9b819745a89eb844be50ce8aed090c6, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
@@ -134,7 +134,6 @@ GameObject:
   - component: {fileID: 2696414867634828579}
   - component: {fileID: 5373188128845934333}
   - component: {fileID: 8835836302094458256}
-  - component: {fileID: 1717890418224346879}
   m_Layer: 5
   m_Name: Confirm
   m_TagString: Untagged
@@ -213,7 +212,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Confirmation.ConfirmationPopupBinder
   rootPanel: {fileID: 733715642457944269}
-  messageLabel: {fileID: 4507811764585118665}
+  messageLabel: {fileID: 1329236520273890780}
   confirmButton: {fileID: 4230762870950286761}
   cancelButton: {fileID: 4723101154727126347}
 --- !u!114 &8835836302094458256
@@ -251,27 +250,6 @@ MonoBehaviour:
   references:
     version: 2
     RefIds: []
---- !u!114 &1717890418224346879
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 733715642457944269}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2071d8460ab88fb43a4e89cbd2f79db7, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.FontLocalizationSetter
-  fontReference:
-    m_TableReference:
-      m_TableCollectionName: GUID:cca40337782091d4f8b7a9dae39a8065
-    m_TableEntryReference:
-      m_KeyId: 69676597248
-      m_Key: 
-    m_FallbackState: 0
-    m_WaitForCompletion: 0
-  applyToChildren: 1
 --- !u!1 &1919982874554236788
 GameObject:
   m_ObjectHideFlags: 0
@@ -282,7 +260,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2971581080601188474}
   - component: {fileID: 1812131832697350339}
-  - component: {fileID: 4507811764585118665}
+  - component: {fileID: 1329236520273890780}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -317,7 +295,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1919982874554236788}
   m_CullTransparentMesh: 1
---- !u!114 &4507811764585118665
+--- !u!114 &1329236520273890780
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -326,9 +304,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 1919982874554236788}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c182f9e6bdf10842b9169de58cff866, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.LocalizedText
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -365,7 +343,7 @@ MonoBehaviour:
     serializedVersion: 2
     rgba: 4294967295
   m_fontSize: 72
-  m_fontSizeBase: 36
+  m_fontSizeBase: 72
   m_fontWeight: 400
   m_enableAutoSizing: 1
   m_fontSizeMin: 18
@@ -403,12 +381,24 @@ MonoBehaviour:
   m_VertexBufferAutoSizeReduction: 0
   m_useMaxVisibleDescender: 1
   m_pageToDisplay: 1
-  m_margin: {x: 1.8312988, y: -100.716736, z: 0, w: -42.11786}
+  m_margin: {x: 0, y: -81.5788, z: 0, w: -26.669983}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+  localizedKey:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &3366025374581266387
 GameObject:
   m_ObjectHideFlags: 0
@@ -476,7 +466,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 0}
+  m_Sprite: {fileID: 21300000, guid: b1ba10fb0ef5949459d04022c2b96e75, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -496,7 +486,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8888865067996073840}
   - component: {fileID: 6583797845896516100}
-  - component: {fileID: 208819183498212243}
+  - component: {fileID: 6645036841619612073}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -531,7 +521,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4865942614670662841}
   m_CullTransparentMesh: 1
---- !u!114 &208819183498212243
+--- !u!114 &6645036841619612073
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -540,9 +530,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 4865942614670662841}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c182f9e6bdf10842b9169de58cff866, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.LocalizedText
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -623,6 +613,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+  localizedKey:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &4995356935734010890
 GameObject:
   m_ObjectHideFlags: 0
@@ -633,7 +635,7 @@ GameObject:
   m_Component:
   - component: {fileID: 4592188922602259711}
   - component: {fileID: 8983155348964829786}
-  - component: {fileID: 1961843520797288237}
+  - component: {fileID: 2039368096026237930}
   m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
@@ -668,7 +670,7 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4995356935734010890}
   m_CullTransparentMesh: 1
---- !u!114 &1961843520797288237
+--- !u!114 &2039368096026237930
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -677,9 +679,9 @@ MonoBehaviour:
   m_GameObject: {fileID: 4995356935734010890}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f4688fdb7df04437aeb418b961361dc5, type: 3}
+  m_Script: {fileID: 11500000, guid: 5c182f9e6bdf10842b9169de58cff866, type: 3}
   m_Name: 
-  m_EditorClassIdentifier: Unity.TextMeshPro::TMPro.TextMeshProUGUI
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Common.LocalizedText
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -760,6 +762,18 @@ MonoBehaviour:
   m_hasFontAssetChanged: 0
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
+  localizedKey:
+    m_TableReference:
+      m_TableCollectionName: 
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: 
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  references:
+    version: 2
+    RefIds: []
 --- !u!1 &5499058660023411793
 GameObject:
   m_ObjectHideFlags: 0
@@ -814,7 +828,7 @@ MonoBehaviour:
     m_Left: 0
     m_Right: 0
     m_Top: 0
-    m_Bottom: 0
+    m_Bottom: 40
   m_ChildAlignment: 4
   m_Spacing: 0
   m_ChildForceExpandWidth: 1
@@ -861,7 +875,7 @@ RectTransform:
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 160, y: 30}
+  m_SizeDelta: {x: 160, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &2880726987463280173
 CanvasRenderer:
@@ -891,8 +905,8 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
-  m_Type: 1
+  m_Sprite: {fileID: -684627549, guid: b9b819745a89eb844be50ce8aed090c6, type: 3}
+  m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
   m_FillMethod: 4
