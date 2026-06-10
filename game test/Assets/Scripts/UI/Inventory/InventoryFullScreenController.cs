@@ -107,6 +107,8 @@ namespace IndieGame.UI.Inventory
             // 同步初始金币（避免 GoldChangedEvent 尚未触发时显示 0）
             _currentGold = GoldSystem.Instance != null ? GoldSystem.Instance.CurrentGold : _currentGold;
 
+            // 置顶到同层最后，确保覆盖 CampUI、PlayerHUD 等同层节点
+            transform.SetAsLastSibling();
             SetVisible(true);
             RebuildSlotList();
             RefreshCapacity();

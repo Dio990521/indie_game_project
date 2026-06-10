@@ -955,4 +955,51 @@ namespace IndieGame.Core
     /// </summary>
     public struct CloseSkillTreeUIEvent { }
 
+    // ── Memory 图鉴系统事件 ────────────────────────────────────────────
+
+    /// <summary>
+    /// 打开图鉴界面请求事件：
+    /// 由 CampUIView 在玩家点击 Memory 按钮时发布，MemoryUIController 监听后执行显示逻辑。
+    /// </summary>
+    public struct OpenMemoryUIEvent { }
+
+    /// <summary>
+    /// 关闭图鉴界面请求事件：
+    /// 由关闭按钮发起，MemoryUIController 监听后执行隐藏逻辑。
+    /// </summary>
+    public struct CloseMemoryUIEvent { }
+
+    /// <summary>
+    /// 图鉴界面已打开通知事件：
+    /// MemoryUIController 在面板显示后广播。
+    /// </summary>
+    public struct MemoryUIOpenedEvent { }
+
+    /// <summary>
+    /// 图鉴界面已关闭通知事件：
+    /// MemoryUIController 在面板隐藏后广播。
+    /// </summary>
+    public struct MemoryUIClosedEvent { }
+
+    /// <summary>
+    /// 图纸获得事件：
+    /// 玩家通过任何途径（剧情触发、捡取、购买）获得一张图纸时广播。
+    /// MemorySystem 监听此事件以追踪"至今获得的所有图纸"，包含已消耗项。
+    /// </summary>
+    public struct BlueprintObtainedEvent
+    {
+        // 获得的图纸 ID（与 BlueprintSO.ID 对应）
+        public string BlueprintID;
+    }
+
+    /// <summary>
+    /// Memory 列表项点击事件：
+    /// 由 MemorySlotUI 点击后广播，MemoryUIController 监听并切换详情面板。
+    /// </summary>
+    public struct MemorySlotClickedEvent
+    {
+        // 列表条目唯一 Key（非业务 ID，用于 ListManager 内部索引）
+        public string EntryKey;
+    }
+
 }

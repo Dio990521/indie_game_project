@@ -58,3 +58,4 @@ MonoBehaviour:
   townUIPrefab: {fileID: 6246464611815323495, guid: 06e1d05603d3b014f8bcbb986865920b, type: 3}
   systemMenuPrefab: {fileID: 2873604168823854586, guid: 48eaafbf49fc8724d8310e20992c049e, type: 3}
   skillTreeUIPrefab: {fileID: 6907442009302742303, guid: 40a26945f6ba70248904b4053c0473dc, type: 3}
+  memoryUIPrefab: {fileID: 1664930650119696599, guid: bfc09656cde9ec24aa164827ac2d42b0, type: 3}

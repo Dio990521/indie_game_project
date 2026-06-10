@@ -12,6 +12,7 @@ using IndieGame.Gameplay.Town;
 using IndieGame.Gameplay.Date;
 using IndieGame.Core;
 using IndieGame.Gameplay.SkillTree;
+using IndieGame.Gameplay.Memory;
 
 namespace IndieGame.Core
 {
@@ -48,6 +49,7 @@ namespace IndieGame.Core
         [SerializeField] private GameObject dateSystemPrefab;
         [SerializeField] private GameObject gameFlagSystemPrefab;
         [SerializeField] private GameObject skillTreeSystemPrefab;
+        [SerializeField] private GameObject memorySystemPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -107,6 +109,9 @@ namespace IndieGame.Core
             // 技能树系统：管理 SP 与技能解锁状态，监听升级事件，常驻并参与存档。
             // 注：放在 ActionPointSystem 之后，确保读档时 AP 上限已先行恢复。
             EnsureManagerFromPrefab<SkillTreeSystem>(root, skillTreeSystemPrefab, "SkillTreeSystem");
+            // Memory 系统：追踪图纸/武器/物品/语料的历史记录，参与存档。
+            // 注：放在 InventoryManager、DialogueManager、CraftingSystem 之后，确保读档时上游数据已就绪。
+            EnsureManagerFromPrefab<MemorySystem>(root, memorySystemPrefab, "MemorySystem");
 
             // 2. 正式启动游戏逻辑
             if (gm != null)

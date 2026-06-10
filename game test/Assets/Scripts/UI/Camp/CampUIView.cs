@@ -150,7 +150,7 @@ namespace IndieGame.UI.Camp
                     EventBus.Raise(new OpenInventoryEvent());
                     break;
                 case CampActionID.Memory:
-                    DebugTools.Log("Log: 检索语料库，查看任务记录与对话日志...");
+                    EventBus.Raise(new OpenMemoryUIEvent());
                     break;
                 case CampActionID.SkillTree:
                     EventBus.Raise(new OpenSkillTreeUIEvent());
