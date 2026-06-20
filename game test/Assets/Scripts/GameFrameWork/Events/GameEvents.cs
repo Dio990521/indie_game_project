@@ -481,6 +481,25 @@ namespace IndieGame.Core
     {
     }
 
+    /// <summary>
+    /// 操作菜单显示事件：
+    /// BoardActionMenuView.Show() 成功显示菜单后广播，供镜头/角色朝向系统监听。
+    /// </summary>
+    public struct BoardActionMenuShownEvent
+    {
+        // 菜单围绕的目标（通常是玩家 Transform）
+        public Transform Target;
+    }
+
+    /// <summary>
+    /// 操作菜单镜头拉远完成事件：
+    /// ActionMenuCameraController 检测到投骰子后的镜头 Blend 已经结束（切回主镜头）时广播。
+    /// PlayerTurnState 监听该事件后才真正切换到 MovementState，避免角色在镜头还没拉远完就开始走。
+    /// </summary>
+    public struct BoardActionMenuCameraSettledEvent
+    {
+    }
+
     public struct BoardActionButtonHoverEvent
     {
         public int Index;

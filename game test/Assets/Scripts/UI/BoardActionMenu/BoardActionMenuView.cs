@@ -150,6 +150,7 @@ namespace IndieGame.UI
             PlayShowAnimation();
             _isVisible = true;
             SubscribeInput();
+            EventBus.Raise(new BoardActionMenuShownEvent { Target = target });
         }
 
         /// <summary>

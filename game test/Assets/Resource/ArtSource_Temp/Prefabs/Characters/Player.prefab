@@ -15,6 +15,7 @@ GameObject:
   - component: {fileID: -3269462684130208509}
   - component: {fileID: 7463442206185927376}
   - component: {fileID: 8770709943874566285}
+  - component: {fileID: 5537106277446306646}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -160,6 +161,23 @@ MonoBehaviour:
   facingEase: 3
   facingYAxisOnly: 1
   facingInstantThresholdAngle: 1
+--- !u!114 &5537106277446306646
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9170140433642860262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7d9e05cb84951e945b87caa346a0bb63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Player.PlayerActionMenuFacing
+  facingOptions:
+    RotateDuration: 0.2
+    RotateEase: 3
+    YAxisOnly: 1
+    InstantThresholdAngle: 1
 --- !u!1001 &1409429107897280448
 PrefabInstance:
   m_ObjectHideFlags: 0

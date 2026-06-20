@@ -22,6 +22,11 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private BoardActionMenuView _menu;
         private BoardGameManager _context;
 
+        // 投骰子后是否在等待镜头拉远完成（避免角色在镜头还没拉远完就开始走）
+        private bool _rollPending;
+        // 等待期间缓存的骰子步数
+        private int _pendingSteps;
+
         // 收集本状态期间所有的反订阅闭包，OnExit 时统一执行，避免遗漏单条 Unsubscribe。
         // 该模式与 EventBusMonoBehaviour 的设计一致，只是状态机不能直接继承 MonoBehaviour 基类，故在此本地实现。
         private readonly List<Action> _eventUnsubscribers = new List<Action>();
@@ -52,6 +57,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             // 绑定掷骰子事件：由 UI 通过 EventBus 广播
             SubscribeEvent<BoardRollDiceRequestedEvent>(_ => OnInteract(_context));
+
+            // 绑定镜头拉远完成事件：投骰子后先等 ActionMenuCameraController 把镜头拉远完，再真正开始移动
+            SubscribeEvent<BoardActionMenuCameraSettledEvent>(_ => HandleCameraSettled());
 
             // 2. 界面互斥逻辑：监听背包系统的状态切换。
             // 当玩家在回合内打开背包查看道具时，棋盘操作菜单应当暂时隐藏，避免视觉叠层混乱。
@@ -106,8 +114,9 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             // 安全检查：必须处于棋盘模式状态
             if (GameManager.Instance.CurrentState != GameState.BoardMode) return;
 
-            // 状态锁检查：如果控制器不存在或当前已经在位移中，则不响应
+            // 状态锁检查：如果控制器不存在、当前已经在位移中、或已经投过骰子在等镜头拉远，则不响应
             if (context.movementController == null || context.movementController.IsMoving) return;
+            if (_rollPending) return;
 
             // 行动点检查：每次掷骰子消耗 1 点行动点
             if (ActionPointSystem.Instance != null)
@@ -131,8 +140,22 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
             DebugTools.Log($"<color=cyan>[掷骰子] {steps} 步</color>");
 
-            // 切换状态机：进入”移动状态”，并将计算出的步数传递过去
-            context.ChangeState(new MovementState(steps));
+            // 不立即切换状态：缓存步数，等 ActionMenuCameraController 广播镜头拉远完成后
+            // 由 HandleCameraSettled 再真正进入 MovementState，避免角色在镜头还没拉远完就开始走。
+            _pendingSteps = steps;
+            _rollPending = true;
+        }
+
+        /// <summary>
+        /// 镜头拉远完成回调：真正切换到移动状态。
+        /// </summary>
+        private void HandleCameraSettled()
+        {
+            if (!_rollPending || _context == null) return;
+            _rollPending = false;
+            int steps = _pendingSteps;
+            _pendingSteps = 0;
+            _context.ChangeState(new MovementState(steps));
         }
 
         /// <summary>
