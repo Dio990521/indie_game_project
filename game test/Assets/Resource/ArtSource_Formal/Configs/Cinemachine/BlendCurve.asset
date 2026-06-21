@@ -17,7 +17,7 @@ MonoBehaviour:
     To: CM_ActionMenu
     Blend:
       Style: 7
-      Time: 0.6
+      Time: 1
       CustomCurve:
         serializedVersion: 2
         m_Curve:
@@ -30,6 +30,15 @@ MonoBehaviour:
           weightedMode: 0
           inWeight: 0
           outWeight: 0
+        - serializedVersion: 3
+          time: 0.5054075
+          value: 0.90306675
+          inSlope: 0.65868896
+          outSlope: 0.65868896
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0.33333334
+          outWeight: 0.09422403
         - serializedVersion: 3
           time: 1
           value: 1
@@ -46,7 +55,7 @@ MonoBehaviour:
     To: CM_GamePlay_TopDown
     Blend:
       Style: 7
-      Time: 0.6
+      Time: 1
       CustomCurve:
         serializedVersion: 2
         m_Curve:
@@ -59,6 +68,15 @@ MonoBehaviour:
           weightedMode: 0
           inWeight: 0
           outWeight: 0
+        - serializedVersion: 3
+          time: 0.5054075
+          value: 0.90306675
+          inSlope: 0.65868896
+          outSlope: 0.65868896
+          tangentMode: 0
+          weightedMode: 0
+          inWeight: 0.33333334
+          outWeight: 0.09422403
         - serializedVersion: 3
           time: 1
           value: 1

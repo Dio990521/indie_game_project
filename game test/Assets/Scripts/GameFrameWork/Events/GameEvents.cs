@@ -1021,4 +1021,28 @@ namespace IndieGame.Core
         public string EntryKey;
     }
 
+    /// <summary>
+    /// 武器装备事件：
+    /// WeaponEquipController.Equip 成功后广播，UI（属性面板/武器面板）据此刷新，不直接引用 WeaponEquipController。
+    /// </summary>
+    public struct WeaponEquippedEvent
+    {
+        // 装备者
+        public GameObject Owner;
+        // 装备的武器配置
+        public WeaponSO Weapon;
+    }
+
+    /// <summary>
+    /// 武器卸下事件：
+    /// WeaponEquipController.Unequip 成功后广播。
+    /// </summary>
+    public struct WeaponUnequippedEvent
+    {
+        // 装备者
+        public GameObject Owner;
+        // 被卸下的武器配置
+        public WeaponSO Weapon;
+    }
+
 }

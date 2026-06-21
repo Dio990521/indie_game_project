@@ -4,6 +4,7 @@ using UnityEngine.UI;
 using UnityEngine.Localization;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
+using IndieGame.Gameplay.Equipment;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Economy;
 using IndieGame.UI.Confirmation;
@@ -37,6 +38,9 @@ namespace IndieGame.UI.Inventory
         private IReadOnlyList<InventorySlot> _cachedSlots;
         // 缓存当前金币（由 GoldChangedEvent 持续更新）
         private int _currentGold;
+        // 玩家身上的武器装备控制器（懒解析，随 CurrentPlayer 变化重新解析）
+        private WeaponEquipController _playerWeaponEquip;
+        private GameObject _playerWeaponEquipOwner;
 
         // ── 生命周期 ─────────────────────────────────────────────────────
 
@@ -74,6 +78,8 @@ namespace IndieGame.UI.Inventory
             Subscribe<CloseInventoryEvent>(HandleCloseInventoryEvent);
             Subscribe<InventoryOpenedEvent>(HandleInventoryOpened);
             Subscribe<InventoryClosedEvent>(HandleInventoryClosed);
+            Subscribe<WeaponEquippedEvent>(HandleWeaponEquipChanged);
+            Subscribe<WeaponUnequippedEvent>(HandleWeaponUnequipChanged);
         }
 
         // ── EventBus 处理器 ──────────────────────────────────────────────
@@ -100,6 +106,20 @@ namespace IndieGame.UI.Inventory
             CloseAndNotify();
         }
 
+        private void HandleWeaponEquipChanged(WeaponEquippedEvent evt)
+        {
+            if (!IsCurrentPlayer(evt.Owner)) return;
+            RefreshEquippedWeaponSlot();
+            RefreshActionButtons();
+        }
+
+        private void HandleWeaponUnequipChanged(WeaponUnequippedEvent evt)
+        {
+            if (!IsCurrentPlayer(evt.Owner)) return;
+            RefreshEquippedWeaponSlot();
+            RefreshActionButtons();
+        }
+
         // ── InventoryManager 静态事件处理器 ──────────────────────────────
 
         private void HandleInventoryOpened(InventoryOpenedEvent evt)
@@ -113,6 +133,7 @@ namespace IndieGame.UI.Inventory
             RebuildSlotList();
             RefreshCapacity();
             RefreshGold();
+            RefreshEquippedWeaponSlot();
         }
 
         private void HandleInventoryClosed(InventoryClosedEvent evt)
@@ -378,15 +399,16 @@ namespace IndieGame.UI.Inventory
 
         /// <summary>
         /// 根据选中项的分类决定按钮的可用状态。
-        /// Use 按钮：仅消耗品可用；Discard 按钮：选中时始终可用。
+        /// Use 按钮：消耗品或武器可用（武器走装备/卸下逻辑）；Discard 按钮：选中时始终可用。
         /// </summary>
         private void RefreshActionButtons()
         {
             bool hasSelection = _selectedSlot != null && _selectedSlot.Item != null;
             bool isConsumable = hasSelection && _selectedSlot.Item.Category == ItemCategory.Consumable;
+            bool isWeapon = hasSelection && _selectedSlot.Item is WeaponSO;
 
             if (binder.UseButton != null)
-                binder.UseButton.interactable = isConsumable;
+                binder.UseButton.interactable = isConsumable || isWeapon;
 
             if (binder.DiscardButton != null)
                 binder.DiscardButton.interactable = hasSelection;
@@ -397,6 +419,14 @@ namespace IndieGame.UI.Inventory
         private void HandleUseClicked()
         {
             if (_selectedSlot == null || _selectedSlot.Item == null) return;
+
+            // 武器走装备/卸下切换，不进入消耗品的 UseItem 流程（武器不应被消耗）
+            if (_selectedSlot.Item is WeaponSO weapon)
+            {
+                ToggleEquipWeapon(weapon);
+                return;
+            }
+
             // UseItem 内部：调用 item.Use()，消耗品自动 RemoveItem(1)，最终触发 OnInventoryChanged
             InventoryManager.Instance?.UseItem(_selectedSlot.Item);
         }
@@ -423,6 +453,58 @@ namespace IndieGame.UI.Inventory
                 },
                 OnCancel = null
             });
+        }
+
+        /// <summary>
+        /// 武器装备/卸下切换：未装备时装备它；已装备时卸下。由"使用"按钮触发。
+        /// </summary>
+        private void ToggleEquipWeapon(WeaponSO weapon)
+        {
+            if (!TryBindPlayerWeaponEquip()) return;
+
+            if (_playerWeaponEquip.CurrentWeapon == weapon)
+            {
+                _playerWeaponEquip.Unequip();
+            }
+            else
+            {
+                _playerWeaponEquip.Equip(weapon);
+            }
+        }
+
+        // ── 当前装备武器槽 ───────────────────────────────────────────────
+
+        private void RefreshEquippedWeaponSlot()
+        {
+            if (binder?.EquippedWeaponSlot == null) return;
+
+            WeaponSO weapon = TryBindPlayerWeaponEquip() ? _playerWeaponEquip.CurrentWeapon : null;
+            binder.EquippedWeaponSlot.Refresh(weapon, weapon != null ? HandleUnequipSlotClicked : (System.Action)null);
+        }
+
+        private void HandleUnequipSlotClicked()
+        {
+            _playerWeaponEquip?.Unequip();
+        }
+
+        // ── 玩家引用解析 ─────────────────────────────────────────────────
+
+        private bool TryBindPlayerWeaponEquip()
+        {
+            GameObject player = GameManager.Instance != null ? GameManager.Instance.CurrentPlayer : null;
+            if (player == null) return false;
+            if (_playerWeaponEquipOwner == player && _playerWeaponEquip != null) return true;
+
+            _playerWeaponEquipOwner = player;
+            _playerWeaponEquip = player.GetComponent<WeaponEquipController>();
+            return _playerWeaponEquip != null;
+        }
+
+        private bool IsCurrentPlayer(GameObject owner)
+        {
+            if (owner == null) return false;
+            GameObject player = GameManager.Instance != null ? GameManager.Instance.CurrentPlayer : null;
+            return owner == player;
         }
 
         // ── 底栏刷新 ─────────────────────────────────────────────────────

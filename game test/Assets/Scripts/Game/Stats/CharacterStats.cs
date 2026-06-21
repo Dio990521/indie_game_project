@@ -40,6 +40,23 @@ namespace IndieGame.Gameplay.Stats
         public int MaxHP => config != null ? Mathf.Max(1, Mathf.RoundToInt(GetBaseHP())) : 1;
 
         /// <summary>
+        /// 按 StatType 获取对应的 Stat 引用：
+        /// 为装备、Buff 等数据驱动的加成系统提供统一入口，调用方无需对每个属性字段写一份映射逻辑。
+        /// </summary>
+        public Stat GetStat(StatType type)
+        {
+            switch (type)
+            {
+                case StatType.Attack: return Attack;
+                case StatType.Defense: return Defense;
+                case StatType.Resistance: return Resistance;
+                case StatType.MoveSpeed: return MoveSpeed;
+                case StatType.Luck: return Luck;
+                default: return null;
+            }
+        }
+
+        /// <summary>
         /// 应用“来自存档”的运行时属性状态：
         /// 该方法是 PlayerStatsSaveable 的唯一写回入口，目的是把“恢复流程”收敛到一处，
         /// 避免外部脚本直接改私有字段导致数值与事件通知不一致。

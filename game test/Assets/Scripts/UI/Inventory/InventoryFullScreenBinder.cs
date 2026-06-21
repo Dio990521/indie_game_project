@@ -37,6 +37,9 @@ namespace IndieGame.UI.Inventory
         [SerializeField] private TMP_Text capacityText;
         [SerializeField] private TMP_Text goldText;
 
+        [Header("当前装备武器槽")]
+        [SerializeField] private EquippedWeaponSlotUI equippedWeaponSlot;
+
         [Header("关闭按钮")]
         [SerializeField] private Button closeButton;
 
@@ -60,6 +63,8 @@ namespace IndieGame.UI.Inventory
 
         public TMP_Text CapacityText => capacityText;
         public TMP_Text GoldText => goldText;
+
+        public EquippedWeaponSlotUI EquippedWeaponSlot => equippedWeaponSlot;
 
         public Button CloseButton => closeButton;
     }

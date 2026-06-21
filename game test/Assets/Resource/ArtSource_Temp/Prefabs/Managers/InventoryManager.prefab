@@ -48,5 +48,10 @@ MonoBehaviour:
   slots:
   - Item: {fileID: 11400000, guid: 7c64937113f1b46408f6af836fe3e338, type: 2}
     Count: 3
+    CustomName: 
   - Item: {fileID: 11400000, guid: 6301c8d2a414f4fb6a116c993cb5e6f7, type: 2}
     Count: 2
+    CustomName: 
+  - Item: {fileID: 11400000, guid: 8e2c07c322788c94f896377e1ab17797, type: 2}
+    Count: 1
+    CustomName: 
