@@ -292,6 +292,11 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                     Id   = BoardActionId.Treasure,
                     Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Treasure" }
                 },
+                new BoardActionOptionData
+                {
+                    Id   = BoardActionId.Map,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Map" }
+                },
             };
 
             // 城镇格上不提供营地：玩家应通过城镇旅馆休息，而非露营

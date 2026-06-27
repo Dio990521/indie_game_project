@@ -35,6 +35,10 @@ MonoBehaviour:
     m_Key: Treasure
     m_Metadata:
       m_Items: []
+  - m_Id: 54913679477211136
+    m_Key: Map
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

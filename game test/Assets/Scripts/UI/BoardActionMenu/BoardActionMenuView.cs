@@ -12,16 +12,10 @@ namespace IndieGame.UI
     /// <summary>
     /// 棋盘操作菜单视图：
     /// 负责菜单的显示/隐藏、按钮布局、输入响应以及点击逻辑分发。
+    /// 菜单以玩家头顶为锚点呈弧形展开；仅支持键盘交互（A/D 或方向键左右切换选项，E 确认），鼠标点击/悬停已禁用。
     /// </summary>
     public class BoardActionMenuView : MonoBehaviour
     {
-        private enum SelectionSource
-        {
-            None,
-            Keyboard,
-            Mouse
-        }
-
         [Header("Binder")]
         // 绑定器：集中保存 UI 引用
         [SerializeField] private BoardActionMenuBinder binder;
@@ -33,12 +27,14 @@ namespace IndieGame.UI
         [SerializeField] private LocationID campingLocationId;
 
         [Header("Layout")]
-        // 按钮半径（围绕目标点的距离）
+        // 锚点相对目标的世界坐标偏移（用于把菜单抬高到角色头顶位置，需在 Inspector 中按角色模型实际高度微调）
+        public Vector3 targetWorldOffset = new Vector3(0f, 1.8f, 0f);
+        // 按钮半径（围绕锚点的距离）
         public float radius = 120f;
-        // 弧形角度范围
-        public float arcAngle = 90f;
-        // 屏幕偏移
-        public Vector2 offset = new Vector2(120f, 40f);
+        // 弧形角度范围（以锚点正上方为中心，向左右展开）
+        public float arcAngle = 140f;
+        // 屏幕偏移（在弧形布局基础上的额外微调，通常保持 0）
+        public Vector2 offset = Vector2.zero;
 
         [Header("Selection")]
         // 选中缩放倍数
@@ -47,7 +43,7 @@ namespace IndieGame.UI
         public float normalScale = 1f;
         // 选中切换动画时长
         public float selectTweenDuration = 0.12f;
-        // 输入连发间隔
+        // 按住方向键不放时的自动连发间隔（单次按键始终立即响应，不受此值影响）
         public float inputRepeatDelay = 0.2f;
 
         [Header("Animation")]
@@ -67,6 +63,8 @@ namespace IndieGame.UI
         private readonly List<BoardActionButton> _buttons = new List<BoardActionButton>();
         private int _selectedIndex = -1;
         private float _nextInputTime = 0f;
+        // 上一帧的水平输入值，用于检测“新按键”边沿，使单次按键不受连发节流影响
+        private float _lastInputX = 0f;
         private Sequence _showSequence;
         private Sequence _hideSequence;
         private RectTransform _selfRect;
@@ -74,7 +72,6 @@ namespace IndieGame.UI
         private CanvasGroup _canvasGroup;
         private bool _isVisible = false;
         private bool _inputSubscribed = false;
-        private SelectionSource _selectionSource = SelectionSource.None;
         private Camera _mainCam;
 
         private void Awake()
@@ -98,6 +95,18 @@ namespace IndieGame.UI
 
         private void OnEnable()
         {
+        }
+
+        /// <summary>
+        /// 编辑器下调整 Layout 参数（radius/arcAngle/offset 等）时立即重新布局，
+        /// 方便在 Play 模式中拖动 Inspector 数值实时看到效果。
+        /// LayoutButtons 只在 Show() 时被调用一次，单靠运行时帧更新无法反映 Inspector 改动，
+        /// 因此通过 OnValidate（仅在编辑器内、Inspector 数值变化时触发）手动补一次布局刷新。
+        /// </summary>
+        private void OnValidate()
+        {
+            if (_buttons == null || _buttons.Count == 0) return;
+            LayoutButtons();
         }
 
         private void Start()
@@ -129,7 +138,7 @@ namespace IndieGame.UI
             if (_selfRect == null || _canvasRect == null || target == null) return;
             if (_mainCam == null) _mainCam = Camera.main;
             if (_mainCam == null) return;
-            Vector3 screenPos = _mainCam.WorldToScreenPoint(target.position);
+            Vector3 screenPos = _mainCam.WorldToScreenPoint(target.position + targetWorldOffset);
             RectTransformUtility.ScreenPointToLocalPointInRectangle(_canvasRect, screenPos, null, out Vector2 localPoint);
             _selfRect.anchoredPosition = localPoint;
         }
@@ -205,19 +214,21 @@ namespace IndieGame.UI
                 }
             }
             _selectedIndex = -1;
-            _selectionSource = SelectionSource.None;
+            _lastInputX = 0f;
         }
 
         /// <summary>
-        /// 计算并设置按钮在弧形布局中的位置。
+        /// 计算并设置按钮在弧形布局中的位置：
+        /// 以锚点正上方（90°）为中心向左右展开，索引 0 对应最左侧按钮，
+        /// 索引递增时按钮位置从左向右排列，方便与“A 左移 / D 右移”的选择逻辑直接对应。
         /// </summary>
         private void LayoutButtons()
         {
             int activeCount = _options.Count;
             if (activeCount == 0) return;
 
-            float startAngle = -arcAngle * 0.5f;
-            float step = activeCount > 1 ? arcAngle / (activeCount - 1) : 0f;
+            float startAngle = 90f + arcAngle * 0.5f;
+            float step = activeCount > 1 ? -arcAngle / (activeCount - 1) : 0f;
 
             int activeIndex = 0;
             for (int i = 0; i < _buttons.Count; i++)
@@ -235,53 +246,52 @@ namespace IndieGame.UI
         }
 
         /// <summary>
-        /// 处理移动输入（上下切换选项）。
+        /// 处理移动输入（左右切换选项，对应弧形菜单从左到右的按钮排列）：
+        /// A / 左方向键 -> 选中左侧选项；D / 右方向键 -> 选中右侧选项。
+        /// 复用现有的 Move 输入轴（与角色移动共用同一组按键），无需额外绑定。
+        ///
+        /// 节流逻辑只用于“按住不放”时的自动连发，新的单次按键（方向从中立或反方向切换过来）
+        /// 一律立即响应，避免快速连续按键时因节流而出现选择顿挫、漏按的问题。
         /// </summary>
         private void OnMoveInput(InputMoveEvent evt)
         {
-            Vector2 input = evt.Value;
-            if (Time.time < _nextInputTime) return;
-            if (_options.Count == 0) return;
+            float x = evt.Value.x;
+            if (_options.Count == 0) { _lastInputX = x; return; }
 
-            if (input.y > 0.5f)
+            bool wasActive = Mathf.Abs(_lastInputX) > 0.5f;
+            bool isActive = Mathf.Abs(x) > 0.5f;
+            bool isNewPress = isActive && (!wasActive || Mathf.Sign(x) != Mathf.Sign(_lastInputX));
+
+            if (isNewPress)
             {
+                // 新按键：立即响应，并重新计时下一次自动连发的等待时间
+                MoveSelection(x > 0f ? 1 : -1);
                 _nextInputTime = Time.time + inputRepeatDelay;
-                _selectionSource = SelectionSource.Keyboard;
-                SelectIndex((_selectedIndex - 1 + _options.Count) % _options.Count);
             }
-            else if (input.y < -0.5f)
+            else if (isActive && Time.time >= _nextInputTime)
             {
+                // 持续按住：按固定间隔自动连发（用于手柄摇杆等连续输入）
+                MoveSelection(x > 0f ? 1 : -1);
                 _nextInputTime = Time.time + inputRepeatDelay;
-                _selectionSource = SelectionSource.Keyboard;
-                SelectIndex((_selectedIndex + 1) % _options.Count);
             }
+
+            _lastInputX = x;
         }
 
         /// <summary>
-        /// 处理交互输入（确认当前选项）。
+        /// 按方向切换当前选中项（+1 向右，-1 向左）。
+        /// </summary>
+        private void MoveSelection(int direction)
+        {
+            SelectIndex((_selectedIndex + direction + _options.Count) % _options.Count);
+        }
+
+        /// <summary>
+        /// 处理交互输入（E 键 / Interact 输入 -> 确认当前选中的选项）。
         /// </summary>
         private void OnInteractInput(InputInteractEvent evt)
         {
             OnButtonClick(new BoardActionButtonClickEvent { Index = _selectedIndex });
-        }
-
-        /// <summary>
-        /// 鼠标悬停回调：切换为鼠标选择源。
-        /// </summary>
-        private void OnButtonHover(BoardActionButtonHoverEvent evt)
-        {
-            int index = evt.Index;
-            _selectionSource = SelectionSource.Mouse;
-            SelectIndex(index);
-        }
-
-        /// <summary>
-        /// 鼠标离开回调：仅在鼠标选择源时清理高亮。
-        /// </summary>
-        private void OnButtonExit(BoardActionButtonExitEvent evt)
-        {
-            if (_selectionSource != SelectionSource.Mouse) return;
-            ClearSelection();
         }
 
         /// <summary>
@@ -317,6 +327,10 @@ namespace IndieGame.UI
                         BoardGameManager.Instance.ChangeState(new CampingState(campingLocationId));
                     }
                     break;
+                case BoardActionId.Map:
+                    // TODO: 地图功能尚未实现，先用日志占位点击效果
+                    DebugTools.Log("<color=cyan>[操作菜单] 点击了【地图】按钮（功能待实现）。</color>");
+                    break;
             }
         }
 
@@ -337,21 +351,9 @@ namespace IndieGame.UI
         }
 
         /// <summary>
-        /// 清理选中状态，恢复所有按钮为普通缩放。
-        /// </summary>
-        private void ClearSelection()
-        {
-            _selectedIndex = -1;
-            _selectionSource = SelectionSource.None;
-
-            for (int i = 0; i < _buttons.Count; i++)
-            {
-                _buttons[i].SetSelected(false, normalScale, selectTweenDuration);
-            }
-        }
-
-        /// <summary>
-        /// 播放显示动画。
+        /// 播放显示动画：
+        /// 仅支持键盘操作，因此显示期间始终关闭 CanvasGroup 的鼠标交互（blocksRaycasts/interactable）。
+        /// 当前选中的按钮（默认第一个）放大到 selectedScale，其余按钮为 normalScale。
         /// </summary>
         private void PlayShowAnimation()
         {
@@ -361,8 +363,8 @@ namespace IndieGame.UI
             if (_canvasGroup != null)
             {
                 _canvasGroup.alpha = 1f;
-                _canvasGroup.blocksRaycasts = true;
-                _canvasGroup.interactable = true;
+                _canvasGroup.blocksRaycasts = false;
+                _canvasGroup.interactable = false;
             }
 
             _showSequence = DOTween.Sequence();
@@ -370,8 +372,9 @@ namespace IndieGame.UI
             {
                 if (_buttons[i] == null || !_buttons[i].gameObject.activeSelf) continue;
                 Transform t = _buttons[i].transform;
+                float targetScale = i == _selectedIndex ? selectedScale : normalScale;
                 t.localScale = Vector3.zero;
-                _showSequence.Append(t.DOScale(normalScale, showDuration).SetEase(showEase));
+                _showSequence.Append(t.DOScale(targetScale, showDuration).SetEase(showEase));
                 if (i < _options.Count - 1) _showSequence.AppendInterval(showStagger);
             }
         }
@@ -411,9 +414,6 @@ namespace IndieGame.UI
             if (_inputSubscribed) return;
             EventBus.Subscribe<InputMoveEvent>(OnMoveInput);
             EventBus.Subscribe<InputInteractEvent>(OnInteractInput);
-            EventBus.Subscribe<BoardActionButtonHoverEvent>(OnButtonHover);
-            EventBus.Subscribe<BoardActionButtonClickEvent>(OnButtonClick);
-            EventBus.Subscribe<BoardActionButtonExitEvent>(OnButtonExit);
             _inputSubscribed = true;
         }
 
@@ -425,9 +425,6 @@ namespace IndieGame.UI
             if (!_inputSubscribed) return;
             EventBus.Unsubscribe<InputMoveEvent>(OnMoveInput);
             EventBus.Unsubscribe<InputInteractEvent>(OnInteractInput);
-            EventBus.Unsubscribe<BoardActionButtonHoverEvent>(OnButtonHover);
-            EventBus.Unsubscribe<BoardActionButtonClickEvent>(OnButtonClick);
-            EventBus.Unsubscribe<BoardActionButtonExitEvent>(OnButtonExit);
             _inputSubscribed = false;
         }
 

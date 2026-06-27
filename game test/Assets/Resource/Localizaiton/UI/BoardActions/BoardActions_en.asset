@@ -38,6 +38,10 @@ MonoBehaviour:
     m_Localized: Treasure
     m_Metadata:
       m_Items: []
+  - m_Id: 54913679477211136
+    m_Localized: Map
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

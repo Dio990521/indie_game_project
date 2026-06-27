@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 4418980510375909799}
   - component: {fileID: 8998479574143937990}
   - component: {fileID: 70720360839907282}
+  - component: {fileID: 5989271657263283739}
   m_Layer: 5
   m_Name: BoardActionMenu
   m_TagString: Untagged
@@ -69,9 +70,10 @@ MonoBehaviour:
   binder: {fileID: 4418980510375909799}
   target: {fileID: 0}
   campingLocationId: {fileID: 11400000, guid: 8af5bc471d543450c9a7f4c7b3f933d7, type: 2}
-  radius: 120
-  arcAngle: 90
-  offset: {x: 120, y: 40}
+  targetWorldOffset: {x: 0, y: 1, z: 0}
+  radius: 280
+  arcAngle: 120
+  offset: {x: 0, y: 0}
   selectedScale: 1.15
   normalScale: 1
   selectTweenDuration: 0.12
@@ -93,3 +95,11 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!222 &5989271657263283739
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5484475624260177340}
+  m_CullTransparentMesh: 1
