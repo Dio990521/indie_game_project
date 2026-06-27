@@ -6,18 +6,22 @@ using IndieGame.Core;
 namespace IndieGame.UI.Crafting
 {
     /// <summary>
-    /// 成品命名输入弹窗（简易实现）：
+    /// 命名输入弹窗（简易实现）：
     ///
     /// 作用：
-    /// - 监听 CraftNameInputPopupRequestEvent，弹出输入框。
-    /// - 点击确认/取消后，通过 CraftNameInputPopupResultEvent 回传结果。
+    /// - 监听 CraftNameInputPopupRequestEvent（打造命名），弹出输入框，确认后回传 CraftNameInputPopupResultEvent。
+    /// - 同时监听 RenameSlotPopupRequestEvent（背包/强化界面的通用"改名"），确认后回传 RenameSlotPopupResultEvent。
+    ///   两者语义不同（前者绑定"执行打造"，后者只是单纯改名字），但共用同一个输入框 UI，
+    ///   通过 _pendingKind 记录当前弹窗是为哪种请求打开，确认/取消时回传对应的结果事件。
     ///
     /// 注意：
-    /// - 该脚本不直接调用 CraftingSystem，保持与业务逻辑解耦。
-    /// - 由 CraftingUIController 负责请求与响应匹配并决定是否执行制造。
+    /// - 该脚本不直接调用 CraftingSystem/InventoryManager，保持与业务逻辑解耦。
+    /// - 由各自的 Controller 负责请求与响应匹配并决定后续动作。
     /// </summary>
     public class CraftNameInputPopupView : MonoBehaviour
     {
+        private enum PendingRequestKind { None, Craft, Rename }
+
         [Header("UI References")]
         [Tooltip("弹窗根节点（用于显示/隐藏）")]
         [SerializeField] private GameObject rootPanel;
@@ -30,6 +34,8 @@ namespace IndieGame.UI.Crafting
 
         // 当前弹窗对应的请求 ID（用于响应事件回传）
         private int _currentRequestId = -1;
+        // 当前弹窗是为哪种请求打开的，决定确认/取消时回传哪个结果事件
+        private PendingRequestKind _pendingKind = PendingRequestKind.None;
 
         private void Awake()
         {
@@ -47,26 +53,43 @@ namespace IndieGame.UI.Crafting
         private void OnEnable()
         {
             EventBus.Subscribe<CraftNameInputPopupRequestEvent>(HandlePopupRequest);
+            EventBus.Subscribe<RenameSlotPopupRequestEvent>(HandleRenamePopupRequest);
             EventBus.Subscribe<CloseCraftingUIEvent>(HandleCraftingUIClose);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<CraftNameInputPopupRequestEvent>(HandlePopupRequest);
+            EventBus.Unsubscribe<RenameSlotPopupRequestEvent>(HandleRenamePopupRequest);
             EventBus.Unsubscribe<CloseCraftingUIEvent>(HandleCraftingUIClose);
         }
 
         /// <summary>
-        /// 接收弹窗请求并展示：
+        /// 接收打造命名弹窗请求并展示：
         /// 输入框默认值来自请求中的 DefaultName。
         /// </summary>
         private void HandlePopupRequest(CraftNameInputPopupRequestEvent evt)
         {
-            _currentRequestId = evt.RequestId;
+            _pendingKind = PendingRequestKind.Craft;
+            ShowPopup(evt.RequestId, evt.DefaultName);
+        }
+
+        /// <summary>
+        /// 接收通用改名弹窗请求并展示。
+        /// </summary>
+        private void HandleRenamePopupRequest(RenameSlotPopupRequestEvent evt)
+        {
+            _pendingKind = PendingRequestKind.Rename;
+            ShowPopup(evt.RequestId, evt.DefaultName);
+        }
+
+        private void ShowPopup(int requestId, string defaultName)
+        {
+            _currentRequestId = requestId;
 
             if (nameInputField != null)
             {
-                nameInputField.text = string.IsNullOrWhiteSpace(evt.DefaultName) ? string.Empty : evt.DefaultName;
+                nameInputField.text = string.IsNullOrWhiteSpace(defaultName) ? string.Empty : defaultName;
                 nameInputField.ActivateInputField();
                 nameInputField.Select();
             }
@@ -75,40 +98,53 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 确认按钮：回传 confirmed=true 与输入文本。
+        /// 确认按钮：回传 confirmed=true 与输入文本（按 _pendingKind 回传对应事件类型）。
         /// </summary>
         private void HandleConfirmClicked()
         {
             if (_currentRequestId < 0) return;
 
             string input = nameInputField != null ? nameInputField.text : string.Empty;
-            EventBus.Raise(new CraftNameInputPopupResultEvent
-            {
-                RequestId = _currentRequestId,
-                Confirmed = true,
-                CustomName = input
-            });
+            RaiseResult(confirmed: true, customName: input);
 
             _currentRequestId = -1;
+            _pendingKind = PendingRequestKind.None;
             SetVisible(false);
         }
 
         /// <summary>
-        /// 取消按钮：回传 confirmed=false，不扣材料。
+        /// 取消按钮：回传 confirmed=false。
         /// </summary>
         private void HandleCancelClicked()
         {
             if (_currentRequestId < 0) return;
 
+            RaiseResult(confirmed: false, customName: string.Empty);
+
+            _currentRequestId = -1;
+            _pendingKind = PendingRequestKind.None;
+            SetVisible(false);
+        }
+
+        private void RaiseResult(bool confirmed, string customName)
+        {
+            if (_pendingKind == PendingRequestKind.Rename)
+            {
+                EventBus.Raise(new RenameSlotPopupResultEvent
+                {
+                    RequestId = _currentRequestId,
+                    Confirmed = confirmed,
+                    CustomName = customName
+                });
+                return;
+            }
+
             EventBus.Raise(new CraftNameInputPopupResultEvent
             {
                 RequestId = _currentRequestId,
-                Confirmed = false,
-                CustomName = string.Empty
+                Confirmed = confirmed,
+                CustomName = customName
             });
-
-            _currentRequestId = -1;
-            SetVisible(false);
         }
 
         /// <summary>
@@ -117,6 +153,7 @@ namespace IndieGame.UI.Crafting
         private void HandleCraftingUIClose(CloseCraftingUIEvent evt)
         {
             _currentRequestId = -1;
+            _pendingKind = PendingRequestKind.None;
             SetVisible(false);
         }
 

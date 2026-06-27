@@ -35,6 +35,14 @@ namespace IndieGame.UI.Inventory
             SetName(nameText, weapon?.GetLocalizedName(), emptyDisplayName);
         }
 
+        /// <summary>
+        /// 用拼接好的强化前缀名称覆盖默认名称（由调用方异步解析后回调设置）。
+        /// </summary>
+        public void ApplyDisplayNameOverride(string displayName)
+        {
+            if (nameText != null && !string.IsNullOrWhiteSpace(displayName)) nameText.text = displayName;
+        }
+
         protected override void HandleClick(PointerEventData eventData)
         {
             _onClick?.Invoke();

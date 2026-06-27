@@ -252,6 +252,54 @@ namespace IndieGame.Gameplay.Inventory
         }
 
         /// <summary>
+        /// 按引用精确移除整个槽位（装备武器时使用）：
+        /// 与 RemoveItem(ItemSO, amount) 的弱匹配不同，这里直接摘除槽位对象本身，
+        /// 不会误删背包里另一把"同 WeaponSO 但强化数据不同"的武器实例。
+        /// </summary>
+        public bool RemoveSlot(InventorySlot slot)
+        {
+            if (slot == null) return false;
+            bool removed = slots.Remove(slot);
+            if (removed) NotifyInventoryChanged();
+            return removed;
+        }
+
+        /// <summary>
+        /// 校验是否还有空槽位（卸下武器前置判断）。
+        /// </summary>
+        public bool CanInsertSlot()
+        {
+            return slots.Count < maxCapacity;
+        }
+
+        /// <summary>
+        /// 把一个槽位对象原样插回背包（卸下武器时使用）：
+        /// 与 AddItem(ItemSO, amount, customName) 不同，这里保留槽位上的 CustomName/WeaponData，
+        /// 不会因为重新走"按 ItemSO 新建槽位"的路径而丢失强化数据。
+        /// </summary>
+        public bool InsertSlot(InventorySlot slot)
+        {
+            if (slot == null || slot.Item == null || slot.Count <= 0) return false;
+            if (!CanInsertSlot()) return false;
+
+            slots.Add(slot);
+            NotifyInventoryChanged();
+            return true;
+        }
+
+        /// <summary>
+        /// 修改槽位的自定义名称（打造后改名）：
+        /// 只改名字，不影响数量/强化数据，不要求槽位当前必须在 slots 列表中
+        /// （装备中的武器槽位同样可以改名）。
+        /// </summary>
+        public void RenameSlot(InventorySlot slot, string newName)
+        {
+            if (slot == null) return;
+            slot.CustomName = string.IsNullOrWhiteSpace(newName) ? string.Empty : newName.Trim();
+            NotifyInventoryChanged();
+        }
+
+        /// <summary>
         /// 按分类排序（同分类内回退到按 ID 排序）。
         /// </summary>
         public void SortByCategory()

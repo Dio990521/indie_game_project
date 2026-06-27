@@ -10,6 +10,10 @@ namespace IndieGame.Gameplay.Stats
         Defense,
         Resistance,
         MoveSpeed,
-        Luck
+        Luck,
+        // 角色最大生命的额外加成（叠加在 CharacterStats.MaxHP 的曲线基础值之上）
+        HP,
+        // 武器充能速率：当前无蓄力/技能系统读取，仅作为可加成数值占位
+        ChargeRate
     }
 }

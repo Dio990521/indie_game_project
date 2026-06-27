@@ -31,6 +31,7 @@ namespace IndieGame.UI.Inventory
         [SerializeField] private TMP_Text detailCountText;
         [SerializeField] private Button useButton;
         [SerializeField] private Button discardButton;
+        [SerializeField] private Button renameButton;
 
         [Header("底栏")]
         // 格式："25/48"（已用槽位 / 最大容量）
@@ -60,6 +61,7 @@ namespace IndieGame.UI.Inventory
         public TMP_Text DetailCountText => detailCountText;
         public Button UseButton => useButton;
         public Button DiscardButton => discardButton;
+        public Button RenameButton => renameButton;
 
         public TMP_Text CapacityText => capacityText;
         public TMP_Text GoldText => goldText;

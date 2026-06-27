@@ -26,6 +26,10 @@ namespace IndieGame.Gameplay.Stats
         public Stat Resistance { get; private set; } = new Stat();
         public Stat MoveSpeed { get; private set; } = new Stat();
         public Stat Luck { get; private set; } = new Stat();
+        // 最大生命的额外加成（装备/强化等来源），BaseValue 恒为 0，只通过 Modifier 叠加
+        public Stat HPBonus { get; private set; } = new Stat();
+        // 武器充能速率：当前无蓄力/技能系统消费，仅作为可加成数值占位
+        public Stat ChargeRate { get; private set; } = new Stat();
 
         // --- 对外只读的运行时数据 ---
         public int CurrentHP => currentHP;
@@ -36,8 +40,8 @@ namespace IndieGame.Gameplay.Stats
         /// 对外暴露给 UI（如玩家 HUD）做经验进度显示，避免 UI 侧重复实现经验曲线计算逻辑。
         /// </summary>
         public int CurrentRequiredEXP => GetRequiredExp(currentLevel);
-        // 最大生命值由基础值 + 成长曲线决定，至少为 1
-        public int MaxHP => config != null ? Mathf.Max(1, Mathf.RoundToInt(GetBaseHP())) : 1;
+        // 最大生命值由基础值 + 成长曲线 + HPBonus 加成决定，至少为 1
+        public int MaxHP => Mathf.Max(1, Mathf.RoundToInt(GetBaseHP() + HPBonus.Value));
 
         /// <summary>
         /// 按 StatType 获取对应的 Stat 引用：
@@ -52,6 +56,8 @@ namespace IndieGame.Gameplay.Stats
                 case StatType.Resistance: return Resistance;
                 case StatType.MoveSpeed: return MoveSpeed;
                 case StatType.Luck: return Luck;
+                case StatType.HP: return HPBonus;
+                case StatType.ChargeRate: return ChargeRate;
                 default: return null;
             }
         }

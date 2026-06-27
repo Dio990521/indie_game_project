@@ -22,8 +22,11 @@ namespace IndieGame.Gameplay.Equipment
         // 当前已应用的加成快照：装备时记录，卸下时按记录逐条撤销，而不是直接清空 Stat
         private readonly List<StatModifierData> _appliedModifiers = new List<StatModifierData>();
 
-        /// <summary> 当前装备的武器，未装备时为 null </summary>
-        public WeaponSO CurrentWeapon { get; private set; }
+        /// <summary> 当前装备的武器槽位（含 CustomName、强化数据），未装备时为 null </summary>
+        public InventorySlot CurrentWeaponSlot { get; private set; }
+
+        /// <summary> 当前装备的武器配置，未装备时为 null（派生自 CurrentWeaponSlot，兼容旧调用点） </summary>
+        public WeaponSO CurrentWeapon => CurrentWeaponSlot?.Item as WeaponSO;
 
         private void Awake()
         {
@@ -31,56 +34,85 @@ namespace IndieGame.Gameplay.Equipment
         }
 
         /// <summary>
-        /// 装备武器：把武器从背包移除并应用属性加成；若已有武器装备中，先把旧武器还回背包。
-        /// 换装时"移除新武器"与"归还旧武器"净占用槽位数不变，必定有空间，因此不做容量校验。
+        /// 装备武器：把整个槽位对象从背包摘出并应用属性加成（基础 Modifiers + 已应用前缀的加成）；
+        /// 若已有武器装备中，先把旧武器槽位原样还回背包。换装时"摘出新武器"与"归还旧武器"
+        /// 净占用槽位数不变，必定有空间，因此不做容量校验。
         /// </summary>
-        public void Equip(WeaponSO weapon)
+        /// <returns>true=装备成功；false=参数非法（slot 为空/不是武器/已是当前装备）</returns>
+        public bool Equip(InventorySlot weaponSlot)
         {
-            if (weapon == null || weapon == CurrentWeapon) return;
+            WeaponSO weapon = weaponSlot?.Item as WeaponSO;
+            if (weapon == null || weaponSlot == CurrentWeaponSlot) return false;
 
-            WeaponSO previous = CurrentWeapon;
+            InventorySlot previous = CurrentWeaponSlot;
 
-            InventoryManager.Instance?.RemoveItem(weapon, 1);
+            InventoryManager.Instance?.RemoveSlot(weaponSlot);
 
             if (previous != null)
             {
                 RemoveAppliedModifiers();
-                InventoryManager.Instance?.AddItem(previous, 1);
-                EventBus.Raise(new WeaponUnequippedEvent { Owner = gameObject, Weapon = previous });
+                InventoryManager.Instance?.InsertSlot(previous);
+                EventBus.Raise(new WeaponUnequippedEvent { Owner = gameObject, Weapon = previous.Item as WeaponSO });
             }
 
-            CurrentWeapon = weapon;
-            ApplyModifiers(weapon.Modifiers);
+            CurrentWeaponSlot = weaponSlot;
+            ApplyCurrentModifiers();
 
             EventBus.Raise(new WeaponEquippedEvent { Owner = gameObject, Weapon = weapon });
+            return true;
         }
 
         /// <summary>
-        /// 卸下当前武器：撤销属性加成并把武器还回背包。
+        /// 卸下当前武器：撤销属性加成并把武器槽位原样还回背包（保留 CustomName/强化数据）。
         /// 若背包已满（无法放回），则放弃卸下，避免武器在"卸下"过程中丢失。
         /// </summary>
         /// <returns>true=卸下成功；false=背包已满，卸下被拒绝</returns>
         public bool Unequip()
         {
-            if (CurrentWeapon == null) return false;
+            if (CurrentWeaponSlot == null) return false;
 
-            WeaponSO weapon = CurrentWeapon;
-            if (InventoryManager.Instance != null && !InventoryManager.Instance.CanAddItem(weapon, 1))
+            InventoryManager inventory = InventoryManager.Instance;
+            if (inventory != null && !inventory.CanInsertSlot())
             {
                 DebugTools.LogWarning("[WeaponEquipController] 背包已满，无法卸下武器。");
                 return false;
             }
 
             RemoveAppliedModifiers();
-            CurrentWeapon = null;
-            InventoryManager.Instance?.AddItem(weapon, 1);
 
-            EventBus.Raise(new WeaponUnequippedEvent { Owner = gameObject, Weapon = weapon });
+            InventorySlot removed = CurrentWeaponSlot;
+            CurrentWeaponSlot = null;
+            inventory?.InsertSlot(removed);
+
+            EventBus.Raise(new WeaponUnequippedEvent { Owner = gameObject, Weapon = removed.Item as WeaponSO });
             return true;
         }
 
-        private void ApplyModifiers(List<StatModifierData> modifiers)
+        /// <summary>
+        /// 重新计算并应用当前武器的加成（基础 Modifiers + 已应用前缀的加成）：
+        /// 供 WeaponEnhanceSystem 在"强化/重铸的正是当前装备的武器"时调用，让数值变化立即生效。
+        /// </summary>
+        public void RefreshAppliedModifiers()
         {
+            if (CurrentWeaponSlot == null) return;
+            RemoveAppliedModifiers();
+            ApplyCurrentModifiers();
+        }
+
+        /// <summary>
+        /// 应用当前武器的有效加成列表：
+        /// 优先通过 WeaponEnhanceSystem 合并"基础 Modifiers + 已应用前缀的加成"；
+        /// 若该系统不存在（如未接入场景），兜底为只应用武器自身的基础 Modifiers。
+        /// </summary>
+        private void ApplyCurrentModifiers()
+        {
+            WeaponSO weapon = CurrentWeapon;
+            if (weapon == null) return;
+
+            List<StatModifierData> modifiers = WeaponEnhanceSystem.Instance != null
+                ? WeaponEnhanceSystem.Instance.ComposeEffectiveModifiers(weapon, CurrentWeaponSlot.WeaponData)
+                : weapon.Modifiers;
+
             for (int i = 0; i < modifiers.Count; i++)
             {
                 Stat stat = _stats.GetStat(modifiers[i].Type);

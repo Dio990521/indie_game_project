@@ -41,6 +41,10 @@ namespace IndieGame.UI.Inventory
         // 玩家身上的武器装备控制器（懒解析，随 CurrentPlayer 变化重新解析）
         private WeaponEquipController _playerWeaponEquip;
         private GameObject _playerWeaponEquipOwner;
+        // 改名弹窗请求上下文
+        private int _popupRequestSeed;
+        private int _pendingRenameRequestId = -1;
+        private InventorySlot _renameTargetSlot;
 
         // ── 生命周期 ─────────────────────────────────────────────────────
 
@@ -80,6 +84,9 @@ namespace IndieGame.UI.Inventory
             Subscribe<InventoryClosedEvent>(HandleInventoryClosed);
             Subscribe<WeaponEquippedEvent>(HandleWeaponEquipChanged);
             Subscribe<WeaponUnequippedEvent>(HandleWeaponUnequipChanged);
+            Subscribe<WeaponEnhancedEvent>(HandleWeaponDataChanged);
+            Subscribe<WeaponRebindEvent>(HandleWeaponDataChanged);
+            Subscribe<RenameSlotPopupResultEvent>(HandleRenamePopupResult);
         }
 
         // ── EventBus 处理器 ──────────────────────────────────────────────
@@ -120,6 +127,19 @@ namespace IndieGame.UI.Inventory
             RefreshActionButtons();
         }
 
+        /// <summary>
+        /// 强化/重铸会改变武器的前缀列表（进而改变显示名称），若正是当前选中/已装备的武器，刷新展示。
+        /// </summary>
+        private void HandleWeaponDataChanged(WeaponEnhancedEvent evt) => RefreshIfAffected(evt.Slot);
+        private void HandleWeaponDataChanged(WeaponRebindEvent evt) => RefreshIfAffected(evt.Slot);
+
+        private void RefreshIfAffected(InventorySlot slot)
+        {
+            if (slot == null) return;
+            if (_selectedSlot == slot) RefreshDetailPanel();
+            if (TryBindPlayerWeaponEquip() && _playerWeaponEquip.CurrentWeaponSlot == slot) RefreshEquippedWeaponSlot();
+        }
+
         // ── InventoryManager 静态事件处理器 ──────────────────────────────
 
         private void HandleInventoryOpened(InventoryOpenedEvent evt)
@@ -139,6 +159,7 @@ namespace IndieGame.UI.Inventory
         private void HandleInventoryClosed(InventoryClosedEvent evt)
         {
             SetVisible(false);
+            ClearPendingRenameRequest();
         }
 
         // ── 按钮绑定 ─────────────────────────────────────────────────────
@@ -160,6 +181,7 @@ namespace IndieGame.UI.Inventory
 
             binder.UseButton?.onClick.AddListener(HandleUseClicked);
             binder.DiscardButton?.onClick.AddListener(HandleDiscardClicked);
+            binder.RenameButton?.onClick.AddListener(HandleRenameButtonClicked);
             binder.CloseButton?.onClick.AddListener(CloseAndNotify);
         }
 
@@ -343,10 +365,20 @@ namespace IndieGame.UI.Inventory
             if (binder.DetailIcon != null)
                 binder.DetailIcon.sprite = item.Icon;
 
-            // 名称：优先显示实例自定义名，否则异步读取本地化名
+            // 名称：武器需要拼接已应用的强化前缀（"强力的·锐利的·月牙剑"），其余物品维持原逻辑
             if (binder.DetailNameText != null)
             {
-                if (!string.IsNullOrWhiteSpace(_selectedSlot.CustomName))
+                if (item is WeaponSO && WeaponEnhanceSystem.Instance != null)
+                {
+                    InventorySlot capturedSlot = _selectedSlot;
+                    WeaponEnhanceSystem.Instance.ComposeDisplayName(item, capturedSlot.CustomName, capturedSlot.WeaponData, displayName =>
+                    {
+                        if (this == null || binder == null) return;
+                        if (_selectedSlot != capturedSlot) return;
+                        if (binder.DetailNameText != null) binder.DetailNameText.text = displayName;
+                    });
+                }
+                else if (!string.IsNullOrWhiteSpace(_selectedSlot.CustomName))
                 {
                     binder.DetailNameText.text = _selectedSlot.CustomName;
                 }
@@ -412,6 +444,9 @@ namespace IndieGame.UI.Inventory
 
             if (binder.DiscardButton != null)
                 binder.DiscardButton.interactable = hasSelection;
+
+            if (binder.RenameButton != null)
+                binder.RenameButton.interactable = hasSelection;
         }
 
         // ── 操作按钮 ─────────────────────────────────────────────────────
@@ -421,9 +456,9 @@ namespace IndieGame.UI.Inventory
             if (_selectedSlot == null || _selectedSlot.Item == null) return;
 
             // 武器走装备/卸下切换，不进入消耗品的 UseItem 流程（武器不应被消耗）
-            if (_selectedSlot.Item is WeaponSO weapon)
+            if (_selectedSlot.Item is WeaponSO)
             {
-                ToggleEquipWeapon(weapon);
+                ToggleEquipWeapon(_selectedSlot);
                 return;
             }
 
@@ -458,18 +493,58 @@ namespace IndieGame.UI.Inventory
         /// <summary>
         /// 武器装备/卸下切换：未装备时装备它；已装备时卸下。由"使用"按钮触发。
         /// </summary>
-        private void ToggleEquipWeapon(WeaponSO weapon)
+        private void ToggleEquipWeapon(InventorySlot weaponSlot)
         {
             if (!TryBindPlayerWeaponEquip()) return;
 
-            if (_playerWeaponEquip.CurrentWeapon == weapon)
+            if (_playerWeaponEquip.CurrentWeaponSlot == weaponSlot)
             {
                 _playerWeaponEquip.Unequip();
             }
             else
             {
-                _playerWeaponEquip.Equip(weapon);
+                _playerWeaponEquip.Equip(weaponSlot);
             }
+        }
+
+        // ── 改名（背包详情面板，与 Craft 强化面板共用同一套事件） ──────────
+
+        private void HandleRenameButtonClicked()
+        {
+            if (_selectedSlot == null || _selectedSlot.Item == null) return;
+
+            string defaultName = !string.IsNullOrWhiteSpace(_selectedSlot.CustomName)
+                ? _selectedSlot.CustomName
+                : _selectedSlot.Item.GetLocalizedName();
+
+            // 捕获改名目标槽位，弹窗结果回传时按 RequestId 匹配
+            _renameTargetSlot = _selectedSlot;
+            _pendingRenameRequestId = ++_popupRequestSeed;
+
+            EventBus.Raise(new RenameSlotPopupRequestEvent
+            {
+                RequestId = _pendingRenameRequestId,
+                DefaultName = defaultName
+            });
+        }
+
+        private void HandleRenamePopupResult(RenameSlotPopupResultEvent evt)
+        {
+            if (evt.RequestId != _pendingRenameRequestId) return;
+
+            InventorySlot slot = _renameTargetSlot;
+            ClearPendingRenameRequest();
+
+            if (!evt.Confirmed || slot == null) return;
+
+            InventoryManager.Instance?.RenameSlot(slot, evt.CustomName);
+            RefreshIfAffected(slot);
+        }
+
+        private void ClearPendingRenameRequest()
+        {
+            _pendingRenameRequestId = -1;
+            _renameTargetSlot = null;
         }
 
         // ── 当前装备武器槽 ───────────────────────────────────────────────
@@ -480,6 +555,16 @@ namespace IndieGame.UI.Inventory
 
             WeaponSO weapon = TryBindPlayerWeaponEquip() ? _playerWeaponEquip.CurrentWeapon : null;
             binder.EquippedWeaponSlot.Refresh(weapon, weapon != null ? HandleUnequipSlotClicked : (System.Action)null);
+            if (weapon == null || WeaponEnhanceSystem.Instance == null) return;
+
+            // 名称需要拼接强化前缀，本地化解析是异步的，解析完成后再覆盖默认名称
+            InventorySlot equippedSlot = _playerWeaponEquip.CurrentWeaponSlot;
+            WeaponEnhanceSystem.Instance.ComposeDisplayName(weapon, equippedSlot?.CustomName, equippedSlot?.WeaponData, displayName =>
+            {
+                if (this == null || binder?.EquippedWeaponSlot == null) return;
+                if (!TryBindPlayerWeaponEquip() || _playerWeaponEquip.CurrentWeaponSlot != equippedSlot) return;
+                binder.EquippedWeaponSlot.ApplyDisplayNameOverride(displayName);
+            });
         }
 
         private void HandleUnequipSlotClicked()

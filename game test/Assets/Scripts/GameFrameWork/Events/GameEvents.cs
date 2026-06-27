@@ -1045,4 +1045,79 @@ namespace IndieGame.Core
         public WeaponSO Weapon;
     }
 
+    /// <summary>
+    /// 武器强化事件：
+    /// WeaponEnhanceSystem.ExecuteEnhance 成功后广播，UI（背包详情/强化详情/属性面板）据此刷新。
+    /// </summary>
+    public struct WeaponEnhancedEvent
+    {
+        // 被强化的武器槽位
+        public InventorySlot Slot;
+        // 新应用的前缀 WordSO.ID
+        public string WordId;
+    }
+
+    /// <summary>
+    /// 武器重铸事件：
+    /// WeaponEnhanceSystem.ExecuteRebind 成功后广播。
+    /// </summary>
+    public struct WeaponRebindEvent
+    {
+        // 被重铸的武器槽位
+        public InventorySlot Slot;
+        // 被替换的前缀位序号
+        public int PrefixIndex;
+        // 旧前缀 WordSO.ID
+        public string OldWordId;
+        // 新前缀 WordSO.ID
+        public string NewWordId;
+    }
+
+    /// <summary>
+    /// 槽位改名弹窗请求事件：
+    /// 背包/强化详情面板点击"改名"按钮后广播，与 CraftNameInputPopupRequestEvent 语义区分
+    /// （后者专属"打造确认流程"，这里只是通用的"给槽位换个名字"，不触发任何制造逻辑）。
+    /// </summary>
+    public struct RenameSlotPopupRequestEvent
+    {
+        // 请求 ID，用于匹配响应（避免连续点击串线）
+        public int RequestId;
+        // 输入框默认值（当前名称）
+        public string DefaultName;
+    }
+
+    /// <summary>
+    /// 槽位改名弹窗结果事件。
+    /// </summary>
+    public struct RenameSlotPopupResultEvent
+    {
+        public int RequestId;
+        public bool Confirmed;
+        public string CustomName;
+    }
+
+    /// <summary>
+    /// 强化界面左侧"武器列表"槽位点击事件。
+    /// </summary>
+    public struct WeaponEnhanceSlotClickedEvent
+    {
+        public string EntryKey;
+    }
+
+    /// <summary>
+    /// 强化界面右侧"语料库"词语槽位点击事件。
+    /// </summary>
+    public struct WeaponPrefixSlotClickedEvent
+    {
+        public string EntryKey;
+    }
+
+    /// <summary>
+    /// 强化界面"已应用前缀"条目点击事件：选中后作为重铸的替换目标。
+    /// </summary>
+    public struct AppliedPrefixSlotClickedEvent
+    {
+        public int Index;
+    }
+
 }
