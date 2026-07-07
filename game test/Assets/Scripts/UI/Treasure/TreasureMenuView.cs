@@ -48,9 +48,10 @@ namespace IndieGame.UI.Treasure
         // 简单模式（ShowSimple）的条目列表；两种模式互斥，_simpleMode 标记当前生效的
         private readonly List<SimpleMenuItem> _simpleOptions = new List<SimpleMenuItem>();
         private bool _simpleMode;
-        // 用于跳过 ShowSimple 显示后的第一次 InputInteractCanceledEvent：
-        // 玩家按确认键从宝具菜单选中斗篷，键未松开时状态切换到 CloakTreasureState，
-        // ShowSimple 重新订阅输入，此时松开确认键会被误判为"取消"。
+        // 用于跳过菜单显示后的第一次 InputInteractCanceledEvent：
+        // 玩家在操作菜单/上一级菜单按确认键触发本菜单显示时，确认键往往还未松开，
+        // Show()/ShowSimple() 会立即重新订阅输入，此时松开确认键会被误判为"取消"，
+        // 导致菜单刚打开就被自动关闭（表现为"必须一直按住确认键菜单才不消失"）。
         // 设置此标志让第一次取消事件静默，与 WingTreasureState 用 UICancelEvent 的原因相同。
         private bool _suppressNextCancel;
         private int _selectedIndex = -1;
@@ -99,6 +100,9 @@ namespace IndieGame.UI.Treasure
         {
             if (_isVisible) return;
             _simpleMode = false;
+            // 本菜单通常由操作菜单“宝具”按钮的确认键直接触发显示，该键此时大概率还未松开，
+            // 需要静默第一次取消事件，避免菜单刚打开就被误判为“取消”而自动关闭
+            _suppressNextCancel = true;
             RefreshSlots(treasures);
             SelectIndex(0, instant: true);
             PlayShowAnimation();

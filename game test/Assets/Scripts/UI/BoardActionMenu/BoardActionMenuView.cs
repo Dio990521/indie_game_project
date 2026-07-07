@@ -12,7 +12,9 @@ namespace IndieGame.UI
     /// <summary>
     /// 棋盘操作菜单视图：
     /// 负责菜单的显示/隐藏、按钮布局、输入响应以及点击逻辑分发。
-    /// 菜单以玩家头顶为锚点呈弧形展开；仅支持键盘交互（A/D 或方向键左右切换选项，E 确认），鼠标点击/悬停已禁用。
+    /// 菜单以玩家为锚点，按钮分为左右两侧圆弧展开（左侧朝左侧鼓出，右侧朝右侧鼓出）。
+    /// 两侧按钮视为一个 3 行 x 2 列的网格：水平方向（A/D 或左右方向键）在左右两侧之间切换，
+    /// 垂直方向（W/S 或上下方向键）在当前侧内部切换行；E 确认。鼠标点击/悬停已禁用。
     /// </summary>
     public class BoardActionMenuView : MonoBehaviour
     {
@@ -29,11 +31,11 @@ namespace IndieGame.UI
         [Header("Layout")]
         // 锚点相对目标的世界坐标偏移（用于把菜单抬高到角色头顶位置，需在 Inspector 中按角色模型实际高度微调）
         public Vector3 targetWorldOffset = new Vector3(0f, 1.8f, 0f);
-        // 按钮半径（围绕锚点的距离）
+        // 按钮半径（围绕锚点的距离，左右两侧共用同一半径）
         public float radius = 120f;
-        // 弧形角度范围（以锚点正上方为中心，向左右展开）
+        // 单侧弧形角度范围（以该侧圆弧中心——左侧 180°/右侧 0°——为中心，纵向向上下展开）
         public float arcAngle = 140f;
-        // 屏幕偏移（在弧形布局基础上的额外微调，通常保持 0）
+        // 屏幕偏移（在弧形布局基础上的额外微调，左右两侧共用，通常保持 0）
         public Vector2 offset = Vector2.zero;
 
         [Header("Selection")]
@@ -61,10 +63,19 @@ namespace IndieGame.UI
         // --- 运行时数据 ---
         private readonly List<BoardActionOptionData> _options = new List<BoardActionOptionData>();
         private readonly List<BoardActionButton> _buttons = new List<BoardActionButton>();
+        // 左/右两侧按钮的“扁平索引”列表（索引指向 _options/_buttons），按从上到下的行顺序排列，
+        // 用于圆弧布局与 3x2 网格式方向键选择
+        private readonly List<int> _leftFlatIndices = new List<int>();
+        private readonly List<int> _rightFlatIndices = new List<int>();
         private int _selectedIndex = -1;
+        // 当前选中所在的侧（0=左侧，1=右侧）与行号（0 表示该侧最上方一行）
+        private int _selectedSide = 0;
+        private int _selectedRow = 0;
         private float _nextInputTime = 0f;
-        // 上一帧的水平输入值，用于检测“新按键”边沿，使单次按键不受连发节流影响
+        private float _nextInputTimeY = 0f;
+        // 上一帧的水平/垂直输入值，用于检测“新按键”边沿，使单次按键不受连发节流影响
         private float _lastInputX = 0f;
+        private float _lastInputY = 0f;
         private Sequence _showSequence;
         private Sequence _hideSequence;
         private RectTransform _selfRect;
@@ -155,7 +166,8 @@ namespace IndieGame.UI
             _options.AddRange(data);
             RefreshButtons(data);
             LayoutButtons();
-            SelectIndex(0, instant: true);
+            // 优先选中左侧第一行；若左侧为空（理论上不应发生）则回退到右侧第一行
+            SelectSideRow(_leftFlatIndices.Count > 0 ? 0 : 1, 0, instant: true);
             PlayShowAnimation();
             _isVisible = true;
             SubscribeInput();
@@ -213,77 +225,129 @@ namespace IndieGame.UI
                     _buttons[i].gameObject.SetActive(false);
                 }
             }
+
+            // 按左右两侧分组，保持各侧内部原始顺序（用于圆弧布局与方向键的行号映射）
+            _leftFlatIndices.Clear();
+            _rightFlatIndices.Clear();
+            for (int i = 0; i < data.Count; i++)
+            {
+                if (data[i].Side == BoardActionSide.Left) _leftFlatIndices.Add(i);
+                else _rightFlatIndices.Add(i);
+            }
+
             _selectedIndex = -1;
             _lastInputX = 0f;
+            _lastInputY = 0f;
         }
 
         /// <summary>
-        /// 计算并设置按钮在弧形布局中的位置：
-        /// 以锚点正上方（90°）为中心向左右展开，索引 0 对应最左侧按钮，
-        /// 索引递增时按钮位置从左向右排列，方便与“A 左移 / D 右移”的选择逻辑直接对应。
+        /// 计算并设置按钮在圆弧布局中的位置：
+        /// 左侧按钮以玩家左侧（180°）为中心呈弧形纵向展开，右侧按钮以玩家右侧（0°）为中心呈弧形纵向展开；
+        /// 每侧内部 row 0 始终在最上方，向下依次排列，与方向键的“3x2 网格”选择逻辑一一对应。
         /// </summary>
         private void LayoutButtons()
         {
-            int activeCount = _options.Count;
-            if (activeCount == 0) return;
+            LayoutSideArc(_leftFlatIndices, 180f, flipStep: true);
+            LayoutSideArc(_rightFlatIndices, 0f, flipStep: false);
+        }
 
-            float startAngle = 90f + arcAngle * 0.5f;
-            float step = activeCount > 1 ? -arcAngle / (activeCount - 1) : 0f;
+        /// <summary>
+        /// 将某一侧的按钮沿圆弧纵向排列（row 0 在最上方，中间行朝该侧鼓出最多）。
+        /// </summary>
+        /// <param name="flatIndices">该侧按钮在 _buttons 中的索引列表，按行从上到下排列</param>
+        /// <param name="centerAngle">该侧圆弧中心角度：左侧 180°，右侧 0°</param>
+        /// <param name="flipStep">左右两侧的角度增长方向相反，用于保证 row 0 始终位于最上方</param>
+        private void LayoutSideArc(List<int> flatIndices, float centerAngle, bool flipStep)
+        {
+            int count = flatIndices.Count;
+            if (count == 0) return;
 
-            int activeIndex = 0;
-            for (int i = 0; i < _buttons.Count; i++)
+            float half = arcAngle * 0.5f * (flipStep ? -1f : 1f);
+            float step = (count > 1 ? arcAngle / (count - 1) : 0f) * (flipStep ? 1f : -1f);
+            float startAngle = centerAngle + half;
+
+            for (int row = 0; row < count; row++)
             {
-                BoardActionButton button = _buttons[i];
-                if (button == null || !button.gameObject.activeSelf) continue;
-                float angle = startAngle + step * activeIndex;
+                BoardActionButton button = _buttons[flatIndices[row]];
+                if (button == null) continue;
+                float angle = startAngle + step * row;
                 float rad = angle * Mathf.Deg2Rad;
                 Vector2 pos = new Vector2(Mathf.Cos(rad) * radius, Mathf.Sin(rad) * radius) + offset;
 
                 RectTransform rt = button.GetComponent<RectTransform>();
                 rt.anchoredPosition = pos;
-                activeIndex++;
             }
         }
 
         /// <summary>
-        /// 处理移动输入（左右切换选项，对应弧形菜单从左到右的按钮排列）：
-        /// A / 左方向键 -> 选中左侧选项；D / 右方向键 -> 选中右侧选项。
+        /// 处理移动输入：将左右两侧按钮视为一个 3 行 x 2 列的网格。
+        /// 水平方向（A/D 或左右方向键）在“左侧栏 / 右侧栏”之间切换；
+        /// 垂直方向（W/S 或上下方向键）在当前所在侧内部按行循环切换。
         /// 复用现有的 Move 输入轴（与角色移动共用同一组按键），无需额外绑定。
         ///
+        /// 两个轴各自独立做“新按键立即响应 + 按住连发”的节流判定，互不干扰；
         /// 节流逻辑只用于“按住不放”时的自动连发，新的单次按键（方向从中立或反方向切换过来）
         /// 一律立即响应，避免快速连续按键时因节流而出现选择顿挫、漏按的问题。
         /// </summary>
         private void OnMoveInput(InputMoveEvent evt)
         {
-            float x = evt.Value.x;
-            if (_options.Count == 0) { _lastInputX = x; return; }
+            Vector2 v = evt.Value;
+            if (_options.Count == 0) { _lastInputX = v.x; _lastInputY = v.y; return; }
 
-            bool wasActive = Mathf.Abs(_lastInputX) > 0.5f;
-            bool isActive = Mathf.Abs(x) > 0.5f;
-            bool isNewPress = isActive && (!wasActive || Mathf.Sign(x) != Mathf.Sign(_lastInputX));
-
-            if (isNewPress)
-            {
-                // 新按键：立即响应，并重新计时下一次自动连发的等待时间
-                MoveSelection(x > 0f ? 1 : -1);
-                _nextInputTime = Time.time + inputRepeatDelay;
-            }
-            else if (isActive && Time.time >= _nextInputTime)
-            {
-                // 持续按住：按固定间隔自动连发（用于手柄摇杆等连续输入）
-                MoveSelection(x > 0f ? 1 : -1);
-                _nextInputTime = Time.time + inputRepeatDelay;
-            }
-
-            _lastInputX = x;
+            ProcessAxis(v.x, ref _lastInputX, ref _nextInputTime, MoveSide);
+            // 屏幕纵坐标向上为正，而 row 0 在最上方，因此按“上”时需要让 row 减小，符号取反
+            ProcessAxis(v.y, ref _lastInputY, ref _nextInputTimeY, dir => MoveRow(-dir));
         }
 
         /// <summary>
-        /// 按方向切换当前选中项（+1 向右，-1 向左）。
+        /// 单个输入轴的“新按键立即响应 + 按住连发”节流通用逻辑。
         /// </summary>
-        private void MoveSelection(int direction)
+        private void ProcessAxis(float value, ref float lastValue, ref float nextTime, Action<int> onStep)
         {
-            SelectIndex((_selectedIndex + direction + _options.Count) % _options.Count);
+            bool wasActive = Mathf.Abs(lastValue) > 0.5f;
+            bool isActive = Mathf.Abs(value) > 0.5f;
+            bool isNewPress = isActive && (!wasActive || Mathf.Sign(value) != Mathf.Sign(lastValue));
+
+            if (isNewPress)
+            {
+                onStep(value > 0f ? 1 : -1);
+                nextTime = Time.time + inputRepeatDelay;
+            }
+            else if (isActive && Time.time >= nextTime)
+            {
+                onStep(value > 0f ? 1 : -1);
+                nextTime = Time.time + inputRepeatDelay;
+            }
+
+            lastValue = value;
+        }
+
+        /// <summary>
+        /// 左右切换当前选中所在的侧（+1 右，-1 左）；已在最左/最右侧时不循环。
+        /// 若目标侧的行数少于当前行号，则夹取到该侧最后一行。
+        /// </summary>
+        private void MoveSide(int direction)
+        {
+            int targetSide = direction > 0 ? 1 : 0;
+            if (targetSide == _selectedSide) return;
+
+            List<int> target = targetSide == 0 ? _leftFlatIndices : _rightFlatIndices;
+            if (target.Count == 0) return;
+
+            int row = Mathf.Min(_selectedRow, target.Count - 1);
+            SelectSideRow(targetSide, row);
+        }
+
+        /// <summary>
+        /// 在当前侧内部上下循环切换选中行（+1 向下，-1 向上）。
+        /// </summary>
+        private void MoveRow(int direction)
+        {
+            List<int> current = _selectedSide == 0 ? _leftFlatIndices : _rightFlatIndices;
+            if (current.Count == 0) return;
+
+            int row = (_selectedRow + direction + current.Count) % current.Count;
+            SelectSideRow(_selectedSide, row);
         }
 
         /// <summary>
@@ -339,12 +403,17 @@ namespace IndieGame.UI
         }
 
         /// <summary>
-        /// 选中某一按钮并更新动画缩放。
+        /// 选中指定侧、指定行的按钮，并更新所有按钮的高亮缩放。
         /// </summary>
-        private void SelectIndex(int index, bool instant = false)
+        private void SelectSideRow(int side, int row, bool instant = false)
         {
-            if (_options.Count == 0) return;
-            _selectedIndex = Mathf.Clamp(index, 0, _options.Count - 1);
+            List<int> list = side == 0 ? _leftFlatIndices : _rightFlatIndices;
+            if (list.Count == 0) return;
+            row = Mathf.Clamp(row, 0, list.Count - 1);
+
+            _selectedSide = side;
+            _selectedRow = row;
+            _selectedIndex = list[row];
 
             for (int i = 0; i < _buttons.Count; i++)
             {

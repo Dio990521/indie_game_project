@@ -271,6 +271,8 @@ namespace IndieGame.Gameplay.Board.Runtime.States
 
         /// <summary>
         /// 构建默认菜单数据：定义玩家回合开始时菜单里有哪些按钮。
+        /// 按钮分为左右两侧：左侧【骰子】【宝具】【露营】，右侧【背包】【装备】【地图】，
+        /// 各侧内部按列表顺序从上到下排列，与 View 中的圆弧布局及方向键分组一一对应。
         /// 站在城镇格时不显示营地按钮——城镇提供专属服务，无法在此扎营。
         /// </summary>
         private List<BoardActionOptionData> BuildDefaultMenuData()
@@ -280,27 +282,32 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 new BoardActionOptionData
                 {
                     Id   = BoardActionId.RollDice,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "RollDice" }
-                },
-                new BoardActionOptionData
-                {
-                    Id   = BoardActionId.Item,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Bag" }
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "RollDice" },
+                    Side = BoardActionSide.Left
                 },
                 new BoardActionOptionData
                 {
                     Id   = BoardActionId.Treasure,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Treasure" }
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Treasure" },
+                    Side = BoardActionSide.Left
                 },
                 new BoardActionOptionData
                 {
-                    Id   = BoardActionId.Map,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Map" }
+                    Id   = BoardActionId.Item,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Bag" },
+                    Side = BoardActionSide.Right
                 },
                 new BoardActionOptionData
                 {
                     Id   = BoardActionId.Equip,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Equip" }
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Equip" },
+                    Side = BoardActionSide.Right
+                },
+                new BoardActionOptionData
+                {
+                    Id   = BoardActionId.Map,
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Map" },
+                    Side = BoardActionSide.Right
                 },
             };
 
@@ -310,7 +317,8 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 options.Add(new BoardActionOptionData
                 {
                     Id   = BoardActionId.Camp,
-                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Camp" }
+                    Name = new LocalizedString { TableReference = "BoardActions", TableEntryReference = "Camp" },
+                    Side = BoardActionSide.Left
                 });
             }
 

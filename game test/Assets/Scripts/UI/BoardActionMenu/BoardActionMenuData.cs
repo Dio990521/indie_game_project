@@ -25,8 +25,18 @@ namespace IndieGame.UI
     }
 
     /// <summary>
+    /// 按钮所在的侧别：
+    /// 菜单以玩家为中心分为左右两侧圆弧展开，Side 决定按钮归属哪一侧。
+    /// </summary>
+    public enum BoardActionSide
+    {
+        Left,
+        Right
+    }
+
+    /// <summary>
     /// 单个操作按钮的数据结构：
-    /// 包含逻辑 ID、显示名称与图标。
+    /// 包含逻辑 ID、显示名称、图标与所属侧别。
     /// </summary>
     public class BoardActionOptionData
     {
@@ -36,6 +46,8 @@ namespace IndieGame.UI
         public LocalizedString Name;
         // 图标
         public Sprite Icon;
+        // 所属侧别（左侧/右侧），决定圆弧布局与方向键分组
+        public BoardActionSide Side;
     }
 
     /// <summary>

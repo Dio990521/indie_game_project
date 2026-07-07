@@ -70,9 +70,9 @@ MonoBehaviour:
   binder: {fileID: 4418980510375909799}
   target: {fileID: 0}
   campingLocationId: {fileID: 11400000, guid: 8af5bc471d543450c9a7f4c7b3f933d7, type: 2}
-  targetWorldOffset: {x: 0, y: 1, z: 0}
+  targetWorldOffset: {x: 0, y: 0.7, z: 0}
   radius: 280
-  arcAngle: 120
+  arcAngle: 80
   offset: {x: 0, y: 0}
   selectedScale: 1.15
   normalScale: 1
