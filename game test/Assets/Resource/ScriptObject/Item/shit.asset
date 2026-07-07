@@ -22,9 +22,10 @@ MonoBehaviour:
     m_FallbackState: 0
     m_WaitForCompletion: 0
     m_LocalVariables: []
-  Icon: {fileID: 0}
+  Icon: {fileID: 720359660, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
   Description: 111
   Category: 0
+  Rarity: 4
   isStackable: 0
   maxStack: 99
   references:

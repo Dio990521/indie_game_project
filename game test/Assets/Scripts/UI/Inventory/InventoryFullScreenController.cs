@@ -18,12 +18,12 @@ namespace IndieGame.UI.Inventory
     /// </summary>
     public class InventoryFullScreenController : EventBusMonoBehaviour
     {
-        // 分类 Tab 枚举，顺序必须与 Binder 中 categoryTabButtons 数组对应
-        private enum InventoryTab { All, Equipment, Consumable, Material, Quest }
+        // 分类 Tab 枚举，顺序必须与 Binder 中 categoryTabButtons 数组对应：道具/材料/图纸/任务
+        private enum InventoryTab { Consumable, Material, Blueprint, Quest }
 
         [SerializeField] private InventoryFullScreenBinder binder;
-        // 对象池预热数量（避免首次打开时频繁 Instantiate）
-        [SerializeField] private int slotPoolWarmup = 16;
+        // 对象池预热数量；同时也是网格的最小展示槛位数（物品不足时用空槛位补齐占位，超出时靠 ScrollRect 滚动查看）
+        [SerializeField] private int slotPoolWarmup = 28;
 
         // ── 对象池 ───────────────────────────────────────────────────────
         private readonly List<InventorySlotUI> _slotPool = new List<InventorySlotUI>();
@@ -31,7 +31,7 @@ namespace IndieGame.UI.Inventory
         private int _activeSlotCount;
 
         // ── 状态 ────────────────────────────────────────────────────────
-        private InventoryTab _currentTab = InventoryTab.All;
+        private InventoryTab _currentTab = InventoryTab.Consumable;
         private InventorySlot _selectedSlot;
         private CanvasGroup _canvasGroup;
         // 缓存最近一次 OnInventoryChanged 传入的槽位列表
@@ -182,6 +182,7 @@ namespace IndieGame.UI.Inventory
             binder.UseButton?.onClick.AddListener(HandleUseClicked);
             binder.DiscardButton?.onClick.AddListener(HandleDiscardClicked);
             binder.RenameButton?.onClick.AddListener(HandleRenameButtonClicked);
+            binder.SortButton?.onClick.AddListener(HandleSortClicked);
             binder.CloseButton?.onClick.AddListener(CloseAndNotify);
         }
 
@@ -253,11 +254,14 @@ namespace IndieGame.UI.Inventory
 
         /// <summary>
         /// 按当前 Tab 过滤槽位后重建 UI 列表。
+        /// 网格按固定最小数量（slotPoolWarmup）展示：物品数不足时用空槛位（Setup(null,...)）补齐占位，
+        /// 超出时不截断，靠 ScrollRect 滚动查看（不在此处处理滚动裁剪）。
         /// </summary>
         private void RebuildSlotList()
         {
             _activeSlotCount = 0;
 
+            int filledCount = 0;
             if (_cachedSlots != null)
             {
                 for (int i = 0; i < _cachedSlots.Count; i++)
@@ -268,10 +272,19 @@ namespace IndieGame.UI.Inventory
 
                     InventorySlotUI slotUI = GetPooledSlot();
                     slotUI.Setup(slot, OnSlotClicked);
+                    filledCount++;
                 }
             }
 
+            // 补齐空槛位占位，网格至少显示 slotPoolWarmup 个格子
+            for (int i = filledCount; i < slotPoolWarmup; i++)
+            {
+                InventorySlotUI emptySlotUI = GetPooledSlot();
+                emptySlotUI.Setup(null, null);
+            }
+
             ReturnExcessToPool();
+            RefreshSelectionHighlight();
 
             // 若当前选中项在新列表中已不存在，清空详情；否则刷新（如数量变化）
             if (_selectedSlot != null && !IsSelectedSlotStillValid())
@@ -283,6 +296,18 @@ namespace IndieGame.UI.Inventory
             {
                 RefreshDetailPanel();
                 RefreshActionButtons();
+            }
+        }
+
+        /// <summary>
+        /// 刷新槛位选中高亮：遍历当前活跃槛位，仅让绑定了 _selectedSlot 的那一个显示高亮。
+        /// </summary>
+        private void RefreshSelectionHighlight()
+        {
+            for (int i = 0; i < _activeSlotCount; i++)
+            {
+                InventorySlotUI slotUI = _slotPool[i];
+                slotUI.SetSelected(_selectedSlot != null && slotUI.BoundSlot == _selectedSlot);
             }
         }
 
@@ -306,11 +331,11 @@ namespace IndieGame.UI.Inventory
         {
             return _currentTab switch
             {
-                InventoryTab.Equipment  => slot.Item.Category == ItemCategory.Equipment,
                 InventoryTab.Consumable => slot.Item.Category == ItemCategory.Consumable,
                 InventoryTab.Material   => slot.Item.Category == ItemCategory.Material,
+                InventoryTab.Blueprint  => slot.Item.Category == ItemCategory.Blueprint,
                 InventoryTab.Quest      => slot.Item.Category == ItemCategory.Quest,
-                _                       => true // All
+                _                       => false
             };
         }
 
@@ -321,10 +346,14 @@ namespace IndieGame.UI.Inventory
             if (_currentTab == tab) return;
             _currentTab = tab;
             RefreshTabHighlights();
-            RebuildSlotList();
             // 切换 Tab 时清空详情（避免展示与当前 Tab 无关的物品）
             _selectedSlot = null;
             ClearDetailPanel();
+            RebuildSlotList();
+
+            // 切回顶部，避免停留在上一个 Tab 的滚动位置
+            if (binder?.GridScrollRect != null)
+                binder.GridScrollRect.verticalNormalizedPosition = 1f;
         }
 
         private void RefreshTabHighlights()
@@ -344,6 +373,7 @@ namespace IndieGame.UI.Inventory
         private void OnSlotClicked(InventorySlot slot)
         {
             _selectedSlot = slot;
+            RefreshSelectionHighlight();
             RefreshDetailPanel();
             RefreshActionButtons();
         }
@@ -406,16 +436,19 @@ namespace IndieGame.UI.Inventory
             if (binder.DetailTypeText != null)
                 binder.DetailTypeText.text = CategoryToDisplayName(item.Category);
 
+            // 稀有度色块：背景色 + 中文短标签（普通/优良/稀有/史诗/传说）
+            if (binder.DetailRarityBadgeBackground != null)
+                binder.DetailRarityBadgeBackground.color = ItemRarityUtility.GetColor(item.Rarity);
+            if (binder.DetailRarityBadgeText != null)
+                binder.DetailRarityBadgeText.text = ItemRarityUtility.GetDisplayName(item.Rarity);
+
             // 描述
             if (binder.DetailDescText != null)
                 binder.DetailDescText.text = item.Description ?? string.Empty;
 
-            // 数量（当前数 / 最大堆叠）
+            // 持有数量
             if (binder.DetailCountText != null)
-            {
-                int maxStack = item.isStackable ? item.maxStack : 1;
-                binder.DetailCountText.text = $"{_selectedSlot.Count}/{maxStack}";
-            }
+                binder.DetailCountText.text = _selectedSlot.Count.ToString();
         }
 
         private void ClearDetailPanel()
@@ -426,6 +459,7 @@ namespace IndieGame.UI.Inventory
             if (binder.DetailTypeText != null) binder.DetailTypeText.text = string.Empty;
             if (binder.DetailDescText != null) binder.DetailDescText.text = string.Empty;
             if (binder.DetailCountText != null) binder.DetailCountText.text = string.Empty;
+            if (binder.DetailRarityBadgeText != null) binder.DetailRarityBadgeText.text = string.Empty;
             RefreshActionButtons();
         }
 
@@ -488,6 +522,14 @@ namespace IndieGame.UI.Inventory
                 },
                 OnCancel = null
             });
+        }
+
+        /// <summary>
+        /// 整理按钮：当前仅打印 log，排序逻辑暂不接入（InventoryManager 已有 SortByCategory/SortByID 可用，待后续设计确认后再接）。
+        /// </summary>
+        private void HandleSortClicked()
+        {
+            DebugTools.Log("[InventoryFullScreenController] 整理按钮点击（排序逻辑未接入）");
         }
 
         /// <summary>
@@ -617,6 +659,7 @@ namespace IndieGame.UI.Inventory
                 ItemCategory.Equipment  => "Equipment",
                 ItemCategory.Consumable => "Consumable",
                 ItemCategory.Material   => "Material",
+                ItemCategory.Blueprint  => "图纸",
                 ItemCategory.Quest      => "Quest Item",
                 _                       => "Unknown"
             };

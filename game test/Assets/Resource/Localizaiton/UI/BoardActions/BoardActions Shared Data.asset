@@ -39,6 +39,10 @@ MonoBehaviour:
     m_Key: Map
     m_Metadata:
       m_Items: []
+  - m_Id: 58718224896524288
+    m_Key: Equip
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

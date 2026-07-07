@@ -19,7 +19,9 @@ namespace IndieGame.UI
         // 宝具
         Treasure,
         // 地图
-        Map
+        Map,
+        // 装备
+        Equip
     }
 
     /// <summary>

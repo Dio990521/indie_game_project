@@ -23,6 +23,10 @@ namespace IndieGame.UI.Inventory
         public TMP_Text nameLabel;
         // 数量文本（仅当数量 > 1 时显示）
         [SerializeField] private TMP_Text countLabel;
+        // 稀有度背景色块：颜色随物品稀有度变化，空槛位时隐藏
+        [SerializeField] private Image rarityBackground;
+        // 选中高亮：简单占位实现，默认隐藏，由 Controller 在选中/取消选中时调用 SetSelected 控制
+        [SerializeField] private GameObject selectedHighlight;
         // Inspector 配置指南：
         // - 将 countLabel 绑定到槽位预制体上的 TextMeshProUGUI
         // - 当数量 <= 1 时将自动清空文本
@@ -33,6 +37,9 @@ namespace IndieGame.UI.Inventory
         private InventorySlot _slot;
         // 点击回调（由外部注入）
         private Action<InventorySlot> _onClick;
+
+        // 供 Controller 反查"这个槛位 UI 当前绑定的是哪个 slot"，用于刷新选中高亮
+        public InventorySlot BoundSlot => _slot;
 
         /// <summary>
         /// 初始化槽位显示内容与点击逻辑。
@@ -47,6 +54,17 @@ namespace IndieGame.UI.Inventory
             // 设置图标（null 安全，旧版预制体可不绑定 iconImage）
             if (iconImage != null)
                 iconImage.sprite = slot?.Item?.Icon;
+
+            // 稀有度背景色块：空槛位/空物品时隐藏，否则按 ItemSO.Rarity 上色
+            if (rarityBackground != null)
+            {
+                bool hasItem = slot?.Item != null;
+                rarityBackground.enabled = hasItem;
+                if (hasItem) rarityBackground.color = ItemRarityUtility.GetColor(slot.Item.Rarity);
+            }
+
+            // 复用时先清空选中高亮，真正的选中态由 Controller 在 Rebuild 之后统一刷新
+            SetSelected(false);
 
             if (nameLabel == null) return;
             if (slot == null || slot.Item == null)
@@ -95,11 +113,17 @@ namespace IndieGame.UI.Inventory
                 nameLabel.text = string.IsNullOrWhiteSpace(slot.Item.ID) ? "Unknown Item" : slot.Item.ID;
             }
 
-            // 数量显示：当数量 > 1 时显示数字，否则清空
+            // 数量显示：始终显示，与设计图保持一致（非堆叠物品也显示 1）
             if (countLabel != null)
-            {
-                countLabel.text = slot.Count > 1 ? slot.Count.ToString() : string.Empty;
-            }
+                countLabel.text = slot.Count > 0 ? slot.Count.ToString() : string.Empty;
+        }
+
+        /// <summary>
+        /// 选中高亮：简单占位实现（GameObject 开关），由 Controller 统一调度。
+        /// </summary>
+        public void SetSelected(bool selected)
+        {
+            if (selectedHighlight != null) selectedHighlight.SetActive(selected);
         }
 
         protected override void HandleClick(PointerEventData eventData)

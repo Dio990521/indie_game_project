@@ -14,7 +14,21 @@ namespace IndieGame.Gameplay.Inventory
         Consumable,
         Equipment,
         Material,
-        Quest
+        Quest,
+        // 图纸：常驻背包、不可消耗的展示型物品，加在末尾避免影响已有存档里的枚举序号
+        Blueprint
+    }
+
+    /// <summary>
+    /// 物品稀有度：驱动背包格子背景色与详情面板的稀有度色块。
+    /// </summary>
+    public enum ItemRarity
+    {
+        Common,
+        Uncommon,
+        Rare,
+        Epic,
+        Legendary
     }
 
     [CreateAssetMenu(menuName = "IndieGame/Inventory/Item")]
@@ -37,6 +51,9 @@ namespace IndieGame.Gameplay.Inventory
         [Header("Category & Stack")]
         [Tooltip("道具分类")]
         public ItemCategory Category = ItemCategory.Consumable;
+
+        [Tooltip("稀有度：驱动背包格子背景色与详情面板稀有度色块")]
+        public ItemRarity Rarity = ItemRarity.Common;
 
         [Tooltip("是否可堆叠")]
         public bool isStackable = true;
