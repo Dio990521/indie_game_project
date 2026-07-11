@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 8585141157554827564}
   - component: {fileID: 9145245866837624719}
   - component: {fileID: -433310404769403129}
+  - component: {fileID: -3903243076910223909}
   m_Layer: 0
   m_Name: InventoryManager
   m_TagString: Untagged
@@ -76,3 +77,22 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.CameraSystem.InventoryCameraController
   inventoryScreenPositionOffset: {x: -0.3, y: 0}
   transitionSmoothTime: 0.2
+--- !u!114 &-3903243076910223909
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1706707719091005244}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7c1cd022d825abd4ebca231adf209600, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Player.PlayerInventoryFacing
+  trackRotateSpeedDegPerSec: 720
+  yAxisOnly: 1
+  restoreOptions:
+    RotateDuration: 0.2
+    RotateEase: 3
+    YAxisOnly: 1
+    InstantThresholdAngle: 1

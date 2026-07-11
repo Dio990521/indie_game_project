@@ -88,6 +88,23 @@ namespace IndieGame.Core.Utilities
                 ? BuildYAxisOnlyRotation(actor, toTarget)
                 : Quaternion.LookRotation(toTarget.normalized, Vector3.up);
 
+            return TryRotateToRotation(actor, targetRotation, ref activeTween, options, onComplete);
+        }
+
+        /// <summary>
+        /// 平滑转向到指定的绝对朝向（Quaternion）。
+        /// 供“需要恢复到某个已缓存朝向”的场景使用（例如背包关闭后恢复到打开前的朝向），
+        /// 与 TryRotateToWorldPosition 共享同一套阈值/缓动逻辑。
+        /// </summary>
+        public static bool TryRotateToRotation(
+            Transform actor,
+            Quaternion targetRotation,
+            ref Tween activeTween,
+            SmoothFacingTweenOptions options,
+            Action onComplete = null)
+        {
+            if (actor == null) return false;
+
             // 角度极小时直接到位，避免“微抖动”。
             float deltaAngle = Quaternion.Angle(actor.rotation, targetRotation);
             if (deltaAngle <= Mathf.Max(0f, options.InstantThresholdAngle))
