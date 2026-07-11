@@ -4157,7 +4157,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Inventory.InventoryFullScreenController
   binder: {fileID: 4056683847031459320}
-  slotPoolWarmup: 28
+  slotPoolWarmup: 36
 --- !u!225 &866798946876174009
 CanvasGroup:
   m_ObjectHideFlags: 0

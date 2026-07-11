@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 8585141157554827564}
   - component: {fileID: 9145245866837624719}
+  - component: {fileID: -433310404769403129}
   m_Layer: 0
   m_Name: InventoryManager
   m_TagString: Untagged
@@ -49,9 +50,29 @@ MonoBehaviour:
   - Item: {fileID: 11400000, guid: 7c64937113f1b46408f6af836fe3e338, type: 2}
     Count: 3
     CustomName: 
+    WeaponData:
+      AppliedPrefixWordIds: []
   - Item: {fileID: 11400000, guid: 6301c8d2a414f4fb6a116c993cb5e6f7, type: 2}
     Count: 2
     CustomName: 
+    WeaponData:
+      AppliedPrefixWordIds: []
   - Item: {fileID: 11400000, guid: 8e2c07c322788c94f896377e1ab17797, type: 2}
     Count: 1
     CustomName: 
+    WeaponData:
+      AppliedPrefixWordIds: []
+--- !u!114 &-433310404769403129
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1706707719091005244}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a2f0ed6f3fb42e42b2109654581ea0e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Core.CameraSystem.InventoryCameraController
+  inventoryScreenPositionOffset: {x: -0.3, y: 0}
+  transitionSmoothTime: 0.2
