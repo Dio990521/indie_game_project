@@ -516,33 +516,6 @@ namespace IndieGame.Core
     }
 
     /// <summary>
-    /// 露营动作按钮 Hover 事件：
-    /// 由 CampActionButton 在鼠标进入时触发。
-    /// </summary>
-    public struct CampActionButtonHoverEvent
-    {
-        public int Index;
-    }
-
-    /// <summary>
-    /// 露营动作按钮 Click 事件：
-    /// 由 CampActionButton 在点击时触发。
-    /// </summary>
-    public struct CampActionButtonClickEvent
-    {
-        public int Index;
-    }
-
-    /// <summary>
-    /// 露营动作按钮 Exit 事件：
-    /// 由 CampActionButton 在鼠标移出时触发。
-    /// </summary>
-    public struct CampActionButtonExitEvent
-    {
-        public int Index;
-    }
-
-    /// <summary>
     /// 露营"睡觉"业务请求事件：
     /// 由 CampUIView 在玩家点击 Sleep 按钮后发布，CampUIController 监听后执行完整流程
     /// （黑屏 → 恢复行动点 → 推进日期 → 自动存档 → 隐藏菜单 → 返回棋盘）。

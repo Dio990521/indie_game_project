@@ -112,11 +112,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Camp.CampUIView
   binder: {fileID: 9122202908034962345}
   defaultActions:
-  - {fileID: 11400000, guid: 599733cae3a6546d39260acfb9a2f506, type: 2}
-  - {fileID: 11400000, guid: 8448044e9403940b6b8dd5228b701fc5, type: 2}
-  - {fileID: 11400000, guid: 57e40069adb1a43cfaaf0b0645a37d7e, type: 2}
-  - {fileID: 11400000, guid: 095764c005baa47ea8e892ddd70a8ded, type: 2}
   - {fileID: 11400000, guid: 0ab9f979e648c4b4b8e634bd90de3486, type: 2}
+  - {fileID: 11400000, guid: 8448044e9403940b6b8dd5228b701fc5, type: 2}
+  - {fileID: 11400000, guid: ba21614a56ef4d14da7a4cf5c480eebc, type: 2}
+  - {fileID: 11400000, guid: 599733cae3a6546d39260acfb9a2f506, type: 2}
+  - {fileID: 11400000, guid: 095764c005baa47ea8e892ddd70a8ded, type: 2}
+  - {fileID: 11400000, guid: 57e40069adb1a43cfaaf0b0645a37d7e, type: 2}
+  - {fileID: 11400000, guid: 69da088599c38c84cb5e4b3dc33bd789, type: 2}
+  selectedScale: 1.15
+  normalScale: 1
+  selectTweenDuration: 0.12
+  inputRepeatDelay: 0.2
 --- !u!114 &9122202908034962345
 MonoBehaviour:
   m_ObjectHideFlags: 0
