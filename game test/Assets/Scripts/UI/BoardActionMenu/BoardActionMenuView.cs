@@ -396,8 +396,8 @@ namespace IndieGame.UI
                     DebugTools.Log("<color=cyan>[操作菜单] 点击了【地图】按钮（功能待实现）。</color>");
                     break;
                 case BoardActionId.Equip:
-                    // TODO: 装备功能尚未实现，先用日志占位点击效果
-                    DebugTools.Log("<color=cyan>[操作菜单] 点击了【装备】按钮（功能待实现）。</color>");
+                    EventBus.Raise(new OpenEquipmentUIEvent());
+                    Hide();
                     break;
             }
         }

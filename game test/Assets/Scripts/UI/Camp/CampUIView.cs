@@ -259,8 +259,8 @@ namespace IndieGame.UI.Camp
                     EventBus.Raise(new OpenMemoryUIEvent());
                     break;
                 case CampActionID.Equip:
-                    // TODO: 装备界面尚未实现，先用日志占位选中效果。
-                    DebugTools.Log("<color=cyan>[露营菜单] 选中了【装备】（功能待实现）。</color>");
+                    // 与 Inventory/Memory 走相同事件通路，由 EquipmentUIController 自行控制 show/hide。
+                    EventBus.Raise(new OpenEquipmentUIEvent());
                     break;
                 case CampActionID.Training:
                     // TODO: 训练功能尚未实现，先用日志占位选中效果。

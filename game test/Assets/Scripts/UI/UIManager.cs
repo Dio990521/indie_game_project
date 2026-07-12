@@ -13,6 +13,7 @@ using IndieGame.UI.Town;
 using IndieGame.UI.SystemMenu;
 using IndieGame.UI.SkillTree;
 using IndieGame.UI.Memory;
+using IndieGame.UI.Equipment;
 
 namespace IndieGame.UI
 {
@@ -80,6 +81,8 @@ namespace IndieGame.UI
         [SerializeField] private SkillTreeController skillTreeUIPrefab;
         // Memory 图鉴 UI（仅由 UIManager 负责实例化）
         [SerializeField] private MemoryUIController memoryUIPrefab;
+        // 装备 UI（仅由 UIManager 负责实例化）
+        [SerializeField] private EquipmentUIController equipmentUIPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -96,6 +99,7 @@ namespace IndieGame.UI
         public SystemMenuController SystemMenuInstance { get; private set; }
         public SkillTreeController SkillTreeUIInstance { get; private set; }
         public MemoryUIController MemoryUIInstance { get; private set; }
+        public EquipmentUIController EquipmentUIInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -293,6 +297,16 @@ namespace IndieGame.UI
                 {
                     // UIManager 只负责生成实例，显示/隐藏由 MemoryUIController 监听 EventBus 自行控制。
                     MemoryUIInstance.gameObject.SetActive(true);
+                }
+            }
+
+            if (equipmentUIPrefab != null && EquipmentUIInstance == null)
+            {
+                EquipmentUIInstance = SpawnOnLayer(equipmentUIPrefab, UILayerPriority.GameUI);
+                if (EquipmentUIInstance != null)
+                {
+                    // UIManager 只负责生成实例，显示/隐藏由 EquipmentUIController 监听 EventBus 自行控制。
+                    EquipmentUIInstance.gameObject.SetActive(true);
                 }
             }
 

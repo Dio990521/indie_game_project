@@ -67,6 +67,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             SubscribeEvent<InventoryOpenedEvent>(_ => HandleInventoryOpened(context));
             SubscribeEvent<InventoryClosedEvent>(_ => HandleInventoryClosed(context));
 
+            // 装备界面同理：打开时隐藏操作菜单，关闭后恢复，与背包的互斥逻辑保持对称。
+            SubscribeEvent<EquipmentUIOpenedEvent>(_ => HandleEquipmentUIOpened(context));
+            SubscribeEvent<EquipmentUIClosedEvent>(_ => HandleEquipmentUIClosed(context));
+
             // 订阅宝具菜单相关事件：
             // - BoardTreasureMenuRequested：操作菜单点击"宝具"时触发，由此处直接调用 TreasureMenuView.Show()
             //   集中在 PlayerTurnState 处理可提供 UIManager 未配置时的兜底回退逻辑
@@ -180,6 +184,28 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         /// 响应背包关闭事件：重新显示操作菜单，恢复玩家的回合决策界面。
         /// </summary>
         private void HandleInventoryClosed(BoardGameManager context)
+        {
+            if (_menu != null)
+            {
+                _menu.Show(BuildDefaultMenuData());
+            }
+        }
+
+        /// <summary>
+        /// 响应装备界面打开事件：隐藏操作菜单，让出屏幕空间给装备 UI。
+        /// </summary>
+        private void HandleEquipmentUIOpened(BoardGameManager context)
+        {
+            if (_menu != null)
+            {
+                _menu.Hide();
+            }
+        }
+
+        /// <summary>
+        /// 响应装备界面关闭事件：重新显示操作菜单，恢复玩家的回合决策界面。
+        /// </summary>
+        private void HandleEquipmentUIClosed(BoardGameManager context)
         {
             if (_menu != null)
             {

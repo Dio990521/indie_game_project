@@ -17,6 +17,7 @@ GameObject:
   - component: {fileID: 8770709943874566285}
   - component: {fileID: 5537106277446306646}
   - component: {fileID: 1086138836753147121}
+  - component: {fileID: 8340336164778473798}
   m_Layer: 0
   m_Name: Player
   m_TagString: Player
@@ -191,6 +192,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 12a55227c62c71446afca0c6fa2e3dc7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Equipment.WeaponEquipController
+--- !u!114 &8340336164778473798
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9170140433642860262}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b146a536c22167d4c953ec6d2dc6bb24, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Equipment.ArmorEquipController
 --- !u!1001 &1409429107897280448
 PrefabInstance:
   m_ObjectHideFlags: 0

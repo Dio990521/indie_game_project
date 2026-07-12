@@ -52,12 +52,17 @@ namespace IndieGame.Gameplay.Player
         {
             EventBus.Subscribe<InventoryOpenedEvent>(HandleInventoryOpened);
             EventBus.Subscribe<InventoryClosedEvent>(HandleInventoryClosed);
+            // 装备界面与背包共用同一套"转向镜头"效果。
+            EventBus.Subscribe<EquipmentUIOpenedEvent>(HandleEquipmentUIOpened);
+            EventBus.Subscribe<EquipmentUIClosedEvent>(HandleEquipmentUIClosed);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<InventoryOpenedEvent>(HandleInventoryOpened);
             EventBus.Unsubscribe<InventoryClosedEvent>(HandleInventoryClosed);
+            EventBus.Unsubscribe<EquipmentUIOpenedEvent>(HandleEquipmentUIOpened);
+            EventBus.Unsubscribe<EquipmentUIClosedEvent>(HandleEquipmentUIClosed);
             SmoothFacingTween.Kill(ref _restoreTween);
             _tracking = false;
         }
@@ -65,13 +70,24 @@ namespace IndieGame.Gameplay.Player
         /// <summary>
         /// 背包打开：缓存当前朝向（供关闭时恢复），并开始逐帧追踪相机。
         /// </summary>
-        private void HandleInventoryOpened(InventoryOpenedEvent evt)
+        private void HandleInventoryOpened(InventoryOpenedEvent evt) => BeginTracking();
+
+        /// <summary>
+        /// 背包关闭：停止追踪相机，转身恢复到打开前缓存的朝向。
+        /// </summary>
+        private void HandleInventoryClosed(InventoryClosedEvent evt) => EndTracking();
+
+        // 装备界面共用同一份逻辑。
+        private void HandleEquipmentUIOpened(EquipmentUIOpenedEvent evt) => BeginTracking();
+        private void HandleEquipmentUIClosed(EquipmentUIClosedEvent evt) => EndTracking();
+
+        private void BeginTracking()
         {
             Transform player = ResolvePlayerTransform();
             if (player == null)
             {
                 // 找不到玩家：直接跳过追踪，且不缓存朝向——避免关闭时用一个没意义的默认值去恢复。
-                DebugTools.LogWarning("[PlayerInventoryFacing] 未找到 GameManager.CurrentPlayer，跳过背包朝向追踪。");
+                DebugTools.LogWarning("[PlayerInventoryFacing] 未找到 GameManager.CurrentPlayer，跳过朝向追踪。");
                 return;
             }
 
@@ -82,10 +98,9 @@ namespace IndieGame.Gameplay.Player
         }
 
         /// <summary>
-        /// 背包关闭：停止追踪相机，转身恢复到打开前缓存的朝向。
         /// 若打开时从未成功缓存过朝向（例如当时找不到玩家），则跳过，避免误用默认值转身。
         /// </summary>
-        private void HandleInventoryClosed(InventoryClosedEvent evt)
+        private void EndTracking()
         {
             _tracking = false;
             if (!_hasCachedRotation) return;

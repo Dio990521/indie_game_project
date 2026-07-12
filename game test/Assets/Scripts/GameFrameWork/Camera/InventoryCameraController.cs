@@ -51,12 +51,17 @@ namespace IndieGame.Core.CameraSystem
         {
             EventBus.Subscribe<InventoryOpenedEvent>(HandleInventoryOpened);
             EventBus.Subscribe<InventoryClosedEvent>(HandleInventoryClosed);
+            // 装备界面与背包是同一类全屏 UI（右侧内容区），复用同一套取景偏移效果。
+            EventBus.Subscribe<EquipmentUIOpenedEvent>(HandleEquipmentUIOpened);
+            EventBus.Subscribe<EquipmentUIClosedEvent>(HandleEquipmentUIClosed);
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<InventoryOpenedEvent>(HandleInventoryOpened);
             EventBus.Unsubscribe<InventoryClosedEvent>(HandleInventoryClosed);
+            EventBus.Unsubscribe<EquipmentUIOpenedEvent>(HandleEquipmentUIOpened);
+            EventBus.Unsubscribe<EquipmentUIClosedEvent>(HandleEquipmentUIClosed);
 
             // 组件被禁用时若偏移仍生效，直接瞬间还原（不再有 Update 帮忙平滑），避免摄像机卡在偏移状态
             if (_activeComposer != null)
@@ -91,13 +96,24 @@ namespace IndieGame.Core.CameraSystem
         /// <summary>
         /// 背包打开：找到当前生效镜头的 Composer，缓存其原始取景位置，交给 Update 平滑过渡到目标偏移。
         /// </summary>
-        private void HandleInventoryOpened(InventoryOpenedEvent evt)
+        private void HandleInventoryOpened(InventoryOpenedEvent evt) => OpenScreenOffset();
+
+        /// <summary>
+        /// 背包关闭：不立即写值，交给 Update 平滑追回 _originalScreenPosition。
+        /// </summary>
+        private void HandleInventoryClosed(InventoryClosedEvent evt) => CloseScreenOffset();
+
+        // 装备界面与背包共用同一套让位效果，直接转调同一份逻辑。
+        private void HandleEquipmentUIOpened(EquipmentUIOpenedEvent evt) => OpenScreenOffset();
+        private void HandleEquipmentUIClosed(EquipmentUIClosedEvent evt) => CloseScreenOffset();
+
+        private void OpenScreenOffset()
         {
             CinemachinePositionComposer composer = ResolveActiveComposer();
             if (composer == null) return;
 
             // 仅在镜头发生变化（或本来没有镜头）时重新缓存"原始值"，
-            // 避免快速连续开合背包时，把过渡中途的值误当成原始值缓存下来。
+            // 避免快速连续开合背包/装备界面时，把过渡中途的值误当成原始值缓存下来。
             if (_activeComposer != composer)
             {
                 _activeComposer = composer;
@@ -109,10 +125,7 @@ namespace IndieGame.Core.CameraSystem
             _inventoryOpen = true;
         }
 
-        /// <summary>
-        /// 背包关闭：不立即写值，交给 Update 平滑追回 _originalScreenPosition。
-        /// </summary>
-        private void HandleInventoryClosed(InventoryClosedEvent evt)
+        private void CloseScreenOffset()
         {
             _inventoryOpen = false;
         }
