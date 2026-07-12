@@ -499,7 +499,7 @@ MonoBehaviour:
   - {fileID: 1601869406662090634}
   - {fileID: 8505186654929361009}
   - {fileID: 3188309866289618855}
-  - {fileID: 940239279032230602}
+  - {fileID: 0}
   - {fileID: 6631272764525016110}
   tabHighlights: []
   slotPrefab: {fileID: 7869377354470672291, guid: 6dda84a40f7a9744282c3aa5c1389b1c, type: 3}
@@ -527,8 +527,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Memory.MemoryUIController
   binder: {fileID: 7053976148765217114}
   blueprintDatabase: {fileID: 11400000, guid: 9f9b3d52a24d54d4fb03e991c4c13180, type: 2}
-  allWords:
-  - {fileID: 11400000, guid: 50d62b660ff1b4811b54203635b367f9, type: 2}
   allItems:
   - {fileID: 11400000, guid: f5f304d7cae5a481ebdf542f571e3381, type: 2}
   - {fileID: 11400000, guid: ef1d58365e535493989d2c977c1068c4, type: 2}
@@ -2496,7 +2494,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &51384125866115546
 RectTransform:
   m_ObjectHideFlags: 0
@@ -2512,10 +2510,10 @@ RectTransform:
   - {fileID: 5552356015538161337}
   m_Father: {fileID: 7947269321321645437}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
-  m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 321, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
+  m_AnchorMax: {x: 0, y: 1}
+  m_AnchoredPosition: {x: 1920, y: -75}
+  m_SizeDelta: {x: 321, y: 150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1797542453367818184
 CanvasRenderer:

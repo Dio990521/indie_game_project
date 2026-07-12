@@ -343,3 +343,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.UI.Crafting.BlueprintSlotUI
   iconImage: {fileID: 1331118708993515001}
   nameText: {fileID: 6505694336534660913}
+  rarityBorderImage: {fileID: 3388503689941651096}
