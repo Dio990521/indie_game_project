@@ -4,13 +4,15 @@ using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Crafting;
+using IndieGame.Gameplay.Equipment;
+using IndieGame.Gameplay.Inventory;
 using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Crafting
 {
     /// <summary>
     /// 打造界面左侧列表管理器（纯 C# 辅助类，无 MonoBehaviour 生命周期）：
-    /// 职责：对象池管理、列表构建（原型/复现两种数据源）、条目索引、选中状态。
+    /// 职责：对象池管理、列表构建（未打造/已打造两种数据源，按大类/装备部位过滤）、条目索引、选中状态。
     /// 由 CraftingUIController 在 Awake 中实例化并持有。
     /// 通用集合维护逻辑（_activeSlots / _entryByKey / _entryOrder / ReleaseAll）已迁移至 BaseListManager。
     /// </summary>
@@ -23,6 +25,8 @@ namespace IndieGame.UI.Crafting
             public string BlueprintID;
             public string DisplayName;
             public string SuggestedName;
+            public ItemRarity Rarity;
+            public EquipmentType? EquipmentSlotType;
         }
 
         private CraftUIBinder _binder;
@@ -46,10 +50,10 @@ namespace IndieGame.UI.Crafting
         }
 
         /// <summary>
-        /// 重建"原型制造"列表（数据源：未消耗蓝图记录）。
+        /// 重建"未打造"列表（数据源：未消耗蓝图记录），按大类/装备部位过滤。
         /// 返回是否存在条目。
         /// </summary>
-        public bool RebuildForPrototype(CraftingSystem craftingSystem)
+        public bool RebuildForPrototype(CraftingSystem craftingSystem, ItemCategory category, EquipmentType? subFilter)
         {
             ReleaseAll();
             if (craftingSystem == null) return false;
@@ -61,27 +65,29 @@ namespace IndieGame.UI.Crafting
                 if (record == null || string.IsNullOrWhiteSpace(record.ID)) continue;
 
                 BlueprintSO blueprint = craftingSystem.GetBlueprint(record.ID);
-                if (blueprint == null) continue;
+                if (blueprint == null || !MatchesFilter(blueprint, category, subFilter)) continue;
 
                 string origName = craftingSystem.GetOriginalProductName(blueprint);
                 string displayName = string.IsNullOrWhiteSpace(origName) ? blueprint.DefaultName : origName;
 
                 AddEntry(new CraftListEntry
                 {
-                    EntryKey     = $"P:{record.ID}",
-                    BlueprintID  = blueprint.ID,
-                    DisplayName  = displayName,
-                    SuggestedName = displayName
+                    EntryKey          = $"P:{record.ID}",
+                    BlueprintID       = blueprint.ID,
+                    DisplayName       = displayName,
+                    SuggestedName     = displayName,
+                    Rarity            = blueprint.ProductItem != null ? blueprint.ProductItem.Rarity : ItemRarity.Common,
+                    EquipmentSlotType = blueprint.EquipmentSlotType
                 }, blueprint.GetDisplayIcon());
             }
             return _entryOrder.Count > 0;
         }
 
         /// <summary>
-        /// 重建"复现制造"列表（数据源：制造历史，UI 层去重）。
+        /// 重建"已打造"列表（数据源：制造历史，UI 层去重），按大类/装备部位过滤。
         /// 返回是否存在条目。
         /// </summary>
-        public bool RebuildForReplication(CraftingSystem craftingSystem)
+        public bool RebuildForReplication(CraftingSystem craftingSystem, ItemCategory category, EquipmentType? subFilter)
         {
             ReleaseAll();
             if (craftingSystem == null) return false;
@@ -102,20 +108,34 @@ namespace IndieGame.UI.Crafting
                 if (!_dedupeSet.Add(history.BlueprintID + "|" + normalizedName)) continue;
 
                 BlueprintSO blueprint = craftingSystem.GetBlueprint(history.BlueprintID);
-                if (blueprint == null) continue;
+                if (blueprint == null || !MatchesFilter(blueprint, category, subFilter)) continue;
 
                 string fallback = craftingSystem.GetOriginalProductName(blueprint);
                 string displayName = string.IsNullOrWhiteSpace(normalizedName) ? fallback : normalizedName;
 
                 AddEntry(new CraftListEntry
                 {
-                    EntryKey      = $"R:{i}",
-                    BlueprintID   = blueprint.ID,
-                    DisplayName   = displayName,
-                    SuggestedName = displayName
+                    EntryKey          = $"R:{i}",
+                    BlueprintID       = blueprint.ID,
+                    DisplayName       = displayName,
+                    SuggestedName     = displayName,
+                    Rarity            = blueprint.ProductItem != null ? blueprint.ProductItem.Rarity : ItemRarity.Common,
+                    EquipmentSlotType = blueprint.EquipmentSlotType
                 }, blueprint.GetDisplayIcon());
             }
             return _entryOrder.Count > 0;
+        }
+
+        /// <summary>
+        /// 大类/装备部位过滤判断：
+        /// - 大类必须匹配 ProductItem.Category
+        /// - 装备大类下，若指定了 subFilter，还需要匹配 EquipmentSlotType
+        /// </summary>
+        private static bool MatchesFilter(BlueprintSO blueprint, ItemCategory category, EquipmentType? subFilter)
+        {
+            if (blueprint.ProductItem == null || blueprint.ProductItem.Category != category) return false;
+            if (category == ItemCategory.Equipment && subFilter.HasValue && blueprint.EquipmentSlotType != subFilter.Value) return false;
+            return true;
         }
 
         /// <summary>
@@ -183,7 +203,7 @@ namespace IndieGame.UI.Crafting
                 return;
             }
 
-            slotUI.Setup(entry.EntryKey, entry.BlueprintID, icon, entry.DisplayName);
+            slotUI.Setup(entry.EntryKey, entry.BlueprintID, icon, entry.DisplayName, entry.Rarity);
             // 父类登记三件套（_activeSlots / _entryByKey / _entryOrder）
             RegisterActiveSlot(entry.EntryKey, entry, slotUI);
             // 本子类额外维护按 key 反查 Slot 的索引

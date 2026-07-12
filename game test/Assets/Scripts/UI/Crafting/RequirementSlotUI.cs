@@ -16,6 +16,8 @@ namespace IndieGame.UI.Crafting
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text nameText;
         [SerializeField] private TMP_Text amountText;
+        [Tooltip("独立展示背包持有总量的文本（如“持有: 45”），与需求进度 amountText 分开显示")]
+        [SerializeField] private TMP_Text ownedText;
 
         [Header("Style")]
         [SerializeField] private Color enoughColor = new Color(0.45f, 0.95f, 0.45f);
@@ -31,6 +33,7 @@ namespace IndieGame.UI.Crafting
                 if (iconImage != null) iconImage.enabled = false;
                 if (nameText != null) nameText.text = "Invalid Requirement";
                 if (amountText != null) amountText.text = "0/0";
+                if (ownedText != null) ownedText.text = "持有: 0";
                 return;
             }
 
@@ -57,14 +60,21 @@ namespace IndieGame.UI.Crafting
                 }
             }
 
+            int need = requirement.Amount;
+            int have = Mathf.Max(0, ownedCount);
+            bool enough = have >= need;
+
             if (amountText != null)
             {
-                int need = requirement.Amount;
-                int have = Mathf.Max(0, ownedCount);
-                bool enough = have >= need;
-
+                // 需求进度：封顶显示为 need，避免持有远超需求时进度数字失真（如 45/12）
+                int progress = Mathf.Min(have, need);
                 amountText.color = enough ? enoughColor : lackingColor;
-                amountText.text = $"{have}/{need}";
+                amountText.text = $"{progress}/{need}";
+            }
+
+            if (ownedText != null)
+            {
+                ownedText.text = $"持有: {have}";
             }
         }
     }

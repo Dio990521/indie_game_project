@@ -274,8 +274,8 @@ namespace IndieGame.Gameplay.Inventory
 
         /// <summary>
         /// 把一个槽位对象原样插回背包（卸下武器时使用）：
-        /// 与 AddItem(ItemSO, amount, customName) 不同，这里保留槽位上的 CustomName/WeaponData，
-        /// 不会因为重新走"按 ItemSO 新建槽位"的路径而丢失强化数据。
+        /// 与 AddItem(ItemSO, amount, customName) 不同，这里保留槽位上的 CustomName，
+        /// 不会因为重新走"按 ItemSO 新建槽位"的路径而丢失玩家自定义命名。
         /// </summary>
         public bool InsertSlot(InventorySlot slot)
         {

@@ -89,8 +89,7 @@ namespace IndieGame.Gameplay.Equipment
         }
 
         /// <summary>
-        /// 重新计算并应用当前武器的加成（基础 Modifiers + 已应用前缀的加成）：
-        /// 供 WeaponEnhanceSystem 在"强化/重铸的正是当前装备的武器"时调用，让数值变化立即生效。
+        /// 重新计算并应用当前武器的加成（基础 Modifiers）。
         /// </summary>
         public void RefreshAppliedModifiers()
         {
@@ -100,18 +99,14 @@ namespace IndieGame.Gameplay.Equipment
         }
 
         /// <summary>
-        /// 应用当前武器的有效加成列表：
-        /// 优先通过 WeaponEnhanceSystem 合并"基础 Modifiers + 已应用前缀的加成"；
-        /// 若该系统不存在（如未接入场景），兜底为只应用武器自身的基础 Modifiers。
+        /// 应用当前武器的基础 Modifiers。
         /// </summary>
         private void ApplyCurrentModifiers()
         {
             WeaponSO weapon = CurrentWeapon;
             if (weapon == null) return;
 
-            List<StatModifierData> modifiers = WeaponEnhanceSystem.Instance != null
-                ? WeaponEnhanceSystem.Instance.ComposeEffectiveModifiers(weapon, CurrentWeaponSlot.WeaponData)
-                : weapon.Modifiers;
+            List<StatModifierData> modifiers = weapon.Modifiers;
 
             for (int i = 0; i < modifiers.Count; i++)
             {

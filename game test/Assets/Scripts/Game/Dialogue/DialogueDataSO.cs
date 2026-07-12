@@ -18,15 +18,10 @@ namespace IndieGame.Gameplay.Dialogue
         [Tooltip("对话正文（本地化）")]
         [SerializeField] private LocalizedString content;
 
-        [Tooltip("本句中可被学习的关键词列表（用于高亮与习得）")]
-        [SerializeField] private List<WordSO> learnableWords = new List<WordSO>();
-
         /// <summary> 说话人 </summary>
         public LocalizedString Speaker => speaker;
         /// <summary> 正文 </summary>
         public LocalizedString Content => content;
-        /// <summary> 可学习词条 </summary>
-        public IReadOnlyList<WordSO> LearnableWords => learnableWords;
     }
 
     /// <summary>

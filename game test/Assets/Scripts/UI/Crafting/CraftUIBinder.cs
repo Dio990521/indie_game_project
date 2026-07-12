@@ -16,6 +16,8 @@ namespace IndieGame.UI.Crafting
     {
         [Header("Right Panel")]
         [SerializeField] private Image productIcon;
+        [SerializeField] private TMP_Text blueprintLevelText;
+        [SerializeField] private TMP_Text blueprintDescriptionText;
         [SerializeField] private Transform requirementsRoot;
         [SerializeField] private Button craftButton;
         [SerializeField] private GameObject emptyStateNode;
@@ -24,91 +26,52 @@ namespace IndieGame.UI.Crafting
         [SerializeField] private Transform listRoot;
         [SerializeField] private GameObject slotPrefab;
 
-        [Header("Tabs")]
-        [Tooltip("原型制造 Tab 按钮")]
-        [SerializeField] private Button prototypeTabButton;
-        [Tooltip("复现制造 Tab 按钮")]
-        [SerializeField] private Button replicationTabButton;
-        [Tooltip("强化 Tab 按钮")]
-        [SerializeField] private Button enhanceTabButton;
+        [Header("大类 Tab（装备/合成）")]
+        [SerializeField] private Button equipmentCategoryButton;
+        [SerializeField] private Button synthesisCategoryButton;
+
+        [Header("列表模式（未打造/已打造）")]
+        [SerializeField] private Button blueprintListModeButton;
+        [SerializeField] private Button craftedListModeButton;
+
+        [Header("装备部位筛选（仅装备大类下显示）")]
+        [SerializeField] private GameObject equipmentSubFilterRoot;
+        [SerializeField] private Button weaponFilterButton;
+        [SerializeField] private Button armorFilterButton;
+        [SerializeField] private Button allFilterButton;
 
         [Header("Requirement Item (Optional)")]
         [Tooltip("材料条目预制体（可选但推荐配置）。若未配置，右侧将无法生成材料列表。")]
         [SerializeField] private GameObject requirementSlotPrefab;
 
-        [Header("强化 Tab 内容根节点")]
-        [Tooltip("Prototype/Replication 共用的内容根节点（左侧图纸列表+右侧需求详情），切到强化 Tab 时隐藏")]
-        [SerializeField] private GameObject standardTabContentRoot;
-        [Tooltip("整个强化Tab的内容根节点（与 Prototype/Replication 的内容区是不同布局，切 Tab 时整体显隐）")]
-        [SerializeField] private GameObject enhanceRootNode;
-
-        [Header("强化 - 左侧武器列表")]
-        [SerializeField] private Transform weaponListRoot;
-        [SerializeField] private GameObject weaponSlotPrefab;
-
-        [Header("强化 - 右侧语料库列表")]
-        [SerializeField] private Transform prefixListRoot;
-        [SerializeField] private GameObject prefixSlotPrefab;
-
-        [Header("强化 - 武器基础信息")]
-        [SerializeField] private TMP_Text weaponNameText;
-        [SerializeField] private TMP_Text weaponKindText;
-        [SerializeField] private TMP_Text baseHPText;
-        [SerializeField] private TMP_Text baseAttackText;
-        [SerializeField] private TMP_Text baseDefenseText;
-        [SerializeField] private TMP_Text baseChargeRateText;
-        [SerializeField] private GameObject enhanceEmptyStateNode;
-        [SerializeField] private GameObject enhanceDetailNode;
-
-        [Header("强化 - 已应用前缀列表")]
-        [SerializeField] private Transform appliedPrefixListRoot;
-        [SerializeField] private GameObject appliedPrefixSlotPrefab;
-
-        [Header("强化 - 操作按钮")]
-        [SerializeField] private Button enhanceConfirmButton;
-        [SerializeField] private TMP_Text enhanceCostText;
-        [SerializeField] private Button rebindConfirmButton;
-        [SerializeField] private TMP_Text rebindCostText;
-        [SerializeField] private Button renameButton;
+        [Header("打造效果预览")]
+        [SerializeField] private Transform craftEffectsRoot;
+        [SerializeField] private GameObject craftEffectSlotPrefab;
 
         public Image ProductIcon => productIcon;
+        public TMP_Text BlueprintLevelText => blueprintLevelText;
+        public TMP_Text BlueprintDescriptionText => blueprintDescriptionText;
         public Transform RequirementsRoot => requirementsRoot;
         public Button CraftButton => craftButton;
         public GameObject EmptyStateNode => emptyStateNode;
 
         public Transform ListRoot => listRoot;
         public GameObject SlotPrefab => slotPrefab;
-        public Button PrototypeTabButton => prototypeTabButton;
-        public Button ReplicationTabButton => replicationTabButton;
-        public Button EnhanceTabButton => enhanceTabButton;
+
+        public Button EquipmentCategoryButton => equipmentCategoryButton;
+        public Button SynthesisCategoryButton => synthesisCategoryButton;
+
+        public Button BlueprintListModeButton => blueprintListModeButton;
+        public Button CraftedListModeButton => craftedListModeButton;
+
+        public GameObject EquipmentSubFilterRoot => equipmentSubFilterRoot;
+        public Button WeaponFilterButton => weaponFilterButton;
+        public Button ArmorFilterButton => armorFilterButton;
+        public Button AllFilterButton => allFilterButton;
 
         public GameObject RequirementSlotPrefab => requirementSlotPrefab;
 
-        public GameObject StandardTabContentRoot => standardTabContentRoot;
-        public GameObject EnhanceRootNode => enhanceRootNode;
-
-        public Transform WeaponListRoot => weaponListRoot;
-        public GameObject WeaponSlotPrefab => weaponSlotPrefab;
-
-        public Transform PrefixListRoot => prefixListRoot;
-        public GameObject PrefixSlotPrefab => prefixSlotPrefab;
-
-        public TMP_Text WeaponNameText => weaponNameText;
-        public TMP_Text WeaponKindText => weaponKindText;
-        public TMP_Text BaseHPText => baseHPText;
-        public TMP_Text BaseAttackText => baseAttackText;
-        public TMP_Text BaseDefenseText => baseDefenseText;
-        public TMP_Text BaseChargeRateText => baseChargeRateText;
-        public GameObject EnhanceEmptyStateNode => enhanceEmptyStateNode;
-        public GameObject EnhanceDetailNode => enhanceDetailNode;
-
-        public Transform AppliedPrefixListRoot => appliedPrefixListRoot;
-        public GameObject AppliedPrefixSlotPrefab => appliedPrefixSlotPrefab;
-
-        public Button EnhanceConfirmButton => enhanceConfirmButton;
-        public TMP_Text EnhanceCostText => enhanceCostText;
-        public Button RebindConfirmButton => rebindConfirmButton;
-        public TMP_Text RebindCostText => rebindCostText;
-        public Button RenameButton => renameButton;
+        public Transform CraftEffectsRoot => craftEffectsRoot;
+        public GameObject CraftEffectSlotPrefab => craftEffectSlotPrefab;
     }
 }

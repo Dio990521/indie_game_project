@@ -4,14 +4,13 @@ using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Crafting;
 using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Memory;
-using IndieGame.Gameplay.Dialogue;
 using UnityEngine;
 
 namespace IndieGame.UI.Memory
 {
     /// <summary>
     /// Memory 图鉴 UI 控制器：
-    /// 负责界面显隐、6 个 Tab 切换、列表构建、详情面板刷新。
+    /// 负责界面显隐、5 个 Tab 切换、列表构建、详情面板刷新。
     ///
     /// 架构边界：
     /// - MemoryUIBinder：只保存引用；
@@ -23,13 +22,16 @@ namespace IndieGame.UI.Memory
     /// </summary>
     public class MemoryUIController : EventBusMonoBehaviour
     {
+        /// <summary>
+        /// 注意：Task 显式赋值为 5，保留原有 Inspector 里 TabButtons/TabHighlights 数组下标，
+        /// 删除"语料"Tab 后空出原来的 4，避免其余 Tab 需要在 Inspector 里重新接线。
+        /// </summary>
         private enum MemoryTab
         {
             Blueprint = 0,  // 图纸
             Weapon    = 1,  // 武器
             Item      = 2,  // 道具
             Material  = 3,  // 素材
-            Word      = 4,  // 语料
             Task      = 5   // 任务（预留）
         }
 
@@ -39,8 +41,6 @@ namespace IndieGame.UI.Memory
         [Header("数据源（Inspector 拖入）")]
         [Tooltip("图纸数据库，用于从 BlueprintID 反查 BlueprintSO")]
         [SerializeField] private BlueprintDatabaseSO blueprintDatabase;
-        [Tooltip("全量 WordSO 数组，用于从 WordID 反查词条信息")]
-        [SerializeField] private WordSO[] allWords;
         [Tooltip("全量 ItemSO 数组，用于从 ItemID 反查物品信息")]
         [SerializeField] private ItemSO[] allItems;
 
@@ -54,7 +54,6 @@ namespace IndieGame.UI.Memory
 
         // 运行时查找表（Awake 中构建，避免每次打开重建）
         private Dictionary<string, BlueprintSO> _blueprintById;
-        private Dictionary<string, WordSO> _wordById;
         private Dictionary<string, ItemSO> _itemById;
 
         // 复用缓存，避免 RebuildBlueprint 时每帧分配新 List
@@ -172,7 +171,6 @@ namespace IndieGame.UI.Memory
                 case MemoryTab.Weapon:    RebuildWeaponTab();    break;
                 case MemoryTab.Item:      RebuildItemTab();      break;
                 case MemoryTab.Material:  RebuildMaterialTab();  break;
-                case MemoryTab.Word:      RebuildWordTab();      break;
             }
 
             // 无数据时显示空状态提示
@@ -282,32 +280,6 @@ namespace IndieGame.UI.Memory
             }
         }
 
-        private void RebuildWordTab()
-        {
-            MemorySystem ms = MemorySystem.Instance;
-            if (ms == null) return;
-
-            int idx = 0;
-            foreach (string wordId in ms.LearnedWordIds)
-            {
-                if (!_wordById.TryGetValue(wordId, out WordSO word)) continue;
-
-                // LocalizedString.GetLocalizedString() 同步获取（已缓存时直接返回）
-                string displayName  = word.DisplayName  != null ? word.DisplayName.GetLocalizedString()  : wordId;
-                string description  = word.Description  != null ? word.Description.GetLocalizedString()  : string.Empty;
-
-                _listManager.AddEntry(new MemoryListManager.MemoryEntry
-                {
-                    EntryKey    = "WD:" + idx++,
-                    PrimaryID   = wordId,
-                    DisplayName = displayName,
-                    Subtitle    = "语料",
-                    Description = description,
-                    Icon        = null
-                });
-            }
-        }
-
         // ── 详情面板 ──────────────────────────────────────────────────────
 
         private void ShowDetailPanel(MemoryListManager.MemoryEntry entry)
@@ -380,12 +352,6 @@ namespace IndieGame.UI.Memory
                 foreach (var bp in blueprintDatabase.Blueprints)
                     if (bp != null && !string.IsNullOrWhiteSpace(bp.ID))
                         _blueprintById[bp.ID] = bp;
-
-            _wordById = new Dictionary<string, WordSO>(System.StringComparer.Ordinal);
-            if (allWords != null)
-                foreach (var w in allWords)
-                    if (w != null && !string.IsNullOrWhiteSpace(w.ID))
-                        _wordById[w.ID] = w;
 
             _itemById = new Dictionary<string, ItemSO>(System.StringComparer.Ordinal);
             if (allItems != null)

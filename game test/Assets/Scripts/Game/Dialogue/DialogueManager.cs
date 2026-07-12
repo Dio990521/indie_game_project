@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using IndieGame.Core;
 using IndieGame.Core.Utilities;
 using UnityEngine;
@@ -9,7 +8,7 @@ namespace IndieGame.Gameplay.Dialogue
 {
     /// <summary>
     /// 对话管理器（逻辑层，MonoSingleton）：
-    /// 负责维护对话状态、处理交互输入、解析本地化文本、执行关键词高亮学习逻辑。
+    /// 负责维护对话状态、处理交互输入、解析本地化文本。
     ///
     /// 架构边界说明（MVB）：
     /// 1) 本类只处理“规则与状态”，不直接操作具体 UI 组件。
@@ -31,9 +30,6 @@ namespace IndieGame.Gameplay.Dialogue
         [SerializeField] private bool animateHide = true;
         [Tooltip("对话刚启动后的输入保护时间（秒），避免同一次按键被误判为“下一句”")]
         [SerializeField] private float startInputBlockDuration = 0.08f;
-
-        // 词条高亮颜色（富文本）
-        private const string LearnableWordColorHex = "#FFD700";
 
         /// <summary>
         /// 当前是否处于对话流程中：
@@ -124,31 +120,13 @@ namespace IndieGame.Gameplay.Dialogue
         }
 
         /// <summary>
-        /// 查询词条是否已学习。
-        /// </summary>
-        public bool HasLearnedWord(string wordId)
-        {
-            EnsureResolver();
-            return _lineResolver.HasLearnedWord(wordId);
-        }
-
-        /// <summary>
-        /// 导出当前已学习词条 ID（只读拷贝）。
-        /// </summary>
-        public void GetLearnedWordIDs(List<string> output)
-        {
-            EnsureResolver();
-            _lineResolver.GetLearnedWordIDs(output);
-        }
-
-        /// <summary>
         /// 懒初始化解析器：避免依赖 Awake 顺序。
         /// </summary>
         private void EnsureResolver()
         {
             if (_lineResolver == null)
             {
-                _lineResolver = new DialogueLineResolver(defaultTypewriterSpeed, LearnableWordColorHex);
+                _lineResolver = new DialogueLineResolver(defaultTypewriterSpeed);
             }
         }
 

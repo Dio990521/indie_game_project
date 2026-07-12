@@ -1,7 +1,5 @@
 using IndieGame.Core;
 using IndieGame.Gameplay.ActionPoint;
-using IndieGame.Gameplay.Equipment;
-using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Stats;
 using UnityEngine;
 
@@ -35,8 +33,6 @@ namespace IndieGame.UI.Inventory
             Subscribe<ActionPointChangedEvent>(HandleActionPointChanged);
             Subscribe<WeaponEquippedEvent>(HandleWeaponChanged);
             Subscribe<WeaponUnequippedEvent>(HandleWeaponChanged);
-            Subscribe<WeaponEnhancedEvent>(HandleWeaponEnhanced);
-            Subscribe<WeaponRebindEvent>(HandleWeaponRebind);
             Subscribe<ArmorEquippedEvent>(HandleArmorChanged);
             Subscribe<ArmorUnequippedEvent>(HandleArmorChanged);
             Subscribe<InventoryOpenedEvent>(HandleInventoryOpened);
@@ -111,18 +107,6 @@ namespace IndieGame.UI.Inventory
             RefreshAll();
         }
 
-        private void HandleWeaponEnhanced(WeaponEnhancedEvent evt)
-        {
-            if (!IsEquippedSlot(evt.Slot)) return;
-            RefreshStatValues();
-        }
-
-        private void HandleWeaponRebind(WeaponRebindEvent evt)
-        {
-            if (!IsEquippedSlot(evt.Slot)) return;
-            RefreshStatValues();
-        }
-
         // ─── 数据刷新 ────────────────────────────────────────
 
         private void RefreshAll()
@@ -166,19 +150,6 @@ namespace IndieGame.UI.Inventory
             if (owner == null) return false;
             if (_currentPlayer == null) TryBindPlayer();
             return owner == _currentPlayer;
-        }
-
-        /// <summary>
-        /// 判断被强化/重铸的槽位是否正是当前玩家装备中的武器（WeaponEnhancedEvent/WeaponRebindEvent
-        /// 没有携带 Owner，只能反查 WeaponEquipController.CurrentWeaponSlot 来过滤）。
-        /// </summary>
-        private bool IsEquippedSlot(InventorySlot slot)
-        {
-            if (slot == null) return false;
-            if (!TryBindPlayer()) return false;
-
-            WeaponEquipController equip = _currentPlayer.GetComponent<WeaponEquipController>();
-            return equip != null && equip.CurrentWeaponSlot == slot;
         }
     }
 }

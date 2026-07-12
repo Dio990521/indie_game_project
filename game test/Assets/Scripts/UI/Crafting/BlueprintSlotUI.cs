@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using TMPro;
 using UnityEngine.EventSystems;
 using IndieGame.Core;
+using IndieGame.Gameplay.Inventory;
 using IndieGame.UI.Common;
 
 namespace IndieGame.UI.Crafting
@@ -20,6 +21,8 @@ namespace IndieGame.UI.Crafting
         [Header("UI References")]
         [SerializeField] private Image iconImage;
         [SerializeField] private TMP_Text nameText;
+        [Tooltip("品质染色边框（参照背包详情面板复用同一套 ItemRarityUtility 配色）")]
+        [SerializeField] private Image rarityBorderImage;
 
         // 当前槽位绑定的“列表条目唯一键”（不是蓝图 ID）
         // 设计原因：
@@ -35,15 +38,19 @@ namespace IndieGame.UI.Crafting
         /// - entryKey：UI 列表中的唯一条目标识
         /// - blueprintId：对应配方 ID
         /// - icon：显示图标（一般使用成品图标）
-        /// - displayName：显示名称（原型 Tab 用原始名，复现 Tab 用自定义名）
+        /// - displayName：显示名称（未打造用原始名，已打造用自定义名）
+        /// - rarity：产出物品质，驱动左侧边框染色
         /// </summary>
-        public void Setup(string entryKey, string blueprintId, Sprite icon, string displayName)
+        public void Setup(string entryKey, string blueprintId, Sprite icon, string displayName, ItemRarity rarity)
         {
             _entryKey = string.IsNullOrWhiteSpace(entryKey) ? string.Empty : entryKey;
             _blueprintId = string.IsNullOrWhiteSpace(blueprintId) ? string.Empty : blueprintId;
 
             SetIcon(iconImage, icon);
             SetName(nameText, displayName, "Unnamed Blueprint");
+
+            if (rarityBorderImage != null)
+                rarityBorderImage.color = ItemRarityUtility.GetColor(rarity);
         }
 
         /// <summary>

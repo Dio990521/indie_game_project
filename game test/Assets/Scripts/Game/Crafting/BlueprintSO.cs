@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using IndieGame.Gameplay.Equipment;
 using IndieGame.Gameplay.Inventory;
 
 namespace IndieGame.Gameplay.Crafting
@@ -26,6 +27,13 @@ namespace IndieGame.Gameplay.Crafting
         [Tooltip("图纸固定名称（左侧列表直接显示该名称）")]
         [SerializeField] private string defaultName = "Unnamed Blueprint";
 
+        [Tooltip("图纸等级要求，仅用于详情面板展示（<= 0 时显示为未知等级）")]
+        [SerializeField] private int requiredLevel;
+
+        [Tooltip("图纸描述文本，详情面板展示")]
+        [TextArea]
+        [SerializeField] private string description;
+
         [Header("Output")]
         [Tooltip("制造产出物（制造成功后发放到背包）")]
         [SerializeField] private ItemSO productItem;
@@ -46,8 +54,33 @@ namespace IndieGame.Gameplay.Crafting
         /// <summary> 默认名称（只读） </summary>
         public string DefaultName => string.IsNullOrWhiteSpace(defaultName) ? "Unnamed Blueprint" : defaultName;
 
+        /// <summary> 图纸等级要求（只读） </summary>
+        public int RequiredLevel => requiredLevel;
+
+        /// <summary> 图纸描述文本（只读） </summary>
+        public string Description => description;
+
         /// <summary> 产出物（只读） </summary>
         public ItemSO ProductItem => productItem;
+
+        /// <summary>
+        /// 产出物所属的装备部位（武器/防具），非装备类图纸返回 null。
+        /// 优先读取 EquipmentItemSO.SlotType（目前 ArmorSO 走这条）；
+        /// WeaponSO 尚未接入 EquipmentItemSO 体系，单独兜底为 EquipmentType.Weapon。
+        /// 计算属性而非可配置字段：避免图纸配置的类型和产出物实际类型对不上。
+        /// </summary>
+        public EquipmentType? EquipmentSlotType
+        {
+            get
+            {
+                if (productItem is EquipmentItemSO equip) return equip.SlotType;
+                if (productItem is WeaponSO) return EquipmentType.Weapon;
+                return null;
+            }
+        }
+
+        /// <summary> 是否为装备类图纸（只读，等价于 ProductItem.Category == ItemCategory.Equipment） </summary>
+        public bool IsEquipmentBlueprint => EquipmentSlotType.HasValue;
 
         /// <summary> 产出数量（只读，自动兜底 >= 1） </summary>
         public int ProductAmount => Mathf.Max(1, productAmount);

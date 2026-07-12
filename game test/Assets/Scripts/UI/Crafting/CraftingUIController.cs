@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core;
 using IndieGame.Core.Input;
@@ -6,28 +5,27 @@ using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Crafting;
 using IndieGame.Gameplay.Equipment;
 using IndieGame.Gameplay.Inventory;
-using IndieGame.UI.Confirmation;
 
 namespace IndieGame.UI.Crafting
 {
     /// <summary>
     /// 打造界面协调器（薄控制层）：
-    /// 负责界面显隐、Tab切换、弹窗流程、EventBus订阅与输入处理。
+    /// 负责界面显隐、大类/列表模式/装备部位筛选切换、弹窗流程、EventBus订阅与输入处理。
     ///
     /// 架构边界：
     /// - CraftUIBinder：只保存引用，不写逻辑。
     /// - CraftingListManager：管理左侧列表对象池、条目索引、构建逻辑。
-    /// - CraftingDetailPanel：管理右侧详情面板、需求槽位池、按钮状态。
-    /// - WeaponEnhanceListManager/WeaponPrefixListManager/WeaponEnhanceDetailPanel：强化 Tab 的对应职责。
+    /// - CraftingDetailPanel：管理右侧详情面板、需求槽位池、打造效果预览、按钮状态。
     /// - CraftingUIController（本类）：协调上述两者，处理生命周期与事件路由。
-    /// - CraftingSystem/WeaponEnhanceSystem：只负责规则与数据（扣料、产出、历史、存档）。
+    /// - CraftingSystem：只负责规则与数据（扣料、产出、历史、存档）。
     /// </summary>
     public class CraftingUIController : EventBusMonoBehaviour
     {
-        /// <summary>
-        /// Tab 类型：Prototype 显示未消耗蓝图，Replication 显示历史记录，Enhance 是武器强化。
-        /// </summary>
-        private enum CraftTab { Prototype, Replication, Enhance }
+        /// <summary>大类：装备 / 合成（按 ProductItem.Category 区分）。</summary>
+        private enum CraftCategory { Equipment, Synthesis }
+
+        /// <summary>列表模式：未打造（一次性图纸）/ 已打造（可重复复现）。</summary>
+        private enum CraftListMode { Blueprint, Crafted }
 
         [Header("References")]
         [SerializeField] private CraftUIBinder binder;
@@ -42,17 +40,10 @@ namespace IndieGame.UI.Crafting
         private CraftingListManager _listManager;
         private CraftingDetailPanel _detailPanel;
 
-        private WeaponEnhanceListManager _weaponListManager;
-        private WeaponPrefixListManager _prefixListManager;
-        private WeaponEnhanceDetailPanel _weaponEnhanceDetailPanel;
-        // 当前选中的待强化/重铸前缀词（语料库列表里点选的那一个）
-        private string _selectedPrefixWordId;
-        // 当前选中的"重铸目标"前缀位序号；-1 表示未进入重铸选择
-        private int _rebindIndex = -1;
-        // 改名弹窗的待处理槽位（区分背包/装备中的武器都可能触发改名）
-        private InventorySlot _pendingRenameSlot;
+        private CraftCategory _currentCategory = CraftCategory.Equipment;
+        private CraftListMode _currentListMode = CraftListMode.Blueprint;
+        private EquipmentType? _currentSubFilter;
 
-        private CraftTab _currentTab = CraftTab.Prototype;
         private bool _isVisible;
         private CanvasGroup _canvasGroup;
 
@@ -61,7 +52,6 @@ namespace IndieGame.UI.Crafting
         private int _pendingPopupRequestId = -1;
         private string _pendingBlueprintId;
         private string _pendingDefaultName;
-        private int _pendingRenameRequestId = -1;
 
         private void Awake()
         {
@@ -76,35 +66,29 @@ namespace IndieGame.UI.Crafting
             _listManager.Init(binder, slotPoolWarmup);
             _detailPanel.Init(binder, requirementPoolWarmup);
 
-            _weaponListManager = new WeaponEnhanceListManager();
-            _prefixListManager = new WeaponPrefixListManager();
-            _weaponEnhanceDetailPanel = new WeaponEnhanceDetailPanel();
-            _weaponListManager.Init(binder, slotPoolWarmup);
-            _prefixListManager.Init(binder, requirementPoolWarmup);
-            _weaponEnhanceDetailPanel.Init(binder, requirementPoolWarmup);
-
-            EnsureCanvasGroup();
-            ApplyTabContentVisibility();
+            ApplySubFilterVisibility();
 
             if (binder.CraftButton != null) binder.CraftButton.onClick.AddListener(HandleCraftButtonClicked);
-            if (binder.PrototypeTabButton != null) binder.PrototypeTabButton.onClick.AddListener(HandlePrototypeTabClicked);
-            if (binder.ReplicationTabButton != null) binder.ReplicationTabButton.onClick.AddListener(HandleReplicationTabClicked);
-            if (binder.EnhanceTabButton != null) binder.EnhanceTabButton.onClick.AddListener(HandleEnhanceTabClicked);
-            if (binder.EnhanceConfirmButton != null) binder.EnhanceConfirmButton.onClick.AddListener(HandleEnhanceConfirmClicked);
-            if (binder.RebindConfirmButton != null) binder.RebindConfirmButton.onClick.AddListener(HandleRebindConfirmClicked);
-            if (binder.RenameButton != null) binder.RenameButton.onClick.AddListener(HandleRenameButtonClicked);
+            if (binder.EquipmentCategoryButton != null) binder.EquipmentCategoryButton.onClick.AddListener(HandleEquipmentCategoryClicked);
+            if (binder.SynthesisCategoryButton != null) binder.SynthesisCategoryButton.onClick.AddListener(HandleSynthesisCategoryClicked);
+            if (binder.BlueprintListModeButton != null) binder.BlueprintListModeButton.onClick.AddListener(HandleBlueprintListModeClicked);
+            if (binder.CraftedListModeButton != null) binder.CraftedListModeButton.onClick.AddListener(HandleCraftedListModeClicked);
+            if (binder.WeaponFilterButton != null) binder.WeaponFilterButton.onClick.AddListener(HandleWeaponFilterClicked);
+            if (binder.ArmorFilterButton != null) binder.ArmorFilterButton.onClick.AddListener(HandleArmorFilterClicked);
+            if (binder.AllFilterButton != null) binder.AllFilterButton.onClick.AddListener(HandleAllFilterClicked);
         }
 
         private void OnDestroy()
         {
             if (binder == null) return;
             if (binder.CraftButton != null) binder.CraftButton.onClick.RemoveListener(HandleCraftButtonClicked);
-            if (binder.PrototypeTabButton != null) binder.PrototypeTabButton.onClick.RemoveListener(HandlePrototypeTabClicked);
-            if (binder.ReplicationTabButton != null) binder.ReplicationTabButton.onClick.RemoveListener(HandleReplicationTabClicked);
-            if (binder.EnhanceTabButton != null) binder.EnhanceTabButton.onClick.RemoveListener(HandleEnhanceTabClicked);
-            if (binder.EnhanceConfirmButton != null) binder.EnhanceConfirmButton.onClick.RemoveListener(HandleEnhanceConfirmClicked);
-            if (binder.RebindConfirmButton != null) binder.RebindConfirmButton.onClick.RemoveListener(HandleRebindConfirmClicked);
-            if (binder.RenameButton != null) binder.RenameButton.onClick.RemoveListener(HandleRenameButtonClicked);
+            if (binder.EquipmentCategoryButton != null) binder.EquipmentCategoryButton.onClick.RemoveListener(HandleEquipmentCategoryClicked);
+            if (binder.SynthesisCategoryButton != null) binder.SynthesisCategoryButton.onClick.RemoveListener(HandleSynthesisCategoryClicked);
+            if (binder.BlueprintListModeButton != null) binder.BlueprintListModeButton.onClick.RemoveListener(HandleBlueprintListModeClicked);
+            if (binder.CraftedListModeButton != null) binder.CraftedListModeButton.onClick.RemoveListener(HandleCraftedListModeClicked);
+            if (binder.WeaponFilterButton != null) binder.WeaponFilterButton.onClick.RemoveListener(HandleWeaponFilterClicked);
+            if (binder.ArmorFilterButton != null) binder.ArmorFilterButton.onClick.RemoveListener(HandleArmorFilterClicked);
+            if (binder.AllFilterButton != null) binder.AllFilterButton.onClick.RemoveListener(HandleAllFilterClicked);
         }
 
         protected override void OnEnable()
@@ -123,52 +107,62 @@ namespace IndieGame.UI.Crafting
             UnsubscribeInput();
             _listManager.ReleaseAll();
             _detailPanel.ReleaseAllRequirementSlots();
-            _weaponListManager.ReleaseAll();
-            _prefixListManager.ReleaseAll();
-            _weaponEnhanceDetailPanel.ReleaseAllAppliedPrefixSlots();
+            _detailPanel.ReleaseAllCraftEffectSlots();
             ClearPendingPopupRequest();
-            ClearPendingRenameRequest();
         }
 
-        // --- Tab 切换 ---
+        // --- 大类 / 列表模式 / 装备部位筛选切换 ---
 
-        private void HandlePrototypeTabClicked() => SwitchTab(CraftTab.Prototype);
-        private void HandleReplicationTabClicked() => SwitchTab(CraftTab.Replication);
-        private void HandleEnhanceTabClicked() => SwitchTab(CraftTab.Enhance);
+        private void HandleEquipmentCategoryClicked() => SwitchCategory(CraftCategory.Equipment);
+        private void HandleSynthesisCategoryClicked() => SwitchCategory(CraftCategory.Synthesis);
+        private void HandleBlueprintListModeClicked() => SwitchListMode(CraftListMode.Blueprint);
+        private void HandleCraftedListModeClicked() => SwitchListMode(CraftListMode.Crafted);
+        private void HandleWeaponFilterClicked() => SwitchSubFilter(EquipmentType.Weapon);
+        private void HandleArmorFilterClicked() => SwitchSubFilter(EquipmentType.Armor);
+        private void HandleAllFilterClicked() => SwitchSubFilter(null);
 
-        private void SwitchTab(CraftTab tab)
+        private void SwitchCategory(CraftCategory category)
         {
-            if (_currentTab == tab) return;
-            _currentTab = tab;
-            ApplyTabContentVisibility();
+            if (_currentCategory == category) return;
+            _currentCategory = category;
+            _currentSubFilter = null;
+            ApplySubFilterVisibility();
+            if (_isVisible) RebuildCraftList();
+        }
+
+        private void SwitchListMode(CraftListMode mode)
+        {
+            if (_currentListMode == mode) return;
+            _currentListMode = mode;
+            if (_isVisible) RebuildCraftList();
+        }
+
+        private void SwitchSubFilter(EquipmentType? subFilter)
+        {
+            if (_currentSubFilter == subFilter) return;
+            _currentSubFilter = subFilter;
             if (_isVisible) RebuildCraftList();
         }
 
         /// <summary>
-        /// Prototype/Replication 共用左侧图纸列表+右侧需求详情区域；Enhance 是完全不同的布局，
-        /// 因此用一个独立根节点整体切换，而不是复用 ListRoot/RequirementsRoot。
+        /// 装备部位筛选行仅在"装备"大类下显示。
         /// </summary>
-        private void ApplyTabContentVisibility()
+        private void ApplySubFilterVisibility()
         {
-            bool isEnhance = _currentTab == CraftTab.Enhance;
-            if (binder.StandardTabContentRoot != null) binder.StandardTabContentRoot.SetActive(!isEnhance);
-            if (binder.EnhanceRootNode != null) binder.EnhanceRootNode.SetActive(isEnhance);
+            if (binder.EquipmentSubFilterRoot != null)
+                binder.EquipmentSubFilterRoot.SetActive(_currentCategory == CraftCategory.Equipment);
         }
 
         // --- 列表重建 ---
 
         private void RebuildCraftList()
         {
-            if (_currentTab == CraftTab.Enhance)
-            {
-                RebuildEnhanceTab();
-                return;
-            }
-
             CraftingSystem cs = CraftingSystem.Instance;
-            bool hasEntries = _currentTab == CraftTab.Prototype
-                ? _listManager.RebuildForPrototype(cs)
-                : _listManager.RebuildForReplication(cs);
+            ItemCategory category = _currentCategory == CraftCategory.Equipment ? ItemCategory.Equipment : ItemCategory.Consumable;
+
+            bool hasEntries = _currentListMode == CraftListMode.Blueprint
+                ? _listManager.RebuildForPrototype(cs, category, _currentSubFilter)
+                : _listManager.RebuildForReplication(cs, category, _currentSubFilter);
 
             if (hasEntries)
                 OnEntrySelected(_listManager.EntryOrder[0]);
@@ -197,6 +191,7 @@ namespace IndieGame.UI.Crafting
             _listManager.Select(entryKey);
             _detailPanel.ShowForEntry(blueprint);
             _detailPanel.RefreshRequirementList(entry.BlueprintID);
+            _detailPanel.RefreshCraftEffects(blueprint, isRevealed: _currentListMode == CraftListMode.Crafted);
             _detailPanel.RefreshButtonState(entry.BlueprintID);
         }
 
@@ -212,8 +207,8 @@ namespace IndieGame.UI.Crafting
             CraftingSystem cs = CraftingSystem.Instance;
             if (cs == null) return;
 
-            // 复现制造分支：直接使用历史名称，不弹输入框
-            if (_currentTab == CraftTab.Replication)
+            // 已打造分支：直接使用历史名称，不弹输入框
+            if (_currentListMode == CraftListMode.Crafted)
             {
                 string replicationName = _listManager.GetSelectedSuggestedName();
                 if (string.IsNullOrWhiteSpace(replicationName))
@@ -278,7 +273,7 @@ namespace IndieGame.UI.Crafting
 
         private void HandleBlueprintConsumed(OnBlueprintConsumed evt)
         {
-            if (!_isVisible || _currentTab != CraftTab.Prototype) return;
+            if (!_isVisible || _currentListMode != CraftListMode.Blueprint) return;
             if (string.IsNullOrWhiteSpace(evt.BlueprintID)) return;
 
             string nextKey = _listManager.RemoveByBlueprintId(evt.BlueprintID);
@@ -288,11 +283,11 @@ namespace IndieGame.UI.Crafting
 
         /// <summary>
         /// 制造历史新增事件：
-        /// 复现 Tab 下忽略，避免把新记录回灌导致重复 Slot。
+        /// 未打造模式下忽略，避免把新记录回灌导致重复 Slot。
         /// </summary>
         private void HandleCraftHistoryRecorded(CraftHistoryRecordedEvent evt)
         {
-            if (!_isVisible || _currentTab == CraftTab.Replication) return;
+            if (!_isVisible || _currentListMode == CraftListMode.Blueprint) return;
             RebuildCraftList();
             // 制造成功后自动选中末尾（最新记录）
             if (_listManager.EntryOrder.Count > 0)
@@ -319,213 +314,14 @@ namespace IndieGame.UI.Crafting
             SetVisible(false);
             _listManager.ReleaseAll();
             _detailPanel.ReleaseAllRequirementSlots();
-            _weaponListManager.ReleaseAll();
-            _prefixListManager.ReleaseAll();
-            _weaponEnhanceDetailPanel.ReleaseAllAppliedPrefixSlots();
-            _selectedPrefixWordId = null;
-            _rebindIndex = -1;
+            _detailPanel.ReleaseAllCraftEffectSlots();
             ClearPendingPopupRequest();
-            ClearPendingRenameRequest();
         }
 
         private void HandleUICancel()
         {
             if (!isActiveAndEnabled || !_isVisible) return;
             EventBus.Raise(new CloseCraftingUIEvent());
-        }
-
-        // --- 强化 Tab：列表重建与选中 ---
-
-        private void RebuildEnhanceTab()
-        {
-            GameObject player = GameManager.Instance != null ? GameManager.Instance.CurrentPlayer : null;
-            bool hasEntries = _weaponListManager.Rebuild(player);
-
-            _selectedPrefixWordId = null;
-            _rebindIndex = -1;
-
-            if (hasEntries)
-                OnWeaponSelected(_weaponListManager.EntryOrder[0]);
-            else
-                _weaponEnhanceDetailPanel.EnterEmptyState();
-        }
-
-        private void OnWeaponSelected(string entryKey)
-        {
-            _weaponListManager.Select(entryKey);
-            _selectedPrefixWordId = null;
-            _rebindIndex = -1;
-            RefreshEnhanceTabDetail();
-        }
-
-        /// <summary>
-        /// 刷新强化 Tab 右侧全部内容：基础信息、已应用前缀、语料库列表、强化/重铸按钮状态。
-        /// </summary>
-        private void RefreshEnhanceTabDetail()
-        {
-            InventorySlot slot = _weaponListManager.GetSelectedSlot();
-            if (slot == null)
-            {
-                _weaponEnhanceDetailPanel.EnterEmptyState();
-                return;
-            }
-
-            WeaponEnhanceSystem enhanceSystem = WeaponEnhanceSystem.Instance;
-            _weaponEnhanceDetailPanel.ShowForWeapon(slot, enhanceSystem, _rebindIndex);
-
-            List<string> appliedIds = slot.WeaponData?.AppliedPrefixWordIds;
-            _prefixListManager.Rebuild(enhanceSystem, appliedIds, _selectedPrefixWordId);
-
-            _weaponEnhanceDetailPanel.RefreshEnhanceButtonState(enhanceSystem, slot, _selectedPrefixWordId);
-            _weaponEnhanceDetailPanel.RefreshRebindButtonState(enhanceSystem, slot, _rebindIndex, _selectedPrefixWordId);
-        }
-
-        /// <summary>
-        /// 只刷新语料库高亮与按钮状态，不重建基础信息/已应用前缀列表（选词/选重铸目标时用，避免整面板闪烁）。
-        /// </summary>
-        private void RefreshEnhanceTabSelectionState()
-        {
-            InventorySlot slot = _weaponListManager.GetSelectedSlot();
-            if (slot == null) return;
-
-            WeaponEnhanceSystem enhanceSystem = WeaponEnhanceSystem.Instance;
-
-            List<string> appliedIds = slot.WeaponData?.AppliedPrefixWordIds;
-            _prefixListManager.Rebuild(enhanceSystem, appliedIds, _selectedPrefixWordId);
-            _weaponEnhanceDetailPanel.RefreshAppliedPrefixList(slot, enhanceSystem, _rebindIndex);
-
-            _weaponEnhanceDetailPanel.RefreshEnhanceButtonState(enhanceSystem, slot, _selectedPrefixWordId);
-            _weaponEnhanceDetailPanel.RefreshRebindButtonState(enhanceSystem, slot, _rebindIndex, _selectedPrefixWordId);
-        }
-
-        private void HandleWeaponSlotClicked(WeaponEnhanceSlotClickedEvent evt)
-        {
-            if (!isActiveAndEnabled || !_isVisible || _currentTab != CraftTab.Enhance) return;
-            if (string.IsNullOrWhiteSpace(evt.EntryKey)) return;
-            OnWeaponSelected(evt.EntryKey);
-        }
-
-        private void HandlePrefixSlotClicked(WeaponPrefixSlotClickedEvent evt)
-        {
-            if (!isActiveAndEnabled || !_isVisible || _currentTab != CraftTab.Enhance) return;
-            if (string.IsNullOrWhiteSpace(evt.EntryKey)) return;
-
-            _selectedPrefixWordId = evt.EntryKey;
-            RefreshEnhanceTabSelectionState();
-        }
-
-        private void HandleAppliedPrefixSlotClicked(AppliedPrefixSlotClickedEvent evt)
-        {
-            if (!isActiveAndEnabled || !_isVisible || _currentTab != CraftTab.Enhance) return;
-
-            // 再次点击同一行视为取消重铸目标选择
-            _rebindIndex = _rebindIndex == evt.Index ? -1 : evt.Index;
-            RefreshEnhanceTabDetail();
-        }
-
-        // --- 强化 Tab：强化/重铸操作 ---
-
-        private void HandleEnhanceConfirmClicked()
-        {
-            InventorySlot slot = _weaponListManager.GetSelectedSlot();
-            WeaponEnhanceSystem enhanceSystem = WeaponEnhanceSystem.Instance;
-            if (slot == null || enhanceSystem == null || string.IsNullOrWhiteSpace(_selectedPrefixWordId)) return;
-            if (!enhanceSystem.CanEnhance(slot, _selectedPrefixWordId, out _)) return;
-
-            string wordId = _selectedPrefixWordId;
-            ConfirmationEvent.Request(new ConfirmationRequest
-            {
-                Message = "确认消耗材料进行强化？",
-                OnConfirm = () =>
-                {
-                    if (!enhanceSystem.ExecuteEnhance(slot, wordId)) return;
-                    _selectedPrefixWordId = null;
-                    RefreshEnhanceTabDetail();
-                },
-                OnCancel = null
-            });
-        }
-
-        private void HandleRebindConfirmClicked()
-        {
-            InventorySlot slot = _weaponListManager.GetSelectedSlot();
-            WeaponEnhanceSystem enhanceSystem = WeaponEnhanceSystem.Instance;
-            if (slot == null || enhanceSystem == null || _rebindIndex < 0 || string.IsNullOrWhiteSpace(_selectedPrefixWordId)) return;
-            if (!enhanceSystem.CanRebind(slot, _rebindIndex, _selectedPrefixWordId, out _)) return;
-
-            int rebindIndex = _rebindIndex;
-            string wordId = _selectedPrefixWordId;
-            ConfirmationEvent.Request(new ConfirmationRequest
-            {
-                Message = "确认消耗材料重铸该前缀？",
-                OnConfirm = () =>
-                {
-                    if (!enhanceSystem.ExecuteRebind(slot, rebindIndex, wordId)) return;
-                    _selectedPrefixWordId = null;
-                    _rebindIndex = -1;
-                    RefreshEnhanceTabDetail();
-                },
-                OnCancel = null
-            });
-        }
-
-        private void HandleWeaponEnhanced(WeaponEnhancedEvent evt)
-        {
-            if (!_isVisible || _currentTab != CraftTab.Enhance) return;
-            if (_weaponListManager.GetSelectedSlot() != evt.Slot) return;
-            RefreshEnhanceTabDetail();
-        }
-
-        private void HandleWeaponRebound(WeaponRebindEvent evt)
-        {
-            if (!_isVisible || _currentTab != CraftTab.Enhance) return;
-            if (_weaponListManager.GetSelectedSlot() != evt.Slot) return;
-            RefreshEnhanceTabDetail();
-        }
-
-        // --- 改名（背包/强化界面通用） ---
-
-        /// <summary>
-        /// 强化详情面板的"改名"按钮：仅对当前选中的武器槽位生效。
-        /// </summary>
-        private void HandleRenameButtonClicked()
-        {
-            if (_currentTab != CraftTab.Enhance) return;
-
-            InventorySlot slot = _weaponListManager.GetSelectedSlot();
-            if (slot == null) return;
-
-            string defaultName = !string.IsNullOrWhiteSpace(slot.CustomName)
-                ? slot.CustomName
-                : (slot.Item != null ? slot.Item.GetLocalizedName() : string.Empty);
-
-            _pendingRenameSlot = slot;
-            _pendingRenameRequestId = ++_popupRequestSeed;
-
-            EventBus.Raise(new RenameSlotPopupRequestEvent
-            {
-                RequestId = _pendingRenameRequestId,
-                DefaultName = defaultName
-            });
-        }
-
-        private void HandleRenamePopupResult(RenameSlotPopupResultEvent evt)
-        {
-            if (evt.RequestId != _pendingRenameRequestId) return;
-
-            InventorySlot slot = _pendingRenameSlot;
-            ClearPendingRenameRequest();
-
-            if (!evt.Confirmed || slot == null) return;
-
-            InventoryManager.Instance?.RenameSlot(slot, evt.CustomName);
-            RefreshEnhanceTabDetail();
-        }
-
-        private void ClearPendingRenameRequest()
-        {
-            _pendingRenameRequestId = -1;
-            _pendingRenameSlot = null;
         }
 
         // --- 订阅管理 ---
@@ -543,12 +339,6 @@ namespace IndieGame.UI.Crafting
             Subscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
             Subscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
             Subscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
-            Subscribe<RenameSlotPopupResultEvent>(HandleRenamePopupResult);
-            Subscribe<WeaponEnhanceSlotClickedEvent>(HandleWeaponSlotClicked);
-            Subscribe<WeaponPrefixSlotClickedEvent>(HandlePrefixSlotClicked);
-            Subscribe<AppliedPrefixSlotClickedEvent>(HandleAppliedPrefixSlotClicked);
-            Subscribe<WeaponEnhancedEvent>(HandleWeaponEnhanced);
-            Subscribe<WeaponRebindEvent>(HandleWeaponRebound);
         }
 
         private void SubscribeInput()

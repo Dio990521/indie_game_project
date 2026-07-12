@@ -9,13 +9,12 @@ namespace IndieGame.Gameplay.Memory
     /// Memory 系统（数据层单例）：
     /// 追踪玩家游玩过程中的积累记录，为图鉴 UI 提供数据源。
     ///
-    /// 六类数据的来源策略：
+    /// 五类数据的来源策略：
     /// 1) 图纸  - 监听 BlueprintObtainedEvent，Set 去重存 ID
     /// 2) 武器  - 监听 CraftHistoryRecordedEvent，追加到有序列表
     /// 3) 道具  - 监听 OnInventoryChanged，记录 Consumable/Equipment/Quest 类型的 ItemSO.ID
     /// 4) 素材  - 监听 OnInventoryChanged，记录 Material 类型的 ItemSO.ID
-    /// 5) 语料  - 监听 DialogueWordLearnedEvent，记录 WordID
-    /// 6) 任务  - 预留，暂不填充
+    /// 5) 任务  - 预留，暂不填充
     /// </summary>
     public class MemorySystem : SaveableMonoSingleton<MemorySystem>
     {
@@ -34,10 +33,7 @@ namespace IndieGame.Gameplay.Memory
         // 3/4) 至今见过的所有物品 ID（道具与素材共用一个集合，UI 层按 Category 过滤）
         private readonly HashSet<string> _seenItemIds = new HashSet<string>(StringComparer.Ordinal);
 
-        // 5) 至今学习到的语料词汇 ID
-        private readonly HashSet<string> _learnedWordIds = new HashSet<string>(StringComparer.Ordinal);
-
-        // 6) 完成的任务 ID（预留）
+        // 5) 完成的任务 ID（预留）
         private readonly List<string> _completedTaskIds = new List<string>();
 
         // ── 只读对外接口 ──────────────────────────────────────────────────
@@ -45,7 +41,6 @@ namespace IndieGame.Gameplay.Memory
         public IReadOnlyCollection<string> ObtainedBlueprintIds => _obtainedBlueprintIds;
         public IReadOnlyList<CraftedWeaponEntry> CraftedWeapons => _craftedWeapons;
         public IReadOnlyCollection<string> SeenItemIds => _seenItemIds;
-        public IReadOnlyCollection<string> LearnedWordIds => _learnedWordIds;
         public IReadOnlyList<string> CompletedTaskIds => _completedTaskIds;
 
         // ── 生命周期 ──────────────────────────────────────────────────────
@@ -57,7 +52,6 @@ namespace IndieGame.Gameplay.Memory
             EventBus.Subscribe<BlueprintObtainedEvent>(HandleBlueprintObtained);
             EventBus.Subscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
             EventBus.Subscribe<OnInventoryChanged>(HandleInventoryChanged);
-            EventBus.Subscribe<DialogueWordLearnedEvent>(HandleWordLearned);
         }
 
         protected override void OnDisable()
@@ -67,7 +61,6 @@ namespace IndieGame.Gameplay.Memory
             EventBus.Unsubscribe<BlueprintObtainedEvent>(HandleBlueprintObtained);
             EventBus.Unsubscribe<CraftHistoryRecordedEvent>(HandleCraftHistoryRecorded);
             EventBus.Unsubscribe<OnInventoryChanged>(HandleInventoryChanged);
-            EventBus.Unsubscribe<DialogueWordLearnedEvent>(HandleWordLearned);
         }
 
         // ── 事件处理器 ────────────────────────────────────────────────────
@@ -98,12 +91,6 @@ namespace IndieGame.Gameplay.Memory
             }
         }
 
-        private void HandleWordLearned(DialogueWordLearnedEvent evt)
-        {
-            if (string.IsNullOrWhiteSpace(evt.WordID)) return;
-            _learnedWordIds.Add(evt.WordID);
-        }
-
         // ── ISaveable 存档接口 ────────────────────────────────────────────
 
         public override object CaptureState()
@@ -119,9 +106,6 @@ namespace IndieGame.Gameplay.Memory
 
             foreach (string id in _seenItemIds)
                 state.SeenItemIds.Add(id);
-
-            foreach (string id in _learnedWordIds)
-                state.LearnedWordIds.Add(id);
 
             foreach (string id in _completedTaskIds)
                 state.CompletedTaskIds.Add(id);
@@ -156,11 +140,6 @@ namespace IndieGame.Gameplay.Memory
                 foreach (string id in state.SeenItemIds)
                     if (!string.IsNullOrWhiteSpace(id)) _seenItemIds.Add(id);
 
-            _learnedWordIds.Clear();
-            if (state.LearnedWordIds != null)
-                foreach (string id in state.LearnedWordIds)
-                    if (!string.IsNullOrWhiteSpace(id)) _learnedWordIds.Add(id);
-
             _completedTaskIds.Clear();
             if (state.CompletedTaskIds != null)
                 foreach (string id in state.CompletedTaskIds)
@@ -188,7 +167,6 @@ namespace IndieGame.Gameplay.Memory
             public List<string> ObtainedBlueprintIds = new List<string>();
             public List<CraftedWeaponRecord> CraftedWeapons = new List<CraftedWeaponRecord>();
             public List<string> SeenItemIds = new List<string>();
-            public List<string> LearnedWordIds = new List<string>();
             public List<string> CompletedTaskIds = new List<string>();
         }
 
