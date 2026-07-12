@@ -1093,4 +1093,52 @@ namespace IndieGame.Core
         public int Index;
     }
 
+    /// <summary>
+    /// 防具装备事件：
+    /// ArmorEquipController.Equip 成功后广播，UI（属性面板/装备面板）据此刷新，不直接引用 ArmorEquipController。
+    /// </summary>
+    public struct ArmorEquippedEvent
+    {
+        // 装备者
+        public GameObject Owner;
+        // 装备的防具配置
+        public ArmorSO Armor;
+    }
+
+    /// <summary>
+    /// 防具卸下事件：
+    /// ArmorEquipController.Unequip 成功后广播。
+    /// </summary>
+    public struct ArmorUnequippedEvent
+    {
+        // 装备者
+        public GameObject Owner;
+        // 被卸下的防具配置
+        public ArmorSO Armor;
+    }
+
+    /// <summary>
+    /// 打开装备界面事件：
+    /// 由 UI 或输入系统触发，EquipmentUIController 监听。
+    /// </summary>
+    public struct OpenEquipmentUIEvent { }
+
+    /// <summary>
+    /// 关闭装备界面事件：
+    /// 由装备界面关闭按钮或 ESC 触发，EquipmentUIController 监听。
+    /// </summary>
+    public struct CloseEquipmentUIEvent { }
+
+    /// <summary>
+    /// 装备界面已打开事件（状态通知）：
+    /// 由 EquipmentUIController 在处理完 OpenEquipmentUIEvent 后广播，供数值面板等复用组件据此刷新。
+    /// </summary>
+    public struct EquipmentUIOpenedEvent { }
+
+    /// <summary>
+    /// 装备界面已关闭事件（状态通知）：
+    /// 由 EquipmentUIController 在处理完 CloseEquipmentUIEvent 后广播。
+    /// </summary>
+    public struct EquipmentUIClosedEvent { }
+
 }

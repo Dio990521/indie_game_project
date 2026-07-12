@@ -1,19 +1,19 @@
-using System.Collections.Generic;
 using UnityEngine;
-using IndieGame.Gameplay.Stats;
 
 namespace IndieGame.Gameplay.Inventory
 {
     /// <summary>
     /// 武器配置：
-    /// 在通用 ItemSO 基础上追加"装备后对角色属性的加成"数据。
+    /// 装备部位与属性加成字段由基类 EquipmentItemSO 提供。
     /// 武器本身不负责把加成应用到角色身上，那是 WeaponEquipController 的职责（单一职责）。
     /// </summary>
     [CreateAssetMenu(menuName = "IndieGame/Inventory/Weapon")]
-    public class WeaponSO : ItemSO
+    public class WeaponSO : EquipmentItemSO
     {
-        [Header("Equip Modifiers")]
-        [Tooltip("装备该武器后施加到角色身上的属性加成，按 StatType 映射到 CharacterStats 对应的 Stat")]
-        public List<StatModifierData> Modifiers = new List<StatModifierData>();
+        // 在编辑器中新建该资源或点击 Reset 时，自动把部位设为 Weapon，避免每次手动选择。
+        private void Reset()
+        {
+            SlotType = IndieGame.Gameplay.Equipment.EquipmentType.Weapon;
+        }
     }
 }

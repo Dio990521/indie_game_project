@@ -37,7 +37,11 @@ namespace IndieGame.UI.Inventory
             Subscribe<WeaponUnequippedEvent>(HandleWeaponChanged);
             Subscribe<WeaponEnhancedEvent>(HandleWeaponEnhanced);
             Subscribe<WeaponRebindEvent>(HandleWeaponRebind);
+            Subscribe<ArmorEquippedEvent>(HandleArmorChanged);
+            Subscribe<ArmorUnequippedEvent>(HandleArmorChanged);
             Subscribe<InventoryOpenedEvent>(HandleInventoryOpened);
+            // 面板在装备界面复用同一份预制体实例时，靠这个事件驱动初次刷新（背包走 InventoryOpenedEvent）
+            Subscribe<EquipmentUIOpenedEvent>(HandleInventoryOpened);
         }
 
         private void Update()
@@ -85,7 +89,24 @@ namespace IndieGame.UI.Inventory
             RefreshStatValues();
         }
 
+        private void HandleArmorChanged(ArmorEquippedEvent evt)
+        {
+            if (!IsCurrentPlayer(evt.Owner)) return;
+            RefreshStatValues();
+        }
+
+        private void HandleArmorChanged(ArmorUnequippedEvent evt)
+        {
+            if (!IsCurrentPlayer(evt.Owner)) return;
+            RefreshStatValues();
+        }
+
         private void HandleInventoryOpened(InventoryOpenedEvent evt)
+        {
+            RefreshAll();
+        }
+
+        private void HandleInventoryOpened(EquipmentUIOpenedEvent evt)
         {
             RefreshAll();
         }
