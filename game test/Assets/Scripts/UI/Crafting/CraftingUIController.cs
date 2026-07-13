@@ -42,7 +42,8 @@ namespace IndieGame.UI.Crafting
 
         private CraftCategory _currentCategory = CraftCategory.Equipment;
         private CraftListMode _currentListMode = CraftListMode.Blueprint;
-        private EquipmentType? _currentSubFilter;
+        // 装备大类默认落在"武器图纸"分类（与 SwitchCategory 切入装备大类时的默认值保持一致）
+        private EquipmentType? _currentSubFilter = EquipmentType.Weapon;
 
         private bool _isVisible;
         private CanvasGroup _canvasGroup;
@@ -52,6 +53,8 @@ namespace IndieGame.UI.Crafting
         private int _pendingPopupRequestId = -1;
         private string _pendingBlueprintId;
         private string _pendingDefaultName;
+        // ESC/手柄 Cancel 关闭绑定
+        private EscCloseBinding _escBinding;
 
         private void Awake()
         {
@@ -66,16 +69,19 @@ namespace IndieGame.UI.Crafting
             _listManager.Init(binder, slotPoolWarmup);
             _detailPanel.Init(binder, requirementPoolWarmup);
 
-            ApplySubFilterVisibility();
+            _escBinding = new EscCloseBinding(inputReader, () => _isVisible, () => EventBus.Raise(new CloseCraftingUIEvent()));
+
+            ApplyCategorySpecificControlsVisibility();
 
             if (binder.CraftButton != null) binder.CraftButton.onClick.AddListener(HandleCraftButtonClicked);
             if (binder.EquipmentCategoryButton != null) binder.EquipmentCategoryButton.onClick.AddListener(HandleEquipmentCategoryClicked);
             if (binder.SynthesisCategoryButton != null) binder.SynthesisCategoryButton.onClick.AddListener(HandleSynthesisCategoryClicked);
             if (binder.BlueprintListModeButton != null) binder.BlueprintListModeButton.onClick.AddListener(HandleBlueprintListModeClicked);
             if (binder.CraftedListModeButton != null) binder.CraftedListModeButton.onClick.AddListener(HandleCraftedListModeClicked);
-            if (binder.WeaponFilterButton != null) binder.WeaponFilterButton.onClick.AddListener(HandleWeaponFilterClicked);
-            if (binder.ArmorFilterButton != null) binder.ArmorFilterButton.onClick.AddListener(HandleArmorFilterClicked);
-            if (binder.AllFilterButton != null) binder.AllFilterButton.onClick.AddListener(HandleAllFilterClicked);
+            if (binder.WeaponBlueprintTabButton != null) binder.WeaponBlueprintTabButton.onClick.AddListener(HandleWeaponBlueprintTabClicked);
+            if (binder.ArmorBlueprintTabButton != null) binder.ArmorBlueprintTabButton.onClick.AddListener(HandleArmorBlueprintTabClicked);
+            if (binder.WeaponCraftedTabButton != null) binder.WeaponCraftedTabButton.onClick.AddListener(HandleWeaponCraftedTabClicked);
+            if (binder.ArmorCraftedTabButton != null) binder.ArmorCraftedTabButton.onClick.AddListener(HandleArmorCraftedTabClicked);
         }
 
         private void OnDestroy()
@@ -86,16 +92,17 @@ namespace IndieGame.UI.Crafting
             if (binder.SynthesisCategoryButton != null) binder.SynthesisCategoryButton.onClick.RemoveListener(HandleSynthesisCategoryClicked);
             if (binder.BlueprintListModeButton != null) binder.BlueprintListModeButton.onClick.RemoveListener(HandleBlueprintListModeClicked);
             if (binder.CraftedListModeButton != null) binder.CraftedListModeButton.onClick.RemoveListener(HandleCraftedListModeClicked);
-            if (binder.WeaponFilterButton != null) binder.WeaponFilterButton.onClick.RemoveListener(HandleWeaponFilterClicked);
-            if (binder.ArmorFilterButton != null) binder.ArmorFilterButton.onClick.RemoveListener(HandleArmorFilterClicked);
-            if (binder.AllFilterButton != null) binder.AllFilterButton.onClick.RemoveListener(HandleAllFilterClicked);
+            if (binder.WeaponBlueprintTabButton != null) binder.WeaponBlueprintTabButton.onClick.RemoveListener(HandleWeaponBlueprintTabClicked);
+            if (binder.ArmorBlueprintTabButton != null) binder.ArmorBlueprintTabButton.onClick.RemoveListener(HandleArmorBlueprintTabClicked);
+            if (binder.WeaponCraftedTabButton != null) binder.WeaponCraftedTabButton.onClick.RemoveListener(HandleWeaponCraftedTabClicked);
+            if (binder.ArmorCraftedTabButton != null) binder.ArmorCraftedTabButton.onClick.RemoveListener(HandleArmorCraftedTabClicked);
         }
 
         protected override void OnEnable()
         {
             // 父类调用 Bind() 自动订阅所有 EventBus 事件
             base.OnEnable();
-            SubscribeInput();
+            _escBinding?.Subscribe();
             // 重要：默认隐藏，等待 OpenCraftingUIEvent 再显示
             SetVisible(false);
         }
@@ -104,29 +111,38 @@ namespace IndieGame.UI.Crafting
         {
             // 父类自动取消订阅所有 EventBus 事件
             base.OnDisable();
-            UnsubscribeInput();
+            _escBinding?.Unsubscribe();
             _listManager.ReleaseAll();
             _detailPanel.ReleaseAllRequirementSlots();
             _detailPanel.ReleaseAllCraftEffectSlots();
             ClearPendingPopupRequest();
         }
 
-        // --- 大类 / 列表模式 / 装备部位筛选切换 ---
+        // --- 大类 / 列表模式 / 装备子分类切换 ---
 
         private void HandleEquipmentCategoryClicked() => SwitchCategory(CraftCategory.Equipment);
         private void HandleSynthesisCategoryClicked() => SwitchCategory(CraftCategory.Synthesis);
+        // 合成大类：沿用通用的"未打造/已打造"两态切换（合成产物没有部位区分）
         private void HandleBlueprintListModeClicked() => SwitchListMode(CraftListMode.Blueprint);
         private void HandleCraftedListModeClicked() => SwitchListMode(CraftListMode.Crafted);
-        private void HandleWeaponFilterClicked() => SwitchSubFilter(EquipmentType.Weapon);
-        private void HandleArmorFilterClicked() => SwitchSubFilter(EquipmentType.Armor);
-        private void HandleAllFilterClicked() => SwitchSubFilter(null);
+        // 装备大类：四个分类按钮直达"列表模式+部位"组合，一步到位，不再需要先选模式再选部位
+        private void HandleWeaponBlueprintTabClicked() => SwitchSubTab(CraftListMode.Blueprint, EquipmentType.Weapon);
+        private void HandleArmorBlueprintTabClicked() => SwitchSubTab(CraftListMode.Blueprint, EquipmentType.Armor);
+        private void HandleWeaponCraftedTabClicked() => SwitchSubTab(CraftListMode.Crafted, EquipmentType.Weapon);
+        private void HandleArmorCraftedTabClicked() => SwitchSubTab(CraftListMode.Crafted, EquipmentType.Armor);
 
         private void SwitchCategory(CraftCategory category)
         {
             if (_currentCategory == category) return;
             _currentCategory = category;
-            _currentSubFilter = null;
-            ApplySubFilterVisibility();
+
+            // 切换大类时统一落到"未打造"这一侧的默认子分类：
+            // 装备 -> 武器图纸，合成 -> 配方
+            _currentListMode = CraftListMode.Blueprint;
+            if (category == CraftCategory.Equipment)
+                _currentSubFilter = EquipmentType.Weapon;
+
+            ApplyCategorySpecificControlsVisibility();
             if (_isVisible) RebuildCraftList();
         }
 
@@ -137,20 +153,33 @@ namespace IndieGame.UI.Crafting
             if (_isVisible) RebuildCraftList();
         }
 
-        private void SwitchSubFilter(EquipmentType? subFilter)
+        /// <summary>
+        /// 装备大类专用：一次性切换"列表模式+装备部位"这一组合（对应四个直达分类按钮之一）。
+        /// </summary>
+        private void SwitchSubTab(CraftListMode mode, EquipmentType subFilter)
         {
-            if (_currentSubFilter == subFilter) return;
+            if (_currentListMode == mode && _currentSubFilter == subFilter) return;
+            _currentListMode = mode;
             _currentSubFilter = subFilter;
             if (_isVisible) RebuildCraftList();
         }
 
         /// <summary>
-        /// 装备部位筛选行仅在"装备"大类下显示。
+        /// 按当前大类切换两组子分类按钮的显隐（六个按钮共放在同一个 SubFilter 容器下，逐个控制）：
+        /// - 装备大类：显示武器图纸/防具图纸/武器/防具，隐藏配方/道具。
+        /// - 合成大类：反之，显示配方（未打造）/道具（已打造），隐藏装备的四个。
         /// </summary>
-        private void ApplySubFilterVisibility()
+        private void ApplyCategorySpecificControlsVisibility()
         {
-            if (binder.EquipmentSubFilterRoot != null)
-                binder.EquipmentSubFilterRoot.SetActive(_currentCategory == CraftCategory.Equipment);
+            bool isEquipment = _currentCategory == CraftCategory.Equipment;
+
+            if (binder.WeaponBlueprintTabButton != null) binder.WeaponBlueprintTabButton.gameObject.SetActive(isEquipment);
+            if (binder.ArmorBlueprintTabButton != null) binder.ArmorBlueprintTabButton.gameObject.SetActive(isEquipment);
+            if (binder.WeaponCraftedTabButton != null) binder.WeaponCraftedTabButton.gameObject.SetActive(isEquipment);
+            if (binder.ArmorCraftedTabButton != null) binder.ArmorCraftedTabButton.gameObject.SetActive(isEquipment);
+
+            if (binder.BlueprintListModeButton != null) binder.BlueprintListModeButton.gameObject.SetActive(!isEquipment);
+            if (binder.CraftedListModeButton != null) binder.CraftedListModeButton.gameObject.SetActive(!isEquipment);
         }
 
         // --- 列表重建 ---
@@ -318,12 +347,6 @@ namespace IndieGame.UI.Crafting
             ClearPendingPopupRequest();
         }
 
-        private void HandleUICancel()
-        {
-            if (!isActiveAndEnabled || !_isVisible) return;
-            EventBus.Raise(new CloseCraftingUIEvent());
-        }
-
         // --- 订阅管理 ---
 
         /// <summary>
@@ -339,16 +362,6 @@ namespace IndieGame.UI.Crafting
             Subscribe<OpenCraftingUIEvent>(HandleOpenCraftingUI);
             Subscribe<CloseCraftingUIEvent>(HandleCloseCraftingUI);
             Subscribe<CraftNameInputPopupResultEvent>(HandleCraftNamePopupResult);
-        }
-
-        private void SubscribeInput()
-        {
-            if (inputReader != null) inputReader.UICancelEvent += HandleUICancel;
-        }
-
-        private void UnsubscribeInput()
-        {
-            if (inputReader != null) inputReader.UICancelEvent -= HandleUICancel;
         }
 
         // --- 工具方法 ---

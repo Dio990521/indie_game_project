@@ -586,6 +586,7 @@ MonoBehaviour:
   showEase: 27
   hideEase: 26
   inputRepeatDelay: 0.2
+  inputReader: {fileID: 11400000, guid: 5031a1316da104387ba6ff635beafb43, type: 2}
 --- !u!225 &6399925023992391186
 CanvasGroup:
   m_ObjectHideFlags: 0

@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using DG.Tweening;
 using IndieGame.Core;
+using IndieGame.Core.Input;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Treasure;
 
@@ -41,6 +42,8 @@ namespace IndieGame.UI.Treasure
         [Header("Input")]
         [Tooltip("方向键连发间隔（秒）")]
         public float inputRepeatDelay = 0.2f;
+        [Tooltip("用于监听 ESC/手柄 Cancel 的输入读取器（与其他面板共用同一份 GameInputReader 资产）")]
+        [SerializeField] private GameInputReader inputReader;
 
         // --- 运行时状态 ---
         private readonly List<TreasureSlotUI> _slots   = new List<TreasureSlotUI>();
@@ -62,6 +65,8 @@ namespace IndieGame.UI.Treasure
         private RectTransform _rootRect;
         private Sequence _showSeq;
         private Sequence _hideSeq;
+        // ESC/手柄 Cancel 关闭绑定：与"松开确认键取消"并存的另一条关闭路径，互不影响
+        private EscCloseBinding _escBinding;
 
         private void Awake()
         {
@@ -79,6 +84,8 @@ namespace IndieGame.UI.Treasure
                 _canvasGroup.blocksRaycasts = false;
                 _canvasGroup.interactable   = false;
             }
+
+            _escBinding = new EscCloseBinding(inputReader, () => _isVisible, HandleEscCancel);
         }
 
         private void OnDisable()
@@ -176,6 +183,16 @@ namespace IndieGame.UI.Treasure
         private void OnCancelInput(InputInteractCanceledEvent evt)
         {
             if (_suppressNextCancel) { _suppressNextCancel = false; return; }
+            Hide();
+            EventBus.Raise(new TreasureMenuCancelledEvent());
+        }
+
+        /// <summary>
+        /// ESC/手柄 Cancel 关闭：与确认键松开取消是两条独立路径，
+        /// ESC 是专用按键，不存在"打开时按键还未松开"的问题，无需 _suppressNextCancel。
+        /// </summary>
+        private void HandleEscCancel()
+        {
             Hide();
             EventBus.Raise(new TreasureMenuCancelledEvent());
         }
@@ -302,6 +319,7 @@ namespace IndieGame.UI.Treasure
             EventBus.Subscribe<InputMoveEvent>(OnMoveInput);
             EventBus.Subscribe<InputInteractEvent>(OnInteractInput);
             EventBus.Subscribe<InputInteractCanceledEvent>(OnCancelInput);
+            _escBinding?.Subscribe();
             _inputSubscribed = true;
         }
 
@@ -311,6 +329,7 @@ namespace IndieGame.UI.Treasure
             EventBus.Unsubscribe<InputMoveEvent>(OnMoveInput);
             EventBus.Unsubscribe<InputInteractEvent>(OnInteractInput);
             EventBus.Unsubscribe<InputInteractCanceledEvent>(OnCancelInput);
+            _escBinding?.Unsubscribe();
             _inputSubscribed = false;
         }
     }

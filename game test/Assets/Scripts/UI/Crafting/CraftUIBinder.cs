@@ -30,15 +30,21 @@ namespace IndieGame.UI.Crafting
         [SerializeField] private Button equipmentCategoryButton;
         [SerializeField] private Button synthesisCategoryButton;
 
-        [Header("列表模式（未打造/已打造）")]
+        [Header("合成大类子分类（配方=未打造、道具=已打造；与装备的4个按钮同放在 SubFilter 下，靠 Controller 按大类逐个控制显隐）")]
+        [Tooltip("合成·配方（未打造）")]
         [SerializeField] private Button blueprintListModeButton;
+        [Tooltip("合成·道具（已打造）")]
         [SerializeField] private Button craftedListModeButton;
 
-        [Header("装备部位筛选（仅装备大类下显示）")]
-        [SerializeField] private GameObject equipmentSubFilterRoot;
-        [SerializeField] private Button weaponFilterButton;
-        [SerializeField] private Button armorFilterButton;
-        [SerializeField] private Button allFilterButton;
+        [Header("装备大类子分类（武器图纸/防具图纸/武器/防具；与合成的2个按钮同放在 SubFilter 下，靠 Controller 按大类逐个控制显隐）")]
+        [Tooltip("未打造 + 武器")]
+        [SerializeField] private Button weaponBlueprintTabButton;
+        [Tooltip("未打造 + 防具")]
+        [SerializeField] private Button armorBlueprintTabButton;
+        [Tooltip("已打造 + 武器")]
+        [SerializeField] private Button weaponCraftedTabButton;
+        [Tooltip("已打造 + 防具")]
+        [SerializeField] private Button armorCraftedTabButton;
 
         [Header("Requirement Item (Optional)")]
         [Tooltip("材料条目预制体（可选但推荐配置）。若未配置，右侧将无法生成材料列表。")]
@@ -64,10 +70,10 @@ namespace IndieGame.UI.Crafting
         public Button BlueprintListModeButton => blueprintListModeButton;
         public Button CraftedListModeButton => craftedListModeButton;
 
-        public GameObject EquipmentSubFilterRoot => equipmentSubFilterRoot;
-        public Button WeaponFilterButton => weaponFilterButton;
-        public Button ArmorFilterButton => armorFilterButton;
-        public Button AllFilterButton => allFilterButton;
+        public Button WeaponBlueprintTabButton => weaponBlueprintTabButton;
+        public Button ArmorBlueprintTabButton => armorBlueprintTabButton;
+        public Button WeaponCraftedTabButton => weaponCraftedTabButton;
+        public Button ArmorCraftedTabButton => armorCraftedTabButton;
 
         public GameObject RequirementSlotPrefab => requirementSlotPrefab;
 

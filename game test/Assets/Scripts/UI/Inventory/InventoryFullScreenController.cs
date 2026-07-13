@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using UnityEngine.Localization;
 using IndieGame.Core;
+using IndieGame.Core.Input;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Equipment;
 using IndieGame.Gameplay.Inventory;
@@ -22,6 +23,7 @@ namespace IndieGame.UI.Inventory
         private enum InventoryTab { Consumable, Material, Blueprint, Quest }
 
         [SerializeField] private InventoryFullScreenBinder binder;
+        [SerializeField] private GameInputReader inputReader;
         // 对象池预热数量；同时也是网格的最小展示槛位数（物品不足时用空槛位补齐占位，超出时靠 ScrollRect 滚动查看）
         [SerializeField] private int slotPoolWarmup = 28;
 
@@ -45,6 +47,8 @@ namespace IndieGame.UI.Inventory
         private int _popupRequestSeed;
         private int _pendingRenameRequestId = -1;
         private InventorySlot _renameTargetSlot;
+        // ESC/手柄 Cancel 关闭绑定（与关闭按钮共用 CloseAndNotify）
+        private EscCloseBinding _escBinding;
 
         // ── 生命周期 ─────────────────────────────────────────────────────
 
@@ -67,6 +71,22 @@ namespace IndieGame.UI.Inventory
 
             // 绑定按钮事件
             BindButtons();
+
+            _escBinding = new EscCloseBinding(inputReader, () => _canvasGroup != null && _canvasGroup.alpha > 0f, CloseAndNotify);
+        }
+
+        protected override void OnEnable()
+        {
+            // 父类调用 Bind() 自动订阅所有 EventBus 事件
+            base.OnEnable();
+            _escBinding?.Subscribe();
+        }
+
+        protected override void OnDisable()
+        {
+            // 父类自动取消订阅所有 EventBus 事件
+            base.OnDisable();
+            _escBinding?.Unsubscribe();
         }
 
         /// <summary>

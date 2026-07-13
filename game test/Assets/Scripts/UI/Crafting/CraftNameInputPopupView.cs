@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
@@ -36,6 +37,8 @@ namespace IndieGame.UI.Crafting
         private int _currentRequestId = -1;
         // 当前弹窗是为哪种请求打开的，决定确认/取消时回传哪个结果事件
         private PendingRequestKind _pendingKind = PendingRequestKind.None;
+        // 延迟一帧激活输入框的协程句柄（避免与上一次请求的延迟激活重叠）
+        private Coroutine _activateNextFrameRoutine;
 
         private void Awake()
         {
@@ -87,14 +90,29 @@ namespace IndieGame.UI.Crafting
         {
             _currentRequestId = requestId;
 
+            // 必须先激活面板再 ActivateInputField/Select：
+            // 输入框此时仍挂在尚未激活的 rootPanel 下，EventSystem 无法选中一个未激活的物体，
+            // 导致看似弹窗已打开但键盘输入实际未路由到输入框（只能用预填的默认名确认）。
+            SetVisible(true);
+
+            if (nameInputField != null)
+                nameInputField.text = string.IsNullOrWhiteSpace(defaultName) ? string.Empty : defaultName;
+
+            // 即使面板已激活，同一帧内调用 ActivateInputField 仍可能因为 EventSystem/Canvas
+            // 尚未完成本帧的选中状态刷新而失效，因此延迟到下一帧再激活，确保稳定获得键盘焦点。
+            if (_activateNextFrameRoutine != null) StopCoroutine(_activateNextFrameRoutine);
+            _activateNextFrameRoutine = StartCoroutine(ActivateInputFieldNextFrame());
+        }
+
+        private IEnumerator ActivateInputFieldNextFrame()
+        {
+            yield return null;
             if (nameInputField != null)
             {
-                nameInputField.text = string.IsNullOrWhiteSpace(defaultName) ? string.Empty : defaultName;
                 nameInputField.ActivateInputField();
                 nameInputField.Select();
             }
-
-            SetVisible(true);
+            _activateNextFrameRoutine = null;
         }
 
         /// <summary>
@@ -109,6 +127,7 @@ namespace IndieGame.UI.Crafting
 
             _currentRequestId = -1;
             _pendingKind = PendingRequestKind.None;
+            StopPendingActivation();
             SetVisible(false);
         }
 
@@ -123,6 +142,7 @@ namespace IndieGame.UI.Crafting
 
             _currentRequestId = -1;
             _pendingKind = PendingRequestKind.None;
+            StopPendingActivation();
             SetVisible(false);
         }
 
@@ -154,7 +174,15 @@ namespace IndieGame.UI.Crafting
         {
             _currentRequestId = -1;
             _pendingKind = PendingRequestKind.None;
+            StopPendingActivation();
             SetVisible(false);
+        }
+
+        private void StopPendingActivation()
+        {
+            if (_activateNextFrameRoutine == null) return;
+            StopCoroutine(_activateNextFrameRoutine);
+            _activateNextFrameRoutine = null;
         }
 
         /// <summary>

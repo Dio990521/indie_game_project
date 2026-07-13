@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using IndieGame.Core;
+using IndieGame.Core.Input;
 using IndieGame.Core.Utilities;
 using IndieGame.Gameplay.Equipment;
 using IndieGame.Gameplay.Inventory;
@@ -20,6 +21,7 @@ namespace IndieGame.UI.Equipment
     {
         [SerializeField] private EquipmentUIBinder binder;
         [SerializeField] private EquipmentUIView view;
+        [SerializeField] private GameInputReader inputReader;
         // 网格最小展示格数：装备类物品数量远少于背包全部物品，池子按需扩容，此值只影响“至少铺多少个空格”
         [SerializeField] private int slotMinCount = 12;
 
@@ -34,6 +36,8 @@ namespace IndieGame.UI.Equipment
         private GameObject _playerOwner;
         private WeaponEquipController _playerWeaponEquip;
         private ArmorEquipController _playerArmorEquip;
+        // ESC/手柄 Cancel 关闭绑定（与关闭按钮共用 CloseAndNotify）
+        private EscCloseBinding _escBinding;
 
         // ── 生命周期 ─────────────────────────────────────────────────────
 
@@ -44,6 +48,22 @@ namespace IndieGame.UI.Equipment
 
             view?.SetVisible(false);
             BindButtons();
+
+            _escBinding = new EscCloseBinding(inputReader, () => _isVisible, CloseAndNotify);
+        }
+
+        protected override void OnEnable()
+        {
+            // 父类调用 Bind() 自动订阅所有 EventBus 事件
+            base.OnEnable();
+            _escBinding?.Subscribe();
+        }
+
+        protected override void OnDisable()
+        {
+            // 父类自动取消订阅所有 EventBus 事件
+            base.OnDisable();
+            _escBinding?.Unsubscribe();
         }
 
         protected override void Bind()

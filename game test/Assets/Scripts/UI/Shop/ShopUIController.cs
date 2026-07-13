@@ -43,6 +43,9 @@ namespace IndieGame.UI.Shop
         private bool _hasStateSnapshot;
         private GameState _stateBeforeShop = GameState.FreeRoam;
 
+        // ESC/手柄 Cancel 关闭绑定：优先关数量弹窗，再关整个商店界面
+        private EscCloseBinding _escBinding;
+
         private void Awake()
         {
             if (binder == null)
@@ -60,6 +63,8 @@ namespace IndieGame.UI.Shop
             HookButtons();
             SetVisible(false);
             _quantityPopup.Close();
+
+            _escBinding = new EscCloseBinding(inputReader, () => _isVisible, HandleEscClose);
         }
 
         private void OnDestroy()
@@ -71,7 +76,7 @@ namespace IndieGame.UI.Shop
         {
             // 父类调用 Bind() 自动订阅所有 EventBus 事件
             base.OnEnable();
-            SubscribeInput();
+            _escBinding?.Subscribe();
             SetVisible(false);
             _quantityPopup.Close();
         }
@@ -80,7 +85,7 @@ namespace IndieGame.UI.Shop
         {
             // 父类自动取消订阅所有 EventBus 事件
             base.OnDisable();
-            UnsubscribeInput();
+            _escBinding?.Unsubscribe();
             _listManager.ReleaseAll();
             ClearSelectionAndDetail();
             _quantityPopup.Close();
@@ -173,9 +178,8 @@ namespace IndieGame.UI.Shop
             }
         }
 
-        private void HandleUICancel()
+        private void HandleEscClose()
         {
-            if (!_isVisible) return;
             if (_quantityPopup.IsOpen) { _quantityPopup.Close(); return; }
             EventBus.Raise(new CloseShopUIRequestEvent());
         }
@@ -359,16 +363,6 @@ namespace IndieGame.UI.Shop
             Subscribe<ShopItemSlotClickedEvent>(HandleShopItemSlotClicked);
             Subscribe<GoldChangedEvent>(HandleGoldChangedEvent);
             Subscribe<ShopPurchaseCompletedEvent>(HandleShopPurchaseCompletedEvent);
-        }
-
-        private void SubscribeInput()
-        {
-            if (inputReader != null) inputReader.UICancelEvent += HandleUICancel;
-        }
-
-        private void UnsubscribeInput()
-        {
-            if (inputReader != null) inputReader.UICancelEvent -= HandleUICancel;
         }
     }
 }
