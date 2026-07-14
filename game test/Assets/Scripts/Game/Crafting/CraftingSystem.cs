@@ -203,21 +203,34 @@ namespace IndieGame.Gameplay.Crafting
                 }
             }
 
-            // 2) 首次制造时才标记图纸消耗：
+            // 规范化最终实例名（为空时回退原始名称）
+            string finalCustomName = NormalizeFinalCustomName(customName, blueprint);
+
+            // 2) 发放成品（C2 修复：必须校验发放结果）：
+            // AddItem 已是事务性（放不下时完全不入包），若失败则把刚扣的材料原样退回，
+            // 避免"材料扣了、历史记了、图纸消耗了，但成品没拿到"的状态污染。
+            if (blueprint.ProductItem != null)
+            {
+                bool productAdded = inventory.AddItem(blueprint.ProductItem, blueprint.ProductAmount, finalCustomName);
+                if (!productAdded)
+                {
+                    for (int i = 0; i < requirements.Count; i++)
+                    {
+                        BlueprintRequirement requirement = requirements[i];
+                        if (requirement == null || requirement.Item == null) continue;
+                        inventory.AddItem(requirement.Item, requirement.Amount);
+                    }
+                    DebugTools.LogWarning($"[CraftingSystem] 背包空间不足，成品无法放入，材料已退回。BlueprintID={blueprintId}");
+                    return false;
+                }
+            }
+
+            // 3) 首次制造时才标记图纸消耗（放在发放成功之后，失败时不消耗图纸）：
             // 这样“原型制造”会移除该图纸，而“复现制造”仍然可继续生产。
             bool consumedNow = !record.IsConsumed;
             if (consumedNow)
             {
                 record.IsConsumed = true;
-            }
-
-            // 规范化最终实例名（为空时回退原始名称）
-            string finalCustomName = NormalizeFinalCustomName(customName, blueprint);
-
-            // 3) 发放成品（若配置缺失则仅跳过发放，不阻断流程）
-            if (blueprint.ProductItem != null)
-            {
-                inventory.AddItem(blueprint.ProductItem, blueprint.ProductAmount, finalCustomName);
             }
 
             // 4) 追加制造历史（无论是不是首次原型制造，都写入历史用于复现 Tab）
@@ -446,11 +459,26 @@ namespace IndieGame.Gameplay.Crafting
         }
 
         /// <summary>
-        /// 尝试自动保存：
-        /// 没有 SaveManager 时静默返回，不影响制造主流程。
+        /// 尝试自动保存（M5 修复）：
+        /// 统一走 AutoSaveService 的事件协议，由其串行队列避免与其他自动存档并发写盘；
+        /// 仅当 AutoSaveService 不存在（无订阅者）时，才回退为直连 SaveManager 的旧路径。
         /// </summary>
         private void TryAutoSave()
         {
+            if (EventBus.HasSubscribers<AutoSaveRequestedEvent>())
+            {
+                EventBus.Raise(new AutoSaveRequestedEvent
+                {
+                    RequestId = 0, // 交由 AutoSaveService 自动生成序列号
+                    Reason = AutoSaveReason.Craft,
+                    SlotIndex = autoSaveSlotIndex,
+                    Note = null,
+                    WaitForCompletion = false
+                });
+                return;
+            }
+
+            // 兜底：AutoSaveService 未启用时直接保存（如测试场景）
             EnsureSaveRegistration(forceSearch: true);
             if (_saveManager == null) return;
             _ = _saveManager.SaveAsync(autoSaveSlotIndex);

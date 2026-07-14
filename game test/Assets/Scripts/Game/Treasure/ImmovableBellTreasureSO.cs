@@ -1,4 +1,7 @@
 using UnityEngine;
+using IndieGame.Core;
+using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Gameplay.Board.Runtime.States;
 
 namespace IndieGame.Gameplay.Treasure
 {
@@ -8,5 +11,12 @@ namespace IndieGame.Gameplay.Treasure
     /// 在 Inspector 中设置 TreasureId = "immovable_bell"，ActionPointCost = 1。
     /// </summary>
     [CreateAssetMenu(menuName = "BoardGame/Treasure/Immovable Bell Treasure", fileName = "ImmovableBellTreasureSO")]
-    public class ImmovableBellTreasureSO : TreasureSO { }
+    public class ImmovableBellTreasureSO : TreasureSO
+    {
+        /// <summary> 创建不动铃铛激活状态（M10：多态分发）。 </summary>
+        public override BaseState<BoardGameManager> CreateActivationState()
+        {
+            return new ImmovableBellTreasureState(this);
+        }
+    }
 }

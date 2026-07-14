@@ -509,9 +509,9 @@ namespace IndieGame.UI.Inventory
         {
             if (_selectedSlot == null || _selectedSlot.Item == null) return;
 
-            // 获取物品显示名（同步读取 ID 作为兜底，异步本地化名在弹窗中不需要等待）
+            // 获取物品显示名（优先自定义名，否则用带缓存的同步本地化名）
             string itemName = string.IsNullOrWhiteSpace(_selectedSlot.CustomName)
-                ? (_selectedSlot.Item.ID ?? "该物品")
+                ? _selectedSlot.Item.GetLocalizedName()
                 : _selectedSlot.CustomName;
 
             // 捕获当前选中项引用，防止弹窗等待期间选中项切换
@@ -519,11 +519,14 @@ namespace IndieGame.UI.Inventory
 
             ConfirmationEvent.Request(new ConfirmationRequest
             {
-                Message = $"确认丢弃 {itemName} x1？",
+                Message = string.Format(UIText.DiscardConfirmFormat, itemName),
                 OnConfirm = () =>
                 {
                     if (slotToDiscard?.Item == null) return;
-                    InventoryManager.Instance?.RemoveItem(slotToDiscard.Item, 1);
+                    // H2 修复：精确扣减选中的槽位本身。
+                    // 旧实现用 RemoveItem(ItemSO, 1) 按 ItemSO 弱匹配且从列表末尾扣，
+                    // 背包里存在"同 ItemSO 但不同 CustomName"（如改名武器）时会删错对象。
+                    InventoryManager.Instance?.RemoveFromSlot(slotToDiscard, 1);
                 },
                 OnCancel = null
             });
@@ -655,14 +658,15 @@ namespace IndieGame.UI.Inventory
 
         private static string CategoryToDisplayName(ItemCategory category)
         {
+            // L2 修复：分类显示名统一走 UIText 目录（旧实现中英混杂且内联在此处）
             return category switch
             {
-                ItemCategory.Equipment  => "Equipment",
-                ItemCategory.Consumable => "Consumable",
-                ItemCategory.Material   => "Material",
-                ItemCategory.Blueprint  => "图纸",
-                ItemCategory.Quest      => "Quest Item",
-                _                       => "Unknown"
+                ItemCategory.Equipment  => UIText.CategoryEquipment,
+                ItemCategory.Consumable => UIText.CategoryConsumable,
+                ItemCategory.Material   => UIText.CategoryMaterial,
+                ItemCategory.Blueprint  => UIText.CategoryBlueprint,
+                ItemCategory.Quest      => UIText.CategoryQuest,
+                _                       => UIText.CategoryUnknown
             };
         }
     }

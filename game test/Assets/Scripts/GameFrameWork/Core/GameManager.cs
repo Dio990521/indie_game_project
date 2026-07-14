@@ -163,9 +163,23 @@ namespace IndieGame.Core
                 _isLoading = false;
                 return;
             }
-            // 若没有缓存状态，默认回到自由探索
-            ChangeState(GameState.FreeRoam);
+            // M7 修复：无缓存状态时按"当前活动场景在注册表中的模式"推导，
+            // 替代旧的硬编码 FreeRoam 回退（依赖"转场必广播 GameModeChanged"的隐性约定，
+            // 一旦某条转场路径漏广播，会把棋盘/标题错切成自由探索）。
+            ChangeState(ResolveStateForActiveScene());
             _isLoading = false;
+        }
+
+        /// <summary>
+        /// 按当前活动场景推导应处的 GameState（SceneLoader 不可用时回退 FreeRoam）。
+        /// </summary>
+        private GameState ResolveStateForActiveScene()
+        {
+            if (SceneLoader.Instance == null) return GameState.FreeRoam;
+            string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            return SceneLoader.Instance.GetSceneMode(sceneName) == GameMode.Board
+                ? GameState.BoardMode
+                : GameState.FreeRoam;
         }
 
         /// <summary>

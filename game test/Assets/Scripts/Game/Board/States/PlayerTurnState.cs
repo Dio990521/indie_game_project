@@ -255,34 +255,17 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 }
             }
 
-            if (so is WingTreasureSO wingData && _context != null)
+            // M10 修复：由宝具 SO 多态创建自己的激活状态，
+            // 取代原先按 SO 具体类型逐个 if-else 分发——新增宝具不再需要修改本类。
+            BaseState<BoardGameManager> activationState = so != null ? so.CreateActivationState() : null;
+            if (activationState != null && _context != null)
             {
-                _context.ChangeState(new WingTreasureState(wingData));
-            }
-            else if (so is WoodenPuppetTreasureSO puppetData && _context != null)
-            {
-                _context.ChangeState(new WoodenPuppetTreasureState(puppetData));
-            }
-            else if (so is ImmovableBellTreasureSO bellData && _context != null)
-            {
-                _context.ChangeState(new ImmovableBellTreasureState(bellData));
-            }
-            else if (so is ReverseCardTreasureSO reverseData && _context != null)
-            {
-                _context.ChangeState(new ReverseCardTreasureState(reverseData));
-            }
-            else if (so is ShadowDiceTreasureSO shadowDiceData && _context != null)
-            {
-                _context.ChangeState(new ShadowDiceTreasureState(shadowDiceData));
-            }
-            else if (so is CloakTreasureSO cloakData && _context != null)
-            {
-                _context.ChangeState(new CloakTreasureState(cloakData));
+                _context.ChangeState(activationState);
             }
             else
             {
-                // 未知宝具 ID 或 SO 未注册到 TreasureSystem：回退到操作菜单
-                DebugTools.LogWarning($"[PlayerTurnState] 未知宝具 ID \"{evt.TreasureId}\" 或未注册，返回操作菜单。");
+                // 未知宝具 ID、SO 未注册、或该宝具未提供激活状态：回退到操作菜单
+                DebugTools.LogWarning($"[PlayerTurnState] 宝具 ID \"{evt.TreasureId}\" 未注册或未提供激活状态，返回操作菜单。");
                 _menu?.Show(BuildDefaultMenuData());
             }
         }

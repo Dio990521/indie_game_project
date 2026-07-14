@@ -202,147 +202,60 @@ namespace IndieGame.UI
 
         /// <summary>
         /// 生成 UI 预制体实例（若尚未生成）。
+        /// L6 重构说明：原先每个 UI 都是一段"判空 → SpawnOnLayer → SetActive"的重复代码（15 段），
+        /// 收敛为 EnsureUIInstance 泛型辅助后每个 UI 只占一行，新增 UI 时只需加一行 + 一个字段。
+        /// 统一约定：UIManager 只负责"生成实例并保持激活"，
+        /// 显示/隐藏一律由各 Controller/View 监听 EventBus 自行控制。
         /// </summary>
         private void SpawnUI()
         {
             // ── GameUI 层（SortingOrder=10）：游戏功能 UI ──────────────────────
-            if (boardActionMenuPrefab != null && BoardActionMenuInstance == null)
-            {
-                BoardActionMenuInstance = SpawnOnLayer(boardActionMenuPrefab, UILayerPriority.GameUI);
-                if (BoardActionMenuInstance != null) BoardActionMenuInstance.gameObject.SetActive(true);
-            }
-
-            if (inventoryPrefab != null && InventoryInstance == null)
-            {
-                InventoryInstance = SpawnOnLayer(inventoryPrefab, UILayerPriority.GameUI);
-                if (InventoryInstance != null) InventoryInstance.gameObject.SetActive(true);
-            }
-
-            if (campUIPrefab != null && CampUIInstance == null)
-            {
-                CampUIInstance = SpawnOnLayer(campUIPrefab, UILayerPriority.GameUI);
-                if (CampUIInstance != null) CampUIInstance.gameObject.SetActive(true);
-            }
-
-            if (craftingUIPrefab != null && CraftingUIInstance == null)
-            {
-                CraftingUIInstance = SpawnOnLayer(craftingUIPrefab, UILayerPriority.GameUI);
-                if (CraftingUIInstance != null)
-                {
-                    // UIManager 仅负责”生成实例”：
-                    // 保持对象激活，让 CraftingUIController 能持续监听 EventBus 并自行控制 show/hide。
-                    CraftingUIInstance.gameObject.SetActive(true);
-                }
-            }
-
-            if (dialogueUIPrefab != null && DialogueUIInstance == null)
-            {
-                DialogueUIInstance = SpawnOnLayer(dialogueUIPrefab, UILayerPriority.GameUI);
-                if (DialogueUIInstance != null)
-                {
-                    // 统一由 UIManager 生成并保持激活，
-                    // 具体显示/隐藏由 DialogueManager -> EventBus -> DialogueUIView 控制。
-                    DialogueUIInstance.gameObject.SetActive(true);
-                }
-            }
-
-            if (playerHudPrefab != null && PlayerHudInstance == null)
-            {
-                PlayerHudInstance = SpawnOnLayer(playerHudPrefab, UILayerPriority.GameUI);
-                if (PlayerHudInstance != null)
-                {
-                    // UIManager 只负责实例化与激活，显示规则由 PlayerHudController 自行控制。
-                    PlayerHudInstance.gameObject.SetActive(true);
-                }
-            }
-
-            if (shopUIPrefab != null && ShopUIInstance == null)
-            {
-                ShopUIInstance = SpawnOnLayer(shopUIPrefab, UILayerPriority.GameUI);
-                if (ShopUIInstance != null)
-                {
-                    // 与 Craft/Dialogue 一致：
-                    // UIManager 只负责生成实例，不负责 Show/Hide。
-                    // 具体开关由 ShopUIController 监听 EventBus 自行处理。
-                    ShopUIInstance.gameObject.SetActive(true);
-                }
-            }
-
-            if (treasureMenuPrefab != null && TreasureMenuInstance == null)
-            {
-                TreasureMenuInstance = SpawnOnLayer(treasureMenuPrefab, UILayerPriority.GameUI);
-                if (TreasureMenuInstance != null) TreasureMenuInstance.gameObject.SetActive(true);
-            }
-
-            if (townUIPrefab != null && TownUIInstance == null)
-            {
-                TownUIInstance = SpawnOnLayer(townUIPrefab, UILayerPriority.GameUI);
-                if (TownUIInstance != null) TownUIInstance.gameObject.SetActive(true);
-            }
-
-            if (skillTreeUIPrefab != null && SkillTreeUIInstance == null)
-            {
-                SkillTreeUIInstance = SpawnOnLayer(skillTreeUIPrefab, UILayerPriority.GameUI);
-                if (SkillTreeUIInstance != null)
-                {
-                    // UIManager 只负责生成实例，显示/隐藏由 SkillTreeController 监听 EventBus 自行控制。
-                    SkillTreeUIInstance.gameObject.SetActive(true);
-                }
-            }
-
-            if (memoryUIPrefab != null && MemoryUIInstance == null)
-            {
-                MemoryUIInstance = SpawnOnLayer(memoryUIPrefab, UILayerPriority.GameUI);
-                if (MemoryUIInstance != null)
-                {
-                    // UIManager 只负责生成实例，显示/隐藏由 MemoryUIController 监听 EventBus 自行控制。
-                    MemoryUIInstance.gameObject.SetActive(true);
-                }
-            }
-
-            if (equipmentUIPrefab != null && EquipmentUIInstance == null)
-            {
-                EquipmentUIInstance = SpawnOnLayer(equipmentUIPrefab, UILayerPriority.GameUI);
-                if (EquipmentUIInstance != null)
-                {
-                    // UIManager 只负责生成实例，显示/隐藏由 EquipmentUIController 监听 EventBus 自行控制。
-                    EquipmentUIInstance.gameObject.SetActive(true);
-                }
-            }
+            BoardActionMenuInstance = EnsureUIInstance(boardActionMenuPrefab, BoardActionMenuInstance, UILayerPriority.GameUI);
+            InventoryInstance       = EnsureUIInstance(inventoryPrefab,       InventoryInstance,       UILayerPriority.GameUI);
+            CampUIInstance          = EnsureUIInstance(campUIPrefab,          CampUIInstance,          UILayerPriority.GameUI);
+            CraftingUIInstance      = EnsureUIInstance(craftingUIPrefab,      CraftingUIInstance,      UILayerPriority.GameUI);
+            DialogueUIInstance      = EnsureUIInstance(dialogueUIPrefab,      DialogueUIInstance,      UILayerPriority.GameUI);
+            PlayerHudInstance       = EnsureUIInstance(playerHudPrefab,       PlayerHudInstance,       UILayerPriority.GameUI);
+            ShopUIInstance          = EnsureUIInstance(shopUIPrefab,          ShopUIInstance,          UILayerPriority.GameUI);
+            TreasureMenuInstance    = EnsureUIInstance(treasureMenuPrefab,    TreasureMenuInstance,    UILayerPriority.GameUI);
+            TownUIInstance          = EnsureUIInstance(townUIPrefab,          TownUIInstance,          UILayerPriority.GameUI);
+            SkillTreeUIInstance     = EnsureUIInstance(skillTreeUIPrefab,     SkillTreeUIInstance,     UILayerPriority.GameUI);
+            MemoryUIInstance        = EnsureUIInstance(memoryUIPrefab,        MemoryUIInstance,        UILayerPriority.GameUI);
+            EquipmentUIInstance     = EnsureUIInstance(equipmentUIPrefab,     EquipmentUIInstance,     UILayerPriority.GameUI);
 
             // ── SystemUI 层（SortingOrder=20）：系统菜单 ──────────────────────
-            if (systemMenuPrefab != null && SystemMenuInstance == null)
-            {
-                SystemMenuInstance = SpawnOnLayer(systemMenuPrefab, UILayerPriority.SystemUI);
-                if (SystemMenuInstance != null)
-                {
-                    // UIManager 只负责生成实例，显示/隐藏规则由 SystemMenuController 监听 EventBus 自行控制。
-                    SystemMenuInstance.gameObject.SetActive(true);
-                }
-            }
+            SystemMenuInstance = EnsureUIInstance(systemMenuPrefab, SystemMenuInstance, UILayerPriority.SystemUI);
 
             // ── Popup 层（SortingOrder=30）：确认弹窗，始终在菜单上方 ────────
-            if (confirmationPrefab != null && ConfirmationInstance == null)
-            {
-                ConfirmationInstance = SpawnOnLayer(confirmationPrefab, UILayerPriority.Popup);
-                if (ConfirmationInstance != null) ConfirmationInstance.gameObject.SetActive(true);
-            }
+            ConfirmationInstance = EnsureUIInstance(confirmationPrefab, ConfirmationInstance, UILayerPriority.Popup);
 
             // ── Fullscreen 层（SortingOrder=40）：全屏遮罩，绝对最顶层 ────────
-            if (fullscreenFadePrefab != null && FullscreenFadeInstance == null)
+            bool fadeJustSpawned = FullscreenFadeInstance == null && fullscreenFadePrefab != null;
+            FullscreenFadeInstance = EnsureUIInstance(fullscreenFadePrefab, FullscreenFadeInstance, UILayerPriority.Fullscreen);
+            if (fadeJustSpawned && FullscreenFadeInstance != null)
             {
-                FullscreenFadeInstance = SpawnOnLayer(fullscreenFadePrefab, UILayerPriority.Fullscreen);
-                if (FullscreenFadeInstance != null)
-                {
-                    FullscreenFadeInstance.gameObject.SetActive(true);
-                    FullscreenFadeInstance.alpha = 0f;
-                    FullscreenFadeInstance.blocksRaycasts = false;
-                    FullscreenFadeInstance.interactable = false;
-                }
+                // 遮罩初始为完全透明且不拦截点击
+                FullscreenFadeInstance.alpha = 0f;
+                FullscreenFadeInstance.blocksRaycasts = false;
+                FullscreenFadeInstance.interactable = false;
             }
 
             // 通知外部 UI 已准备完毕
             OnUIReady?.Invoke();
+        }
+
+        /// <summary>
+        /// 确保某个 UI 实例存在（L6 新增）：
+        /// - 已生成或未配置预制体：原样返回；
+        /// - 否则在指定层级实例化并激活后返回。
+        /// </summary>
+        private T EnsureUIInstance<T>(T prefab, T existing, UILayerPriority layer) where T : Component
+        {
+            if (prefab == null || existing != null) return existing;
+
+            T instance = SpawnOnLayer(prefab, layer);
+            if (instance != null) instance.gameObject.SetActive(true);
+            return instance;
         }
 
         private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
@@ -439,7 +352,9 @@ namespace IndieGame.UI
             FullscreenFadeInstance.interactable = false;
 
             float targetAlpha = evt.FadeIn ? 1f : 0f;
-            FullscreenFadeInstance.DOFade(targetAlpha, evt.Duration).OnComplete(() =>
+            // M2 修复：SetUpdate(true) 让淡入淡出使用 unscaled time，
+            // 与 SceneLoader 的 WaitForSecondsRealtime 对齐，timeScale=0（暂停）时转场不会卡住
+            FullscreenFadeInstance.DOFade(targetAlpha, evt.Duration).SetUpdate(true).OnComplete(() =>
             {
                 // 淡出完成后解除遮挡
                 if (!evt.FadeIn)

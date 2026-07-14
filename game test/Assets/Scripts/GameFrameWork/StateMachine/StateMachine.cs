@@ -163,13 +163,15 @@ namespace IndieGame.Core
         /// <summary>
         /// 实际执行清理：
         /// 触发当前状态 OnExit，并清空所有待切换状态。
+        /// L3 修复：先清队列再判空——旧实现在 CurrentState == null 时提前 return，
+        /// 会漏掉 _pendingStates 里残留的待切换状态。
         /// </summary>
         private void DoClear(T context)
         {
+            _pendingStates.Clear();
             if (CurrentState == null) return;
             CurrentState.OnExit(context);
             CurrentState = null;
-            _pendingStates.Clear();
         }
     }
 }

@@ -130,8 +130,21 @@ namespace IndieGame.UI
             }
             // 缓存主相机
             _mainCam = Camera.main;
-            // 默认跟随玩家
+            // L1 修复：默认跟随玩家，但玩家可能尚未创建（初始化顺序变化 / 标题场景）。
+            // 这里只做尝试绑定，失败时留空，由 LateUpdate 的懒绑定兜底。
+            TryResolveTarget();
+        }
+
+        /// <summary>
+        /// 懒绑定跟随目标：玩家对象由 GameManager 运行时生成，
+        /// 本 UI 的 Start 可能早于玩家创建，因此提供可重入的解析入口。
+        /// </summary>
+        private bool TryResolveTarget()
+        {
+            if (target != null) return true;
+            if (GameManager.Instance == null || GameManager.Instance.CurrentPlayer == null) return false;
             target = GameManager.Instance.CurrentPlayer.transform;
+            return true;
         }
 
 
@@ -146,7 +159,9 @@ namespace IndieGame.UI
         private void LateUpdate()
         {
             // 将菜单锚点对齐到目标世界坐标的屏幕投影
-            if (_selfRect == null || _canvasRect == null || target == null) return;
+            // L1 修复：目标为空时尝试懒绑定（玩家可能在本 UI Start 之后才创建）
+            if (target == null && !TryResolveTarget()) return;
+            if (_selfRect == null || _canvasRect == null) return;
             if (_mainCam == null) _mainCam = Camera.main;
             if (_mainCam == null) return;
             Vector3 screenPos = _mainCam.WorldToScreenPoint(target.position + targetWorldOffset);

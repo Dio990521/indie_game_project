@@ -137,11 +137,37 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         /// <summary>
         /// 强制重置控制器：停止一切移动并将玩家放回起点。
+        /// H1 修复：中断移动时必须退订格子事件并复位效果状态。
+        /// 旧实现只置 _isMoving=false，7 个 EventBus 订阅残留，下次 BeginMove 再订阅
+        /// 会造成委托链重复（EventBus 不去重），每个格子事件被处理两次。
         /// </summary>
         public void ResetToStart()
         {
             StopAllCoroutines();
+
+            if (_isMoving)
+            {
+                // 与 FinishMove 相同的收尾，但不广播 BoardMovementEndedEvent：
+                // 重置属于"强制作废本次移动"，不应触发"移动正常结束"的状态机流转。
+                UnsubscribeSegmentEvent();
+                _arrivalRoutine = null; // 协程已被 StopAllCoroutines 终止
+                if (_activeEntity != null)
+                {
+                    _activeEntity.SetMoveAnimationSpeed(0f);
+                    _activeEntity.SetMovingState(false);
+                }
+                _activeEntity = null;
+            }
+
             _isMoving = false;
+            // 清空所有待执行的格子效果与一次性标志，防止残留到下一次移动
+            _fx = TileEffectPendingState.Default;
+            _immovableBellActive = false;
+            _shadowDiceActive = false;
+            _isTeleporting = false;
+            _allowFirstStepUTurn = false;
+            _cannonPresetFirstStepNodeId = -1;
+
             if (forkSelector != null) forkSelector.ClearSelection();
 
             if (_startNode != null && _playerEntity != null)

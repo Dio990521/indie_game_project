@@ -90,15 +90,25 @@ namespace IndieGame.Core.SaveSystem
 
         /// <summary>
         /// 供按钮绑定：触发保存。
+        /// L7 修复：async void 中未捕获的异常会直接抛到同步上下文（无 Task 可观察），
+        /// 虽然 SaveAsync 内部已有 try/catch，这里再包一层防御，避免未来内部实现变化后
+        /// 异常静默逃逸导致按钮"点了没反应"。
         /// </summary>
         public async void Save()
         {
-            SaveManager manager = SaveManager.Instance;
-            if (manager == null) return;
-            // 调用异步存档
-            await manager.SaveAsync(slotIndex);
-            // 存档完成后刷新 UI
-            Refresh();
+            try
+            {
+                SaveManager manager = SaveManager.Instance;
+                if (manager == null) return;
+                // 调用异步存档
+                await manager.SaveAsync(slotIndex);
+                // 存档完成后刷新 UI
+                Refresh();
+            }
+            catch (System.Exception ex)
+            {
+                IndieGame.Core.Utilities.DebugTools.LogError($"[SaveSlotUI] Save 异常：{ex}");
+            }
         }
 
         /// <summary>
@@ -106,12 +116,19 @@ namespace IndieGame.Core.SaveSystem
         /// </summary>
         public async void Load()
         {
-            SaveManager manager = SaveManager.Instance;
-            if (manager == null) return;
-            // 调用异步读档
-            await manager.LoadAsync(slotIndex);
-            // 读档完成后刷新 UI
-            Refresh();
+            try
+            {
+                SaveManager manager = SaveManager.Instance;
+                if (manager == null) return;
+                // 调用异步读档
+                await manager.LoadAsync(slotIndex);
+                // 读档完成后刷新 UI
+                Refresh();
+            }
+            catch (System.Exception ex)
+            {
+                IndieGame.Core.Utilities.DebugTools.LogError($"[SaveSlotUI] Load 异常：{ex}");
+            }
         }
     }
 }

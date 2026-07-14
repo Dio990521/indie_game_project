@@ -50,6 +50,11 @@ namespace IndieGame.Gameplay.Stats
             // 该组件可能经历“场景切换后重新启用”、“脚本热重载”等生命周期变化。
             base.OnEnable();
             TryApplyPendingRestoreState();
+
+            // L4 修复：LateUpdate 只在"存在待应用的恢复数据"时才需要运行。
+            // 注册已在上方完成（注销由 OnDestroy 兜底，UnregisterOnDisable=false），
+            // 无 pending 时直接禁用组件，让引擎彻底跳过每帧回调。
+            enabled = _hasPendingRestoreState;
         }
 
         private void LateUpdate()
@@ -95,6 +100,8 @@ namespace IndieGame.Gameplay.Stats
             {
                 _pendingRestoreState = state;
                 _hasPendingRestoreState = true;
+                // L4：出现待应用数据时恢复 LateUpdate 轮询
+                enabled = true;
                 return;
             }
 
@@ -112,6 +119,8 @@ namespace IndieGame.Gameplay.Stats
             ApplyStateToStats(stats, _pendingRestoreState);
             _hasPendingRestoreState = false;
             _pendingRestoreState = null;
+            // L4：pending 已消费完毕，停掉 LateUpdate 轮询
+            enabled = false;
         }
 
         /// <summary>

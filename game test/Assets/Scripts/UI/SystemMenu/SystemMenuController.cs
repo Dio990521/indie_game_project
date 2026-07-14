@@ -239,9 +239,17 @@ namespace IndieGame.UI.SystemMenu
         /// </summary>
         private async void DoQuickSave()
         {
-            if (SaveManager.Instance == null) return;
-            ClosePanel();
-            await SaveManager.Instance.SaveAsync(quickSaveSlot, sourceTag: "SystemMenu");
+            // L7 修复：async void 异常无人观察，统一 try/catch 落日志
+            try
+            {
+                if (SaveManager.Instance == null) return;
+                ClosePanel();
+                await SaveManager.Instance.SaveAsync(quickSaveSlot, sourceTag: "SystemMenu");
+            }
+            catch (System.Exception ex)
+            {
+                DebugTools.LogError($"[SystemMenuController] QuickSave 异常：{ex}");
+            }
         }
 
         /// <summary>
@@ -249,11 +257,20 @@ namespace IndieGame.UI.SystemMenu
         /// </summary>
         private async void DoQuickLoad()
         {
-            if (SaveManager.Instance == null) return;
-            if (!SaveManager.Instance.HasSlot(quickSaveSlot)) return;
-            ClosePanel();
-            _pendingLoadScene = true;
-            await SaveManager.Instance.LoadAsync(quickSaveSlot);
+            // L7 修复：async void 异常无人观察，统一 try/catch 落日志并复位挂起标记
+            try
+            {
+                if (SaveManager.Instance == null) return;
+                if (!SaveManager.Instance.HasSlot(quickSaveSlot)) return;
+                ClosePanel();
+                _pendingLoadScene = true;
+                await SaveManager.Instance.LoadAsync(quickSaveSlot);
+            }
+            catch (System.Exception ex)
+            {
+                _pendingLoadScene = false;
+                DebugTools.LogError($"[SystemMenuController] QuickLoad 异常：{ex}");
+            }
         }
 
         /// <summary>

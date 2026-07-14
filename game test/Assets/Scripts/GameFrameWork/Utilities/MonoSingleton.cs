@@ -18,7 +18,6 @@ namespace IndieGame.Core.Utilities
     public abstract class MonoSingleton<T> : MonoBehaviour where T : MonoBehaviour
     {
         private static T _instance;
-        private static readonly object _lock = new object();
         private static bool _applicationIsQuitting = false;
 
         /// <summary>
@@ -27,7 +26,12 @@ namespace IndieGame.Core.Utilities
         public static bool HasInstance => _instance != null && !_applicationIsQuitting;
 
         /// <summary>
-        /// 获取单例实例
+        /// 获取单例实例。
+        /// M8 修复说明：
+        /// - 移除了 lock —— Unity API 只能在主线程访问，锁只会误导读者以为本类线程安全；
+        /// - 移除了 getter 里的 FindObjectsByType 重复实例检查 —— 该检查在每次未命中时
+        ///   分配数组并全场景扫描（场景切换期间可能被高频触发），重复实例的销毁保护
+        ///   已由 Awake 完成，getter 只保留一次 FindAnyObjectByType 兜底查找。
         /// </summary>
         public static T Instance
         {
@@ -38,27 +42,16 @@ namespace IndieGame.Core.Utilities
                     return null;
                 }
 
-                lock (_lock)
+                if (_instance == null)
                 {
+                    _instance = FindAnyObjectByType<T>();
                     if (_instance == null)
                     {
-                        _instance = FindAnyObjectByType<T>();
-
-                        if (FindObjectsByType<T>(FindObjectsSortMode.None).Length > 1)
-                        {
-                            DebugTools.LogError($"[MonoSingleton] Something went really wrong " +
-                                           $" - there should never be more than 1 singleton! Reopening the scene might fix it.");
-                            return _instance;
-                        }
-
-                        if (_instance == null)
-                        {
-                            DebugTools.LogWarning($"[MonoSingleton] Instance of {typeof(T)} not found. Ensure GameBootstrapper created it.");
-                        }
+                        DebugTools.LogWarning($"[MonoSingleton] Instance of {typeof(T)} not found. Ensure GameBootstrapper created it.");
                     }
-
-                    return _instance;
                 }
+
+                return _instance;
             }
         }
 

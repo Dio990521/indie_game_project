@@ -1,4 +1,7 @@
 using UnityEngine;
+using IndieGame.Core;
+using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Gameplay.Board.Runtime.States;
 
 namespace IndieGame.Gameplay.Treasure
 {
@@ -16,5 +19,11 @@ namespace IndieGame.Gameplay.Treasure
 
         [Tooltip("原地跳跃的峰值高度（世界空间单位），推荐 1.5")]
         public float JumpHeight = 1.5f;
+
+        /// <summary> 创建反转牌激活状态（M10：多态分发）。 </summary>
+        public override BaseState<BoardGameManager> CreateActivationState()
+        {
+            return new ReverseCardTreasureState(this);
+        }
     }
 }

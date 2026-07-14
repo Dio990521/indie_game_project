@@ -170,17 +170,25 @@ namespace IndieGame.UI.TitleScreen
 
         private async void BeginLoadSlot(int slotIndex)
         {
-            SaveManager saveManager = SaveManager.Instance;
-            if (saveManager == null) return;
-
-            // 通知标题主流程：“用户已经确认读取某个槽位”。
-            // TitleScreenManager 会在收到后进入“等待 LoadCompletedEvent 后自动进游戏”的状态。
-            EventBus.Raise(new TitleLoadGameRequestedEvent
+            // L7 修复：async void 异常无人观察，统一 try/catch 落日志
+            try
             {
-                SlotIndex = slotIndex
-            });
+                SaveManager saveManager = SaveManager.Instance;
+                if (saveManager == null) return;
 
-            await saveManager.LoadAsync(slotIndex);
+                // 通知标题主流程：“用户已经确认读取某个槽位”。
+                // TitleScreenManager 会在收到后进入“等待 LoadCompletedEvent 后自动进游戏”的状态。
+                EventBus.Raise(new TitleLoadGameRequestedEvent
+                {
+                    SlotIndex = slotIndex
+                });
+
+                await saveManager.LoadAsync(slotIndex);
+            }
+            catch (System.Exception ex)
+            {
+                IndieGame.Core.Utilities.DebugTools.LogError($"[SaveLoadMenuView] 读档异常（Slot {slotIndex}）：{ex}");
+            }
         }
 
         private void HandleOpenMenuEvent(OpenSaveLoadMenuEvent evt)

@@ -28,6 +28,15 @@ namespace IndieGame.Core.SaveSystem
         // 是否存在有效读档快照
         private bool _hasLoadedData;
 
+        // M3 修复：TypeName -> Type 的解析缓存，避免每次恢复都全程序集扫描
+        private static readonly Dictionary<string, Type> TypeResolveCache = new Dictionary<string, Type>(StringComparer.Ordinal);
+
+        // M4 修复：累计游玩时长（秒）。
+        // 旧实现直接写 Time.realtimeSinceStartup，每次重启进程归零，读档再存会"时长倒退"。
+        // 现改为：读档时恢复历史累计值，存档时写入 累计值 + 本次会话增量。
+        private float _accumulatedPlayTime;
+        private float _sessionStartRealtime;
+
         /// <summary>
         /// 注册存档模块（建议在 OnEnable/Start 调用）。
         /// </summary>
@@ -76,8 +85,23 @@ namespace IndieGame.Core.SaveSystem
                 string json = JsonUtility.ToJson(data, true);
                 string path = GetSlotPath(slotIndex);
 
-                // 后台线程执行写入，避免阻塞主线程
-                await Task.Run(() => File.WriteAllText(path, json));
+                // H4 修复：原子写盘。
+                // 旧实现直接覆写目标文件，写一半崩溃/断电会导致存档截断损坏。
+                // 现改为：先写 .tmp，再用 File.Replace 原子替换（同时把上一份好档留为 .bak）。
+                await Task.Run(() =>
+                {
+                    string tmpPath = path + ".tmp";
+                    File.WriteAllText(tmpPath, json);
+                    if (File.Exists(path))
+                    {
+                        // 原子替换：目标文件要么是旧的完整存档，要么是新的完整存档
+                        File.Replace(tmpPath, path, path + ".bak");
+                    }
+                    else
+                    {
+                        File.Move(tmpPath, path);
+                    }
+                });
 
                 EventBus.Raise(new SaveCompletedEvent
                 {
@@ -128,6 +152,10 @@ namespace IndieGame.Core.SaveSystem
                 // 供后续“晚注册”的 ISaveable 模块在 Register 阶段自动补恢复。
                 _lastLoadedData = data;
                 _hasLoadedData = true;
+
+                // M4 修复：恢复历史累计游玩时长，并以当前时刻作为本次会话计时起点
+                _accumulatedPlayTime = Mathf.Max(0f, data.MetaData != null ? data.MetaData.PlayTime : 0f);
+                _sessionStartRealtime = Time.realtimeSinceStartup;
 
                 // 在主线程恢复所有模块状态
                 RestoreAll(data);
@@ -201,6 +229,9 @@ namespace IndieGame.Core.SaveSystem
         {
             _lastLoadedData = null;
             _hasLoadedData = false;
+            // 新游戏：游玩时长从零开始计
+            _accumulatedPlayTime = 0f;
+            _sessionStartRealtime = Time.realtimeSinceStartup;
         }
 
         private SaveData CaptureAll(string note)
@@ -215,7 +246,8 @@ namespace IndieGame.Core.SaveSystem
             string nowUtcIso = DateTime.UtcNow.ToString("o");
             data.MetaData.Timestamp = nowLocalDisplay;
             data.MetaData.SceneName = SceneManager.GetActiveScene().name;
-            data.MetaData.PlayTime = Time.realtimeSinceStartup;
+            // M4 修复：写入"历史累计 + 本次会话增量"，而非进程启动以来的裸时长
+            data.MetaData.PlayTime = _accumulatedPlayTime + Mathf.Max(0f, Time.realtimeSinceStartup - _sessionStartRealtime);
             data.MetaData.SavedAtUtc = nowUtcIso;
             data.MetaData.Note = note;
 
@@ -232,7 +264,10 @@ namespace IndieGame.Core.SaveSystem
                 SaveEntry entry = new SaveEntry
                 {
                     SaveID = saveable.SaveID,
-                    TypeName = type.AssemblyQualifiedName,
+                    // M3 修复：写入 FullName 而非 AssemblyQualifiedName。
+                    // AQN 携带程序集名+版本号，加 asmdef / 改程序集名 / 升级 Unity 都会让旧档解析失败。
+                    // FullName 只含命名空间+类型名，配合 ResolveStateType 的全程序集扫描可稳定解析。
+                    TypeName = type.FullName,
                     Json = json
                 };
                 data.StateData.Add(entry);
@@ -258,7 +293,7 @@ namespace IndieGame.Core.SaveSystem
                 if (saveable == null) continue;
                 if (!lookup.TryGetValue(saveable.SaveID, out SaveEntry entry)) continue;
 
-                Type type = Type.GetType(entry.TypeName);
+                Type type = ResolveStateType(entry.TypeName);
                 if (type == null)
                 {
                     DebugTools.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");
@@ -268,6 +303,33 @@ namespace IndieGame.Core.SaveSystem
                 object state = JsonUtility.FromJson(entry.Json, type);
                 saveable.RestoreState(state);
             }
+        }
+
+        /// <summary>
+        /// M3 修复：稳定的类型名解析。
+        /// 1) 先查缓存（含负缓存，避免重复全程序集扫描）；
+        /// 2) Type.GetType：可解析旧存档里的 AssemblyQualifiedName，以及本程序集/mscorlib 的 FullName；
+        /// 3) 兜底遍历当前已加载的所有程序集按 FullName 查找（新格式跨程序集场景）。
+        /// </summary>
+        private static Type ResolveStateType(string typeName)
+        {
+            if (string.IsNullOrEmpty(typeName)) return null;
+            if (TypeResolveCache.TryGetValue(typeName, out Type cached)) return cached;
+
+            Type resolved = Type.GetType(typeName);
+            if (resolved == null)
+            {
+                System.Reflection.Assembly[] assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                for (int i = 0; i < assemblies.Length; i++)
+                {
+                    resolved = assemblies[i].GetType(typeName);
+                    if (resolved != null) break;
+                }
+            }
+
+            // 无论成败都写入缓存（负缓存防止对损坏类型名反复扫描）
+            TypeResolveCache[typeName] = resolved;
+            return resolved;
         }
 
         /// <summary>
@@ -288,7 +350,7 @@ namespace IndieGame.Core.SaveSystem
                 if (entry == null || string.IsNullOrEmpty(entry.SaveID)) continue;
                 if (!string.Equals(entry.SaveID, saveable.SaveID, StringComparison.Ordinal)) continue;
 
-                Type type = Type.GetType(entry.TypeName);
+                Type type = ResolveStateType(entry.TypeName);
                 if (type == null)
                 {
                     DebugTools.LogWarning($"[SaveManager] Missing type for SaveID: {entry.SaveID}");

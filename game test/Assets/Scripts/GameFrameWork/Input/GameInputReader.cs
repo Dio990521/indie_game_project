@@ -55,6 +55,11 @@ namespace IndieGame.Core.Input
             
             // 默认开启输入
             EnableGameplayInput();
+            // M6 修复：幂等订阅。
+            // ScriptableObject 的 OnEnable 由资源加载触发（与场景生命周期无关），
+            // 关闭 Domain Reload 的快速播放模式下可能重复触发而 OnDisable 未成对执行，
+            // 先退订再订阅可防止委托链重复导致输入事件被派发两次。
+            EventBus.Unsubscribe<InputLockRequestedEvent>(HandleInputLockRequested);
             EventBus.Subscribe<InputLockRequestedEvent>(HandleInputLockRequested);
         }
 
@@ -86,9 +91,18 @@ namespace IndieGame.Core.Input
         /// <summary>
         /// 设置输入模式：
         /// 会根据模式启用/禁用 Player 输入，并在必要时清零移动输入。
+        /// M6 修复：输入锁定期间（加载/黑屏）外部请求的模式切换不立即生效，
+        /// 而是更新"解锁后应恢复的模式"。旧实现会在解锁时用锁定前的旧模式
+        /// 覆盖锁定期间的合法切换（例如加载中打开了 UI，解锁后却恢复成 Gameplay）。
         /// </summary>
         public void SetInputMode(InputMode mode)
         {
+            if (_inputLockCount > 0 && mode != InputMode.Disabled)
+            {
+                _modeBeforeLock = mode;
+                return;
+            }
+
             _currentMode = mode;
             switch (mode)
             {

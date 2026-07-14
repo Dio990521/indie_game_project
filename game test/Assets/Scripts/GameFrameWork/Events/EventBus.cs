@@ -14,6 +14,14 @@ namespace IndieGame.Core
         // 存储每种事件类型对应的委托链
         private static readonly Dictionary<Type, Delegate> Handlers = new Dictionary<Type, Delegate>();
 
+        // H3 性能修复：缓存每种事件类型的调用链快照。
+        // 旧实现在每次 Raise 里调用 chain.GetInvocationList()，该调用每次分配一个新 Delegate[]，
+        // 对 InputMoveEvent 这类每帧触发的事件意味着稳定的每帧 GC Alloc。
+        // 现改为仅在 Subscribe/Unsubscribe 时重建快照，Raise 阶段零分配。
+        // 快照语义与 GetInvocationList 一致：Raise 遍历的是"派发那一刻"的订阅者数组，
+        // 处理器在回调中订阅/退订不影响本轮遍历（下一轮生效）。
+        private static readonly Dictionary<Type, Delegate[]> CachedInvocationLists = new Dictionary<Type, Delegate[]>();
+
         // Lightweight global event hub for decoupled systems.
         /// <summary>
         /// 订阅事件：
@@ -28,11 +36,14 @@ namespace IndieGame.Core
             if (Handlers.TryGetValue(type, out Delegate existing))
             {
                 // 追加到委托链
-                Handlers[type] = (Action<T>)existing + handler;
+                Action<T> combined = (Action<T>)existing + handler;
+                Handlers[type] = combined;
+                CachedInvocationLists[type] = combined.GetInvocationList();
                 return;
             }
             // 首次订阅时创建委托链
             Handlers[type] = handler;
+            CachedInvocationLists[type] = handler.GetInvocationList();
         }
 
         /// <summary>
@@ -49,10 +60,12 @@ namespace IndieGame.Core
             {
                 // 没有任何订阅者后移除该类型键
                 Handlers.Remove(type);
+                CachedInvocationLists.Remove(type);
                 return;
             }
-            // 更新委托链
+            // 更新委托链与调用快照
             Handlers[type] = updated;
+            CachedInvocationLists[type] = updated.GetInvocationList();
         }
 
         /// <summary>
@@ -65,14 +78,9 @@ namespace IndieGame.Core
         /// </summary>
         public static void Raise<T>(T evt)
         {
-            Type type = typeof(T);
-            if (!Handlers.TryGetValue(type, out Delegate existing)) return;
-            if (existing is not Action<T> chain) return;
+            // 直接读缓存快照：Raise 阶段零 GC 分配（详见 CachedInvocationLists 注释）
+            if (!CachedInvocationLists.TryGetValue(typeof(T), out Delegate[] invocationList)) return;
 
-            // 遍历委托调用链，逐个调用并隔离异常：
-            // GetInvocationList 返回的是按订阅顺序的委托数组，遍历期间即便某个处理器抛异常，
-            // 也不会影响后续处理器；异常会被记录在日志中以便定位。
-            Delegate[] invocationList = chain.GetInvocationList();
             for (int i = 0; i < invocationList.Length; i++)
             {
                 try
@@ -81,7 +89,7 @@ namespace IndieGame.Core
                 }
                 catch (Exception ex)
                 {
-                    DebugTools.LogError($"[EventBus] Handler {invocationList[i].Method.DeclaringType?.Name}.{invocationList[i].Method.Name} threw on {type.Name}: {ex}");
+                    DebugTools.LogError($"[EventBus] Handler {invocationList[i].Method.DeclaringType?.Name}.{invocationList[i].Method.Name} threw on {typeof(T).Name}: {ex}");
                 }
             }
         }

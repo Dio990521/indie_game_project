@@ -182,7 +182,8 @@ namespace IndieGame.Core
             if (useFade)
             {
                 EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
-                yield return new WaitForSeconds(fadeDuration);
+                // M2 修复：用 Realtime 等待，避免 timeScale=0（暂停）时黑屏流程永久卡住
+                yield return new WaitForSecondsRealtime(fadeDuration);
             }
 
             int token = BeginTransition();
@@ -296,6 +297,10 @@ namespace IndieGame.Core
                     {
                         unloadOp.completed += _ =>
                         {
+                            // M1 修复：本回调可能在转场被打断、新转场已启动后才到达，
+                            // 过期时放弃全部副作用，避免踩踏新转场的状态。
+                            if (IsStaleTransition(transitionToken)) return;
+
                             // 卸载完成后恢复棋盘显示并激活
                             _currentExplorationScene = null;
                             SetBoardSceneRootsActive(true);
@@ -361,6 +366,9 @@ namespace IndieGame.Core
                 {
                     loadBoardOp.completed += _ =>
                     {
+                        // M1 修复：过期转场的回调不再执行副作用
+                        if (IsStaleTransition(transitionToken)) return;
+
                         // 先让棋盘常驻，再叠加探索
                         _boardScene = SceneManager.GetSceneByName(GetBoardSceneName());
                         SetBoardSceneRootsActive(false);
@@ -378,8 +386,12 @@ namespace IndieGame.Core
                     AsyncOperation unloadOp = SceneManager.UnloadSceneAsync(currentExploration);
                     if (unloadOp != null)
                     {
-                        // 卸载旧探索后再加载新探索
-                        unloadOp.completed += _ => LoadExplorationAdditive(sceneName, transitionToken);
+                        // 卸载旧探索后再加载新探索（M1 修复：过期转场不再续接加载）
+                        unloadOp.completed += _ =>
+                        {
+                            if (IsStaleTransition(transitionToken)) return;
+                            LoadExplorationAdditive(sceneName, transitionToken);
+                        };
                     }
                     return unloadOp;
                 }
@@ -404,6 +416,9 @@ namespace IndieGame.Core
             {
                 op.completed += _ =>
                 {
+                    // M1 修复：过期转场不再执行 SetActiveScene 等副作用
+                    if (IsStaleTransition(transitionToken)) return;
+
                     Scene loadedScene = SceneManager.GetSceneByName(sceneName);
                     if (loadedScene.IsValid() && loadedScene.isLoaded)
                     {
@@ -459,7 +474,8 @@ namespace IndieGame.Core
             }
 
             EventBus.Raise(new FadeRequestedEvent { FadeIn = true, Duration = fadeDuration });
-            yield return new WaitForSeconds(fadeDuration);
+            // M2 修复：用 Realtime 等待，避免 timeScale=0（暂停）时黑屏流程永久卡住
+            yield return new WaitForSecondsRealtime(fadeDuration);
 
             int token = BeginTransition();
             LoadSceneInternal(sceneName, targetID, token);
@@ -544,6 +560,18 @@ namespace IndieGame.Core
         }
 
         /// <summary>
+        /// M1 修复：判断某个 Token 对应的转场是否已过期。
+        /// 转场协程可被 StopCoroutine 打断，但已发起的 AsyncOperation.completed 回调无法取消；
+        /// 过期回调若继续执行"改 _currentExplorationScene / 切换棋盘根显隐"等副作用，
+        /// 会与新转场互相踩踏。所有异步回调里的状态突变前都应先做本判断。
+        /// 注：token &lt; 0 表示"无 Token 的原始加载路径"（LoadSceneAsyncRaw），不参与守卫。
+        /// </summary>
+        private bool IsStaleTransition(int token)
+        {
+            return token >= 0 && token != _activeTransitionToken;
+        }
+
+        /// <summary>
         /// 判断给定场景是否为棋盘场景。
         /// </summary>
         private bool IsBoardScene(Scene scene)
@@ -614,6 +642,16 @@ namespace IndieGame.Core
         private GameMode GetModeForScene(string sceneName)
         {
             return sceneRegistry != null ? sceneRegistry.GetGameMode(sceneName) : GameMode.Exploration;
+        }
+
+        /// <summary>
+        /// 公开的场景模式查询（M7 修复配套）：
+        /// 供 GameManager 在 EndLoading 无缓存状态时按当前场景推导正确的 GameState，
+        /// 替代原先硬编码回退 FreeRoam 的隐性耦合。
+        /// </summary>
+        public GameMode GetSceneMode(string sceneName)
+        {
+            return GetModeForScene(sceneName);
         }
     }
 }

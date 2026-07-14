@@ -20,6 +20,10 @@ namespace IndieGame.Gameplay.Board.Runtime.States
         private readonly System.Action<WaypointConnection> _onSelected;
         // 当前正在运行的选择协程引用，用于生命周期管理
         private Coroutine _routine;
+        // H5 修复：标记回调是否已执行。
+        // 移动控制器在分叉时挂起等待本回调，若状态被外部强制清理（PopOverlayState/状态机 Clear）
+        // 而回调从未执行，_isMoving 会永久卡 true 导致棋盘死锁。
+        private bool _hasInvokedCallback;
 
         /// <summary>
         /// 构造函数 A：使用节点的默认所有连接作为选项。
@@ -51,7 +55,7 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             {
                 DebugTools.LogError("[ForkSelectionState] 找不到所需的 BoardForkSelector 组件。");
                 // 直接返回空结果，避免流程卡死
-                _onSelected?.Invoke(null);
+                InvokeCallbackOnce(null);
                 // 立即退出当前的覆盖状态
                 context.PopOverlayState();
                 return;
@@ -72,6 +76,12 @@ namespace IndieGame.Gameplay.Board.Runtime.States
                 context.StopCoroutine(_routine);
                 _routine = null;
             }
+
+            // H5 修复：兜底回调。
+            // 状态被强制清理（如切场景、状态机 Clear）时协程被杀，正常回调路径丢失，
+            // 这里保证 _onSelected 至少被调用一次（传 null）——
+            // BoardMovementController.StartSegment(null) 会走 FinishMove 收尾，避免 _isMoving 永久卡死。
+            InvokeCallbackOnce(null);
         }
 
         /// <summary>
@@ -101,10 +111,22 @@ namespace IndieGame.Gameplay.Board.Runtime.States
             }
 
             // 4. 选择完成：执行外部传入的回调函数，通知移动控制器继续后续位移
-            _onSelected?.Invoke(selected);
+            InvokeCallbackOnce(selected);
 
             // 5. 任务完成：从管理器中弹出本覆盖状态，恢复底层（位移状态）的正常更新
             context.PopOverlayState();
+        }
+
+        /// <summary>
+        /// 保证回调只执行一次的统一出口：
+        /// 正常选择完成、依赖缺失、状态被强制清理三条路径都经过这里，
+        /// 首次调用生效，后续调用被幂等忽略。
+        /// </summary>
+        private void InvokeCallbackOnce(WaypointConnection result)
+        {
+            if (_hasInvokedCallback) return;
+            _hasInvokedCallback = true;
+            _onSelected?.Invoke(result);
         }
     }
 }

@@ -1,17 +1,22 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using IndieGame.Core.Utilities;
 using IndieGame.Core;
+using IndieGame.Core.SaveSystem;
+using IndieGame.Gameplay.Equipment;
 
 namespace IndieGame.Gameplay.Inventory
 {
     /// <summary>
     /// 背包管理器：作为单例存在，管理玩家的所有物品。
     /// 负责物品的存储、背包界面的开启与关闭，以及物品的使用逻辑分发。
-    /// 继承自 MonoSingleton 以确保全局唯一访问。
+    /// 继承自 SaveableMonoSingleton：
+    /// - 背包槽位（含 CustomName）与"当前装备中的武器/防具槽位"一并参与存档；
+    /// - 读档时通过 ItemDatabaseSO 按 ItemSO.ID 反查资源恢复槽位。
     /// </summary>
-    public class InventoryManager : MonoSingleton<InventoryManager>
+    public class InventoryManager : SaveableMonoSingleton<InventoryManager>
     {
         // 覆盖单例属性：跨场景保留。
         // 注：原代码使用旧 DestroyOnLoad => true，由于基类语义反向 Bug，该值实际触发了
@@ -26,6 +31,10 @@ namespace IndieGame.Gameplay.Inventory
         [Tooltip("当前背包槽位列表。每个槽位包含道具与数量。")]
         public List<InventorySlot> slots = new List<InventorySlot>();
 
+        [Header("存档")]
+        [Tooltip("物品总数据库：读档时按 ItemSO.ID 反查资源。未配置时背包无法从存档恢复。")]
+        [SerializeField] private ItemDatabaseSO itemDatabase;
+
         // 通信方式说明：
         // - 内容变化  → EventBus.Raise(new OnInventoryChanged { Slots = slots });
         // - 已打开    → EventBus.Raise(new InventoryOpenedEvent());
@@ -36,15 +45,44 @@ namespace IndieGame.Gameplay.Inventory
         // 初始化标记
         private bool _isInitialized;
 
-        private void OnEnable()
+        // ── 存档相关 ─────────────────────────────────────────────────────
+        // 物品索引：ItemSO.ID -> ItemSO（读档反查用，懒构建）
+        private Dictionary<string, ItemSO> _itemById;
+        // 读档时缓存的"装备恢复数据"：玩家对象可能晚于读档创建，需延迟应用
+        private InventorySlotSaveData _pendingWeaponRestore;
+        private InventorySlotSaveData _pendingArmorRestore;
+        private bool _hasPendingEquipmentRestore;
+        private Coroutine _equipmentRestoreRoutine;
+
+        // 槽位存放位置标记（存档用）
+        private const int LocationBag = 0;
+        private const int LocationWeapon = 1;
+        private const int LocationArmor = 2;
+
+        /// <summary> 存档模块唯一标识。 </summary>
+        public override string SaveID => "InventoryManager";
+
+        protected override void Awake()
         {
+            base.Awake();
+            if (Instance != this) return;
+            // Awake 里强制尝试一次注册，保证背包在最早阶段就可参与存档
+            // （与 GoldSystem / ShopSystem 保持同一模式）。
+            EnsureSaveRegistration(forceSearch: true);
+        }
+
+        protected override void OnEnable()
+        {
+            // 父类完成 SaveManager 注册（幂等）
+            base.OnEnable();
             // 通过事件总线订阅“打开背包”事件。
             // 这种解耦方式允许任何地方（如棋盘菜单或快捷键）发出 OpenInventoryEvent 即可打开背包。
             EventBus.Subscribe<OpenInventoryEvent>(HandleOpenInventory);
         }
 
-        private void OnDisable()
+        protected override void OnDisable()
         {
+            base.OnDisable();
             // 禁用时务必取消订阅，防止内存泄漏或无效引用
             EventBus.Unsubscribe<OpenInventoryEvent>(HandleOpenInventory);
         }
@@ -165,10 +203,13 @@ namespace IndieGame.Gameplay.Inventory
         }
 
         /// <summary>
-        /// 添加道具：
-        /// - 先尝试堆叠（填满已有槽位）
-        /// - 再尝试新建槽位
-        /// - 超出容量时返回 false
+        /// 添加道具（事务性）：
+        /// - 先用 CanAddItem 做整体可行性预检，空间不足时**不做任何修改**直接返回 false；
+        /// - 预检通过后再执行“堆叠已有槽位 → 新建槽位”，保证要么全部加入、要么完全不动。
+        ///
+        /// 修复说明（C2）：
+        /// 旧实现会先堆叠再新建，容量不足时中途 return false，导致“失败但已部分入包”，
+        /// 上游（商店退款回滚 / 打造发放）以为完全失败，玩家会白拿部分物品或丢失成品。
         /// </summary>
         /// <param name="customName">
         /// 物品实例自定义名称：
@@ -178,6 +219,9 @@ namespace IndieGame.Gameplay.Inventory
         public bool AddItem(ItemSO item, int amount = 1, string customName = null)
         {
             if (item == null || amount <= 0) return false;
+
+            // 事务性预检：放不下就整体失败，不产生任何部分写入
+            if (!CanAddItem(item, amount, customName)) return false;
 
             int remaining = amount;
             // 先做一次标准化，避免循环里重复 Trim
@@ -200,12 +244,12 @@ namespace IndieGame.Gameplay.Inventory
                 }
             }
 
-            // 2) 新建槽位
+            // 2) 新建槽位（预检已保证容量足够，这里的容量判断仅为防御式兜底）
             while (remaining > 0)
             {
                 if (slots.Count >= maxCapacity)
                 {
-                    // 容量不足
+                    DebugTools.LogError("[InventoryManager] AddItem 预检通过但容量不足，请检查 CanAddItem 与 AddItem 的规则是否一致。");
                     NotifyInventoryChanged();
                     return false;
                 }
@@ -220,8 +264,11 @@ namespace IndieGame.Gameplay.Inventory
         }
 
         /// <summary>
-        /// 移除道具：
+        /// 移除道具（按 ItemSO 弱匹配）：
         /// 按数量扣减，扣完后清理空槽位。
+        /// 注意：本方法忽略 CustomName，只按 ItemSO 匹配，且从列表末尾开始扣。
+        /// 若要精确删除“某一个槽位”（如玩家选中的改名武器），请使用
+        /// <see cref="RemoveFromSlot"/> 或 <see cref="RemoveSlot"/>。
         /// </summary>
         public bool RemoveItem(ItemSO item, int amount)
         {
@@ -249,6 +296,31 @@ namespace IndieGame.Gameplay.Inventory
 
             NotifyInventoryChanged();
             return remaining == 0;
+        }
+
+        /// <summary>
+        /// 从指定槽位精确扣减数量（H2 修复新增）：
+        /// 与 RemoveItem(ItemSO, amount) 的弱匹配不同，本方法只作用于传入的槽位对象本身，
+        /// 不会误扣背包里另一个"同 ItemSO 但不同 CustomName"的槽位（如玩家改名的打造武器）。
+        /// 扣到 0 时自动移除该槽位。
+        /// </summary>
+        /// <returns>true=扣减成功；false=槽位无效或不在背包中</returns>
+        public bool RemoveFromSlot(InventorySlot slot, int amount)
+        {
+            if (slot == null || amount <= 0) return false;
+            if (!slots.Contains(slot)) return false;
+
+            if (slot.Count > amount)
+            {
+                slot.Count -= amount;
+            }
+            else
+            {
+                slots.Remove(slot);
+            }
+
+            NotifyInventoryChanged();
+            return true;
         }
 
         /// <summary>
@@ -353,6 +425,213 @@ namespace IndieGame.Gameplay.Inventory
             {
                 Slots = slots
             });
+        }
+
+        // ══════════════════════════ 存档接入（C1 修复） ══════════════════════════
+
+        /// <summary>
+        /// SaveManager 调用：捕获背包 + 已装备武器/防具的完整物品状态。
+        /// 装备中的槽位不在 slots 列表里（装备时被 RemoveSlot 摘出），
+        /// 必须单独采集，否则读档后装备会凭空消失。
+        /// </summary>
+        public override object CaptureState()
+        {
+            InventorySaveState state = new InventorySaveState();
+
+            // 1) 背包槽位
+            for (int i = 0; i < slots.Count; i++)
+            {
+                InventorySlotSaveData data = BuildSlotSaveData(slots[i], LocationBag);
+                if (data != null) state.Slots.Add(data);
+            }
+
+            // 2) 已装备的武器/防具（从玩家对象上的控制器采集）
+            GameObject player = GameManager.Instance != null ? GameManager.Instance.CurrentPlayer : null;
+            if (player != null)
+            {
+                WeaponEquipController weaponCtrl = player.GetComponent<WeaponEquipController>();
+                InventorySlotSaveData weaponData = BuildSlotSaveData(weaponCtrl != null ? weaponCtrl.CurrentWeaponSlot : null, LocationWeapon);
+                if (weaponData != null) state.Slots.Add(weaponData);
+
+                ArmorEquipController armorCtrl = player.GetComponent<ArmorEquipController>();
+                InventorySlotSaveData armorData = BuildSlotSaveData(armorCtrl != null ? armorCtrl.CurrentArmorSlot : null, LocationArmor);
+                if (armorData != null) state.Slots.Add(armorData);
+            }
+
+            return state;
+        }
+
+        /// <summary>
+        /// SaveManager 调用：恢复背包与装备状态。
+        /// 玩家对象可能晚于读档创建（标题界面读档 → 玩法场景才生成玩家），
+        /// 因此装备部分先缓存为 pending，由协程轮询等玩家就绪后再应用。
+        /// </summary>
+        public override void RestoreState(object data)
+        {
+            if (!(data is InventorySaveState state) || state.Slots == null) return;
+
+            if (!EnsureItemIndex())
+            {
+                DebugTools.LogError("[InventoryManager] 未配置 ItemDatabaseSO，无法从存档恢复背包。请在 Inspector 中指定物品数据库。");
+                return;
+            }
+
+            slots.Clear();
+            _pendingWeaponRestore = null;
+            _pendingArmorRestore = null;
+
+            for (int i = 0; i < state.Slots.Count; i++)
+            {
+                InventorySlotSaveData saved = state.Slots[i];
+                if (saved == null || string.IsNullOrWhiteSpace(saved.ItemID)) continue;
+
+                switch (saved.Location)
+                {
+                    case LocationWeapon:
+                        _pendingWeaponRestore = saved;
+                        break;
+                    case LocationArmor:
+                        _pendingArmorRestore = saved;
+                        break;
+                    default:
+                        InventorySlot slot = BuildSlotFromSaveData(saved);
+                        if (slot != null) slots.Add(slot);
+                        break;
+                }
+            }
+
+            NotifyInventoryChanged();
+
+            // 装备恢复统一走 pending 流程：
+            // 即使存档里没有装备条目，也要执行一次"清空当前装备"，
+            // 避免"本局装备了武器 → 读了一份没装备的旧档"后武器残留。
+            _hasPendingEquipmentRestore = true;
+            TryApplyPendingEquipmentRestore();
+
+            if (_hasPendingEquipmentRestore && isActiveAndEnabled)
+            {
+                // 玩家未就绪：启动轮询协程等待玩家创建后补应用
+                if (_equipmentRestoreRoutine != null) StopCoroutine(_equipmentRestoreRoutine);
+                _equipmentRestoreRoutine = StartCoroutine(WaitAndApplyEquipmentRestore());
+            }
+        }
+
+        /// <summary>
+        /// 轮询等待玩家对象就绪后应用装备恢复（帧数上限防止无玩家场景下无限等待）。
+        /// </summary>
+        private IEnumerator WaitAndApplyEquipmentRestore()
+        {
+            const int maxWaitFrames = 1800; // 约 30 秒（60fps），超时放弃并保留 pending 供下次读档覆盖
+            for (int i = 0; i < maxWaitFrames && _hasPendingEquipmentRestore; i++)
+            {
+                TryApplyPendingEquipmentRestore();
+                if (!_hasPendingEquipmentRestore) yield break;
+                yield return null;
+            }
+            _equipmentRestoreRoutine = null;
+        }
+
+        /// <summary>
+        /// 尝试把 pending 装备数据应用到玩家的装备控制器上。
+        /// </summary>
+        private void TryApplyPendingEquipmentRestore()
+        {
+            if (!_hasPendingEquipmentRestore) return;
+
+            GameObject player = GameManager.Instance != null ? GameManager.Instance.CurrentPlayer : null;
+            if (player == null) return;
+
+            WeaponEquipController weaponCtrl = player.GetComponent<WeaponEquipController>();
+            if (weaponCtrl != null)
+            {
+                weaponCtrl.RestoreEquipped(BuildSlotFromSaveData(_pendingWeaponRestore));
+            }
+
+            ArmorEquipController armorCtrl = player.GetComponent<ArmorEquipController>();
+            if (armorCtrl != null)
+            {
+                armorCtrl.RestoreEquipped(BuildSlotFromSaveData(_pendingArmorRestore));
+            }
+
+            _pendingWeaponRestore = null;
+            _pendingArmorRestore = null;
+            _hasPendingEquipmentRestore = false;
+        }
+
+        /// <summary>
+        /// 槽位 → 存档数据（null 槽位返回 null，调用方自行跳过）。
+        /// </summary>
+        private static InventorySlotSaveData BuildSlotSaveData(InventorySlot slot, int location)
+        {
+            if (slot == null || slot.Item == null || slot.Count <= 0) return null;
+            if (string.IsNullOrWhiteSpace(slot.Item.ID))
+            {
+                DebugTools.LogWarning($"[InventoryManager] 物品 {slot.Item.name} 缺少 ID，无法写入存档，已跳过。");
+                return null;
+            }
+
+            return new InventorySlotSaveData
+            {
+                ItemID = slot.Item.ID,
+                Count = slot.Count,
+                CustomName = slot.CustomName ?? string.Empty,
+                Location = location
+            };
+        }
+
+        /// <summary>
+        /// 存档数据 → 槽位（数据库查不到 ID 时返回 null 并打警告）。
+        /// </summary>
+        private InventorySlot BuildSlotFromSaveData(InventorySlotSaveData saved)
+        {
+            if (saved == null || string.IsNullOrWhiteSpace(saved.ItemID)) return null;
+            if (!EnsureItemIndex()) return null;
+
+            if (!_itemById.TryGetValue(saved.ItemID, out ItemSO item) || item == null)
+            {
+                DebugTools.LogWarning($"[InventoryManager] 存档物品 ID \"{saved.ItemID}\" 在 ItemDatabase 中不存在，已跳过。");
+                return null;
+            }
+
+            return new InventorySlot(item, Mathf.Max(1, saved.Count), saved.CustomName);
+        }
+
+        /// <summary>
+        /// 懒构建物品索引（ItemSO.ID -> ItemSO）。
+        /// </summary>
+        private bool EnsureItemIndex()
+        {
+            if (_itemById != null) return true;
+            if (itemDatabase == null) return false;
+
+            _itemById = DatabaseIndexer.BuildById(
+                itemDatabase.Items,
+                item => item != null ? item.ID : null,
+                "InventoryManager");
+            return true;
+        }
+
+        /// <summary>
+        /// 背包存档结构：
+        /// 单列表 + Location 标记（0=背包 / 1=装备武器 / 2=装备防具），
+        /// 避免 JsonUtility 对 null 类字段序列化行为不可控的问题。
+        /// </summary>
+        [Serializable]
+        private class InventorySaveState
+        {
+            public List<InventorySlotSaveData> Slots = new List<InventorySlotSaveData>();
+        }
+
+        /// <summary>
+        /// 单个槽位的存档结构。
+        /// </summary>
+        [Serializable]
+        private class InventorySlotSaveData
+        {
+            public string ItemID;
+            public int Count;
+            public string CustomName;
+            public int Location;
         }
     }
 }

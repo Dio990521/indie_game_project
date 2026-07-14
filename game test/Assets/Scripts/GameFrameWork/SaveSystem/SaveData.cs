@@ -10,6 +10,15 @@ namespace IndieGame.Core.SaveSystem
     [Serializable]
     public class SaveData
     {
+        // 存档格式版本号（M3 修复新增）：
+        // - 1：历史版本（无 Version 字段，反序列化后为默认值 0 也视为 1）；
+        // - 2：SaveEntry.TypeName 由 AssemblyQualifiedName 改为 FullName。
+        // 未来做断档迁移时按该值分支处理。
+        public int Version = CurrentVersion;
+
+        // 当前代码使用的存档格式版本
+        public const int CurrentVersion = 2;
+
         // 元数据（存档时间、备注）
         public SaveMetaData MetaData = new SaveMetaData();
         // 各模块状态列表

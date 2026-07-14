@@ -37,6 +37,8 @@ namespace IndieGame.Core.SaveSystem
         private bool _isProcessingQueue;
         // 当请求方未提供有效 RequestId 时，服务层自动生成的序列号。
         private int _generatedRequestSerial;
+        // 缓存的 SaveManager 引用（避免每条请求全场景查找）。
+        private SaveManager _cachedSaveManager;
 
         private void OnEnable()
         {
@@ -74,7 +76,18 @@ namespace IndieGame.Core.SaveSystem
                 while (_requestQueue.Count > 0)
                 {
                     QueuedAutoSaveRequest request = _requestQueue.Dequeue();
-                    await ExecuteSingleRequestAsync(request);
+                    // M5 修复：本方法由 HandleAutoSaveRequestedEvent 以 fire-and-forget（丢弃 Task）方式启动，
+                    // 单条请求抛出的异常若不在此捕获会成为"未观察异常"被完全吞掉。
+                    // 这里逐条 try/catch：单条失败记日志并回传失败事件，队列继续消费后续请求。
+                    try
+                    {
+                        await ExecuteSingleRequestAsync(request);
+                    }
+                    catch (Exception ex)
+                    {
+                        IndieGame.Core.Utilities.DebugTools.LogError($"[AutoSaveService] 自动存档请求执行异常（RequestId={request.RequestId}）：{ex}");
+                        PublishCompletedEvent(request, false, ex.Message);
+                    }
                 }
             }
             finally
@@ -88,7 +101,12 @@ namespace IndieGame.Core.SaveSystem
         /// </summary>
         private async Task ExecuteSingleRequestAsync(QueuedAutoSaveRequest request)
         {
-            SaveManager saveManager = FindAnyObjectByType<SaveManager>();
+            // 缓存 SaveManager 引用，避免每条请求都做一次全场景查找
+            if (_cachedSaveManager == null)
+            {
+                _cachedSaveManager = FindAnyObjectByType<SaveManager>();
+            }
+            SaveManager saveManager = _cachedSaveManager;
             if (saveManager == null)
             {
                 PublishCompletedEvent(request, false, "SaveManager not found.");

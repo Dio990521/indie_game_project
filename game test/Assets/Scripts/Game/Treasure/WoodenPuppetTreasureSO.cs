@@ -1,4 +1,7 @@
 using UnityEngine;
+using IndieGame.Core;
+using IndieGame.Gameplay.Board.Runtime;
+using IndieGame.Gameplay.Board.Runtime.States;
 
 namespace IndieGame.Gameplay.Treasure
 {
@@ -10,6 +13,12 @@ namespace IndieGame.Gameplay.Treasure
     [CreateAssetMenu(menuName = "BoardGame/Treasure/Wooden Puppet Treasure", fileName = "WoodenPuppetTreasureSO")]
     public class WoodenPuppetTreasureSO : TreasureSO
     {
+        /// <summary> 创建木头人激活状态（M10：多态分发）。 </summary>
+        public override BaseState<BoardGameManager> CreateActivationState()
+        {
+            return new WoodenPuppetTreasureState(this);
+        }
+
         [Header("木头人移动")]
         [Tooltip("木头人的自由移动速度（世界单位/秒）")]
         public float MoveSpeed = 4f;

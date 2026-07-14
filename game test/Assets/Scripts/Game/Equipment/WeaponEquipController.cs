@@ -89,6 +89,31 @@ namespace IndieGame.Gameplay.Equipment
         }
 
         /// <summary>
+        /// 存档恢复专用入口（仅供 InventoryManager 读档流程调用）：
+        /// 与 Equip 不同，本方法不做背包摘出/归还联动——读档时槽位由存档直接重建，
+        /// 既不在背包里、也不需要把"旧装备"还回背包（旧装备属于被覆盖的过期状态）。
+        /// 传入 null 表示"该存档没有装备"，会清空当前装备与其加成。
+        /// </summary>
+        public void RestoreEquipped(InventorySlot weaponSlot)
+        {
+            WeaponSO previous = CurrentWeapon;
+
+            RemoveAppliedModifiers();
+            CurrentWeaponSlot = (weaponSlot != null && weaponSlot.Item is WeaponSO) ? weaponSlot : null;
+            ApplyCurrentModifiers();
+
+            // 事件广播与 Equip/Unequip 保持一致，让 UI（背包/属性面板）正常刷新
+            if (previous != null && CurrentWeapon == null)
+            {
+                EventBus.Raise(new WeaponUnequippedEvent { Owner = gameObject, Weapon = previous });
+            }
+            if (CurrentWeapon != null)
+            {
+                EventBus.Raise(new WeaponEquippedEvent { Owner = gameObject, Weapon = CurrentWeapon });
+            }
+        }
+
+        /// <summary>
         /// 重新计算并应用当前武器的加成（基础 Modifiers）。
         /// </summary>
         public void RefreshAppliedModifiers()
