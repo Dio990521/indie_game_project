@@ -45,12 +45,10 @@ namespace IndieGame.UI.Town
         [Tooltip("等待自动存档完成的超时时长（秒）。超时后继续流程，避免卡死。")]
         [SerializeField] private float innAutoSaveTimeoutSeconds = 8f;
 
-        // 旅馆自动存档请求追踪（与 CampUIController 的 Sleep 机制对称）。
-        private static int _innAutoSaveRequestSerial;
-        private int _pendingInnAutoSaveRequestId = -1;
-        private bool _pendingInnAutoSaveCompleted;
-        private bool _pendingInnAutoSaveSuccess;
-        private string _pendingInnAutoSaveError;
+        // 自动存档请求/等待/匹配的复用工具（与 CampUIController 共用 AutoSaveAwaiter 实现，
+        // 替代原先在本类逐行对称复制的 ~90 行样板）。
+        private readonly IndieGame.Core.SaveSystem.AutoSaveAwaiter _autoSaveAwaiter =
+            new IndieGame.Core.SaveSystem.AutoSaveAwaiter("[TownUIController] Inn");
 
         // 长协程互斥引用：旅馆住宿与传送是两条独立流程，分别拥有互斥引用。
         private Coroutine _innSleepCoroutine;
@@ -78,14 +76,15 @@ namespace IndieGame.UI.Town
         {
             EventBus.Subscribe<InnSleepRequestedEvent>(HandleInnSleepRequested);
             EventBus.Subscribe<TownTeleportRequestedEvent>(HandleTeleportRequested);
-            EventBus.Subscribe<AutoSaveCompletedEvent>(HandleInnAutoSaveCompleted);
+            _autoSaveAwaiter.Subscribe();
         }
 
         private void OnDisable()
         {
             EventBus.Unsubscribe<InnSleepRequestedEvent>(HandleInnSleepRequested);
             EventBus.Unsubscribe<TownTeleportRequestedEvent>(HandleTeleportRequested);
-            EventBus.Unsubscribe<AutoSaveCompletedEvent>(HandleInnAutoSaveCompleted);
+            // 退订并复位等待状态，避免协程被 Stop 后旧 RequestId 在下次流程中错误匹配。
+            _autoSaveAwaiter.Unsubscribe();
 
             // 兜底清理传送委托（协程被 StopCoroutine 终止时不会执行 finally）。
             if (_onTeleportSelected != null)
@@ -110,12 +109,6 @@ namespace IndieGame.UI.Town
                 StopCoroutine(_teleportCoroutine);
                 _teleportCoroutine = null;
             }
-
-            // 自动存档等待状态一并复位，避免下次回到城镇时旧 RequestId 错误匹配。
-            _pendingInnAutoSaveRequestId = -1;
-            _pendingInnAutoSaveCompleted = false;
-            _pendingInnAutoSaveSuccess = false;
-            _pendingInnAutoSaveError = null;
         }
 
         // ===================== 旅馆住宿 =====================
@@ -156,8 +149,12 @@ namespace IndieGame.UI.Town
             ActionPointSystem.Instance?.RefillActionPoints("Inn");
             IndieGame.Gameplay.Date.DateSystem.Instance?.AdvanceDay();
 
-            // 4) 自动存档（带超时保护）。
-            yield return RequestInnAutoSaveRoutine();
+            // 4) 自动存档（带超时保护；超时/失败的告警日志由 Awaiter 统一输出）。
+            if (enableInnAutoSave)
+            {
+                yield return _autoSaveAwaiter.RequestAndWait(
+                    AutoSaveReason.Inn, innAutoSaveSlotIndex, innAutoSaveNote, innAutoSaveTimeoutSeconds);
+            }
 
             // 5) 在黑屏状态下重新初始化菜单按钮并恢复交互。
             //    通过 View 的 public 方法触发，View 自身依然保持纯显示职责。
@@ -182,65 +179,8 @@ namespace IndieGame.UI.Town
             _innSleepCoroutine = null;
         }
 
-        /// <summary>
-        /// 请求旅馆住宿自动存档并等待完成。
-        /// </summary>
-        private IEnumerator RequestInnAutoSaveRoutine()
-        {
-            if (!enableInnAutoSave) yield break;
-
-            if (!EventBus.HasSubscribers<AutoSaveRequestedEvent>())
-            {
-                DebugTools.LogWarning("[TownUIController] Inn auto-save skipped: no AutoSaveRequestedEvent subscriber.");
-                yield break;
-            }
-
-            _pendingInnAutoSaveCompleted = false;
-            _pendingInnAutoSaveSuccess = false;
-            _pendingInnAutoSaveError = null;
-            _pendingInnAutoSaveRequestId = ++_innAutoSaveRequestSerial;
-
-            EventBus.Raise(new AutoSaveRequestedEvent
-            {
-                RequestId = _pendingInnAutoSaveRequestId,
-                Reason = AutoSaveReason.Inn,
-                SlotIndex = innAutoSaveSlotIndex,
-                Note = innAutoSaveNote,
-                WaitForCompletion = true
-            });
-
-            float elapsed = 0f;
-            while (!_pendingInnAutoSaveCompleted && elapsed < Mathf.Max(0.1f, innAutoSaveTimeoutSeconds))
-            {
-                elapsed += Time.unscaledDeltaTime;
-                yield return null;
-            }
-
-            if (!_pendingInnAutoSaveCompleted)
-            {
-                DebugTools.LogWarning($"[TownUIController] Inn auto-save timed out after {innAutoSaveTimeoutSeconds}s.");
-            }
-            else if (!_pendingInnAutoSaveSuccess)
-            {
-                DebugTools.LogWarning($"[TownUIController] Inn auto-save failed: {_pendingInnAutoSaveError}");
-            }
-
-            _pendingInnAutoSaveRequestId = -1;
-        }
-
-        /// <summary>
-        /// 接收自动存档完成回调，仅处理本次旅馆请求（用 RequestId 精确匹配，避免被其他来源串线）。
-        /// </summary>
-        private void HandleInnAutoSaveCompleted(AutoSaveCompletedEvent evt)
-        {
-            if (_pendingInnAutoSaveRequestId < 0) return;
-            if (evt.RequestId != _pendingInnAutoSaveRequestId) return;
-            if (evt.Reason != AutoSaveReason.Inn) return;
-
-            _pendingInnAutoSaveCompleted = true;
-            _pendingInnAutoSaveSuccess = evt.Success;
-            _pendingInnAutoSaveError = evt.Error;
-        }
+        // 注：原 RequestInnAutoSaveRoutine / HandleInnAutoSaveCompleted（约 90 行）已由
+        // AutoSaveAwaiter 统一实现，本类不再持有任何自动存档等待状态。
 
         // ===================== 城镇传送 =====================
 

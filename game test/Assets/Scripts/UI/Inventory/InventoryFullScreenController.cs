@@ -14,8 +14,13 @@ namespace IndieGame.UI.Inventory
 {
     /// <summary>
     /// 全屏背包界面控制器。
-    /// 负责分类过滤、槽位对象池、物品详情展示、使用/丢弃操作。
+    /// 负责分类过滤、槽位对象池、使用/丢弃/改名操作流程与装备切换。
     /// 通过 InventoryManager 的静态事件与游戏状态机（PlayerTurnState）保持兼容。
+    ///
+    /// 架构边界（与打造界面三件套对齐）：
+    /// - InventoryFullScreenBinder：只保存引用；
+    /// - InventoryDetailPanel：右侧详情区渲染 + 操作按钮可用态（纯渲染，不发起业务）；
+    /// - 本类：槽位池、Tab 过滤、业务流程（使用/丢弃/改名/装备）与 EventBus 路由。
     /// </summary>
     public class InventoryFullScreenController : EventBusMonoBehaviour
     {
@@ -36,6 +41,8 @@ namespace IndieGame.UI.Inventory
         private InventoryTab _currentTab = InventoryTab.Consumable;
         private InventorySlot _selectedSlot;
         private CanvasGroup _canvasGroup;
+        // 右侧详情面板（渲染职责已从本类拆出，见 InventoryDetailPanel）
+        private readonly InventoryDetailPanel _detailPanel = new InventoryDetailPanel();
         // 缓存最近一次 OnInventoryChanged 传入的槽位列表
         private IReadOnlyList<InventorySlot> _cachedSlots;
         // 缓存当前金币（由 GoldChangedEvent 持续更新）
@@ -62,6 +69,9 @@ namespace IndieGame.UI.Inventory
 
             _canvasGroup = binder.CanvasGroup;
             if (_canvasGroup == null) _canvasGroup = gameObject.AddComponent<CanvasGroup>();
+
+            // 注入详情面板的 UI 引用
+            _detailPanel.Init(binder);
 
             // 初始隐藏
             SetVisible(false);
@@ -135,14 +145,14 @@ namespace IndieGame.UI.Inventory
         {
             if (!IsCurrentPlayer(evt.Owner)) return;
             RefreshEquippedWeaponSlot();
-            RefreshActionButtons();
+            _detailPanel.RefreshActionButtons(_selectedSlot);
         }
 
         private void HandleWeaponUnequipChanged(WeaponUnequippedEvent evt)
         {
             if (!IsCurrentPlayer(evt.Owner)) return;
             RefreshEquippedWeaponSlot();
-            RefreshActionButtons();
+            _detailPanel.RefreshActionButtons(_selectedSlot);
         }
 
         /// <summary>
@@ -151,7 +161,7 @@ namespace IndieGame.UI.Inventory
         private void RefreshIfAffected(InventorySlot slot)
         {
             if (slot == null) return;
-            if (_selectedSlot == slot) RefreshDetailPanel();
+            if (_selectedSlot == slot) _detailPanel.Show(_selectedSlot);
             if (TryBindPlayerWeaponEquip() && _playerWeaponEquip.CurrentWeaponSlot == slot) RefreshEquippedWeaponSlot();
         }
 
@@ -305,12 +315,11 @@ namespace IndieGame.UI.Inventory
             if (_selectedSlot != null && !IsSelectedSlotStillValid())
             {
                 _selectedSlot = null;
-                ClearDetailPanel();
+                _detailPanel.Clear();
             }
             else if (_selectedSlot != null)
             {
-                RefreshDetailPanel();
-                RefreshActionButtons();
+                _detailPanel.Show(_selectedSlot);
             }
         }
 
@@ -363,7 +372,7 @@ namespace IndieGame.UI.Inventory
             RefreshTabHighlights();
             // 切换 Tab 时清空详情（避免展示与当前 Tab 无关的物品）
             _selectedSlot = null;
-            ClearDetailPanel();
+            _detailPanel.Clear();
             RebuildSlotList();
 
             // 切回顶部，避免停留在上一个 Tab 的滚动位置
@@ -389,104 +398,11 @@ namespace IndieGame.UI.Inventory
         {
             _selectedSlot = slot;
             RefreshSelectionHighlight();
-            RefreshDetailPanel();
-            RefreshActionButtons();
+            _detailPanel.Show(_selectedSlot);
         }
 
-        /// <summary>
-        /// 更新右侧详情面板的所有文本和图标。
-        /// </summary>
-        private void RefreshDetailPanel()
-        {
-            if (binder == null || _selectedSlot == null || _selectedSlot.Item == null)
-            {
-                ClearDetailPanel();
-                return;
-            }
-
-            ItemSO item = _selectedSlot.Item;
-
-            // 图标
-            if (binder.DetailIcon != null)
-                binder.DetailIcon.sprite = item.Icon;
-
-            // 名称：优先使用槽位自定义名，否则回退本地化名称
-            if (binder.DetailNameText != null)
-            {
-                if (!string.IsNullOrWhiteSpace(_selectedSlot.CustomName))
-                {
-                    binder.DetailNameText.text = _selectedSlot.CustomName;
-                }
-                else if (item.ItemName != null)
-                {
-                    var handle = item.ItemName.GetLocalizedStringAsync();
-                    handle.Completed += op =>
-                    {
-                        // 防御性校验顺序：
-                        // 1) Controller 自身或 binder 已被销毁 → 直接放弃；
-                        // 2) 选中项已变更 → 旧异步结果丢弃，避免回写错位的名称。
-                        if (this == null || binder == null) return;
-                        if (_selectedSlot?.Item != item) return;
-                        if (binder.DetailNameText != null)
-                            binder.DetailNameText.text = op.Result;
-                    };
-                }
-                else
-                {
-                    binder.DetailNameText.text = string.IsNullOrWhiteSpace(item.ID) ? "Unknown" : item.ID;
-                }
-            }
-
-            // 分类
-            if (binder.DetailTypeText != null)
-                binder.DetailTypeText.text = CategoryToDisplayName(item.Category);
-
-            // 稀有度色块：背景色 + 中文短标签（普通/优良/稀有/史诗/传说）
-            if (binder.DetailRarityBadgeBackground != null)
-                binder.DetailRarityBadgeBackground.color = ItemRarityUtility.GetColor(item.Rarity);
-            if (binder.DetailRarityBadgeText != null)
-                binder.DetailRarityBadgeText.text = ItemRarityUtility.GetDisplayName(item.Rarity);
-
-            // 描述
-            if (binder.DetailDescText != null)
-                binder.DetailDescText.text = item.Description ?? string.Empty;
-
-            // 持有数量
-            if (binder.DetailCountText != null)
-                binder.DetailCountText.text = _selectedSlot.Count.ToString();
-        }
-
-        private void ClearDetailPanel()
-        {
-            if (binder == null) return;
-            if (binder.DetailIcon != null) binder.DetailIcon.sprite = null;
-            if (binder.DetailNameText != null) binder.DetailNameText.text = string.Empty;
-            if (binder.DetailTypeText != null) binder.DetailTypeText.text = string.Empty;
-            if (binder.DetailDescText != null) binder.DetailDescText.text = string.Empty;
-            if (binder.DetailCountText != null) binder.DetailCountText.text = string.Empty;
-            if (binder.DetailRarityBadgeText != null) binder.DetailRarityBadgeText.text = string.Empty;
-            RefreshActionButtons();
-        }
-
-        /// <summary>
-        /// 根据选中项的分类决定按钮的可用状态。
-        /// Use 按钮：消耗品或武器可用（武器走装备/卸下逻辑）；Discard 按钮：选中时始终可用。
-        /// </summary>
-        private void RefreshActionButtons()
-        {
-            bool hasSelection = _selectedSlot != null && _selectedSlot.Item != null;
-            bool isConsumable = hasSelection && _selectedSlot.Item.Category == ItemCategory.Consumable;
-            bool isWeapon = hasSelection && _selectedSlot.Item is WeaponSO;
-
-            if (binder.UseButton != null)
-                binder.UseButton.interactable = isConsumable || isWeapon;
-
-            if (binder.DiscardButton != null)
-                binder.DiscardButton.interactable = hasSelection;
-
-            if (binder.RenameButton != null)
-                binder.RenameButton.interactable = hasSelection;
-        }
+        // 注：原 RefreshDetailPanel / ClearDetailPanel / RefreshActionButtons / CategoryToDisplayName
+        // （约 120 行详情渲染逻辑）已迁往 InventoryDetailPanel，本类只保留业务流程。
 
         // ── 操作按钮 ─────────────────────────────────────────────────────
 
@@ -654,20 +570,5 @@ namespace IndieGame.UI.Inventory
             binder.GoldText.text = _currentGold.ToString("N0");
         }
 
-        // ── 辅助 ─────────────────────────────────────────────────────────
-
-        private static string CategoryToDisplayName(ItemCategory category)
-        {
-            // L2 修复：分类显示名统一走 UIText 目录（旧实现中英混杂且内联在此处）
-            return category switch
-            {
-                ItemCategory.Equipment  => UIText.CategoryEquipment,
-                ItemCategory.Consumable => UIText.CategoryConsumable,
-                ItemCategory.Material   => UIText.CategoryMaterial,
-                ItemCategory.Blueprint  => UIText.CategoryBlueprint,
-                ItemCategory.Quest      => UIText.CategoryQuest,
-                _                       => UIText.CategoryUnknown
-            };
-        }
     }
 }

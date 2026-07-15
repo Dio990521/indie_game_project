@@ -220,5 +220,74 @@ namespace IndieGame.Gameplay.Board.Runtime
         {
             _fx.ProtectedNodeId = evt.ProtectedNodeId;
         }
+
+        // ===================== 外部抵达管线与事件订阅管理 =====================
+
+        /// <summary>
+        /// 处理外部跳跃（如飞翼宝具）落点的完整格子效果管线。
+        /// 订阅所有格子效果事件，复用 HandleSegmentCompleted 管线，
+        /// 支持传送格、大炮格、方向格、扭曲格等所有连锁效果。
+        /// 调用方 yield return 本协程，协程结束后实体已处于最终落点，
+        /// IsMoving 已重置。
+        /// </summary>
+        public IEnumerator HandleExternalArrival(MapWaypoint landingNode)
+        {
+            if (landingNode == null || _playerEntity == null) yield break;
+            EnsureInteractionHandler();
+
+            // 初始化为"正在移动、最后一步落地"的状态，完全复用现有管线
+            _activeEntity          = _playerEntity;
+            _triggerNodeEvents     = true;
+            _fx                    = TileEffectPendingState.Default;
+            _isMoving              = true;
+            _stepsRemaining        = 1; // 模拟落地即终点
+            _isTeleporting         = false;
+            _allowFirstStepUTurn   = false;
+
+            // 订阅全部格子效果事件（传送、大炮、额外步数、方向格、扭曲格）
+            SubscribeSegmentEvent();
+
+            // 监听移动全部结束事件，确保连锁效果（如传送后再触发格子）全部完成
+            bool done = false;
+            System.Action<BoardMovementEndedEvent> onDone = _ => done = true;
+            EventBus.Subscribe(onDone);
+
+            // 启动完整的抵达处理协程（HandleSegmentCompleted 内部最终都会调 FinishMove）
+            _arrivalRoutine = StartCoroutine(HandleSegmentCompleted(landingNode));
+
+            // 等待 FinishMove → BoardMovementEndedEvent → done = true
+            while (!done) yield return null;
+
+            EventBus.Unsubscribe(onDone);
+            // FinishMove 已在内部调用 UnsubscribeSegmentEvent，状态已清理完毕
+        }
+
+        /// <summary>
+        /// 订阅全部格子效果事件（仅在移动期间保持订阅，FinishMove/ResetToStart 时退订）。
+        /// </summary>
+        private void SubscribeSegmentEvent()
+        {
+            EventBus.Subscribe<BoardEntitySegmentCompletedEvent>(OnEntitySegmentCompleted);
+            EventBus.Subscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
+            EventBus.Subscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
+            EventBus.Subscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
+            EventBus.Subscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
+            EventBus.Subscribe<BoardTeleportRequestedEvent>(OnTeleportRequested);
+            EventBus.Subscribe<BoardDirectionalMoveRequestedEvent>(OnDirectionalMoveRequested);
+        }
+
+        /// <summary>
+        /// 退订全部格子效果事件（与 SubscribeSegmentEvent 严格成对）。
+        /// </summary>
+        private void UnsubscribeSegmentEvent()
+        {
+            EventBus.Unsubscribe<BoardEntitySegmentCompletedEvent>(OnEntitySegmentCompleted);
+            EventBus.Unsubscribe<BoardExtraMoveRequestedEvent>(OnExtraMoveRequested);
+            EventBus.Unsubscribe<BoardWarpSlideRequestedEvent>(OnWarpSlideRequested);
+            EventBus.Unsubscribe<BoardWarpFilterPathEvent>(OnWarpFilterPathRequested);
+            EventBus.Unsubscribe<BoardCannonLaunchRequestedEvent>(OnCannonLaunchRequested);
+            EventBus.Unsubscribe<BoardTeleportRequestedEvent>(OnTeleportRequested);
+            EventBus.Unsubscribe<BoardDirectionalMoveRequestedEvent>(OnDirectionalMoveRequested);
+        }
     }
 }

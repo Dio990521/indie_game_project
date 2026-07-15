@@ -10,13 +10,18 @@ using IndieGame.Gameplay.Board.Runtime.States;
 namespace IndieGame.UI
 {
     /// <summary>
-    /// 棋盘操作菜单视图：
-    /// 负责菜单的显示/隐藏、按钮布局、输入响应以及点击逻辑分发。
+    /// 棋盘操作菜单视图（partial 主文件）：
+    /// 负责菜单的显示/隐藏、按钮池与锚点投影。
     /// 菜单以玩家为锚点，按钮分为左右两侧圆弧展开（左侧朝左侧鼓出，右侧朝右侧鼓出）。
-    /// 两侧按钮视为一个 3 行 x 2 列的网格：水平方向（A/D 或左右方向键）在左右两侧之间切换，
-    /// 垂直方向（W/S 或上下方向键）在当前侧内部切换行；E 确认。鼠标点击/悬停已禁用。
+    ///
+    /// 职责拆分（重构说明）：
+    /// - 本文件：生命周期、Show/Hide、按钮池、锚点投影、显隐动画；
+    /// - <c>BoardActionMenuView.Layout.cs</c>：圆弧布局数学（LayoutButtons / LayoutSideArc）；
+    /// - <c>BoardActionMenuView.Input.cs</c>：3x2 网格键盘导航（轴节流 / 侧行切换 / 选中高亮）；
+    /// - <c>BoardActionDispatcher</c>：菜单项确认后的业务分发（原 OnButtonClick 的 switch，
+    ///   已从 View 迁出以恢复 MVB 边界——View 不再直接调用 BoardGameManager.ChangeState）。
     /// </summary>
-    public class BoardActionMenuView : MonoBehaviour
+    public partial class BoardActionMenuView : MonoBehaviour
     {
         [Header("Binder")]
         // 绑定器：集中保存 UI 引用
@@ -255,187 +260,22 @@ namespace IndieGame.UI
             _lastInputY = 0f;
         }
 
-        /// <summary>
-        /// 计算并设置按钮在圆弧布局中的位置：
-        /// 左侧按钮以玩家左侧（180°）为中心呈弧形纵向展开，右侧按钮以玩家右侧（0°）为中心呈弧形纵向展开；
-        /// 每侧内部 row 0 始终在最上方，向下依次排列，与方向键的“3x2 网格”选择逻辑一一对应。
-        /// </summary>
-        private void LayoutButtons()
-        {
-            LayoutSideArc(_leftFlatIndices, 180f, flipStep: true);
-            LayoutSideArc(_rightFlatIndices, 0f, flipStep: false);
-        }
+        // 注：以下方法已迁往同名 partial 文件 / 分发器：
+        // - LayoutButtons / LayoutSideArc               → BoardActionMenuView.Layout.cs
+        // - OnMoveInput / ProcessAxis / MoveSide /
+        //   MoveRow / OnInteractInput / SelectSideRow /
+        //   SubscribeInput / UnsubscribeInput           → BoardActionMenuView.Input.cs
+        // - 原 OnButtonClick 的业务 switch              → BoardActionDispatcher.Dispatch
 
         /// <summary>
-        /// 将某一侧的按钮沿圆弧纵向排列（row 0 在最上方，中间行朝该侧鼓出最多）。
+        /// 确认当前选中的菜单项：
+        /// View 只负责取出选中项，业务触发全部交给 BoardActionDispatcher（MVB 边界）。
         /// </summary>
-        /// <param name="flatIndices">该侧按钮在 _buttons 中的索引列表，按行从上到下排列</param>
-        /// <param name="centerAngle">该侧圆弧中心角度：左侧 180°，右侧 0°</param>
-        /// <param name="flipStep">左右两侧的角度增长方向相反，用于保证 row 0 始终位于最上方</param>
-        private void LayoutSideArc(List<int> flatIndices, float centerAngle, bool flipStep)
+        private void ConfirmSelection()
         {
-            int count = flatIndices.Count;
-            if (count == 0) return;
-
-            float half = arcAngle * 0.5f * (flipStep ? -1f : 1f);
-            float step = (count > 1 ? arcAngle / (count - 1) : 0f) * (flipStep ? 1f : -1f);
-            float startAngle = centerAngle + half;
-
-            for (int row = 0; row < count; row++)
-            {
-                BoardActionButton button = _buttons[flatIndices[row]];
-                if (button == null) continue;
-                float angle = startAngle + step * row;
-                float rad = angle * Mathf.Deg2Rad;
-                Vector2 pos = new Vector2(Mathf.Cos(rad) * radius, Mathf.Sin(rad) * radius) + offset;
-
-                RectTransform rt = button.GetComponent<RectTransform>();
-                rt.anchoredPosition = pos;
-            }
-        }
-
-        /// <summary>
-        /// 处理移动输入：将左右两侧按钮视为一个 3 行 x 2 列的网格。
-        /// 水平方向（A/D 或左右方向键）在“左侧栏 / 右侧栏”之间切换；
-        /// 垂直方向（W/S 或上下方向键）在当前所在侧内部按行循环切换。
-        /// 复用现有的 Move 输入轴（与角色移动共用同一组按键），无需额外绑定。
-        ///
-        /// 两个轴各自独立做“新按键立即响应 + 按住连发”的节流判定，互不干扰；
-        /// 节流逻辑只用于“按住不放”时的自动连发，新的单次按键（方向从中立或反方向切换过来）
-        /// 一律立即响应，避免快速连续按键时因节流而出现选择顿挫、漏按的问题。
-        /// </summary>
-        private void OnMoveInput(InputMoveEvent evt)
-        {
-            Vector2 v = evt.Value;
-            if (_options.Count == 0) { _lastInputX = v.x; _lastInputY = v.y; return; }
-
-            ProcessAxis(v.x, ref _lastInputX, ref _nextInputTime, MoveSide);
-            // 屏幕纵坐标向上为正，而 row 0 在最上方，因此按“上”时需要让 row 减小，符号取反
-            ProcessAxis(v.y, ref _lastInputY, ref _nextInputTimeY, dir => MoveRow(-dir));
-        }
-
-        /// <summary>
-        /// 单个输入轴的“新按键立即响应 + 按住连发”节流通用逻辑。
-        /// </summary>
-        private void ProcessAxis(float value, ref float lastValue, ref float nextTime, Action<int> onStep)
-        {
-            bool wasActive = Mathf.Abs(lastValue) > 0.5f;
-            bool isActive = Mathf.Abs(value) > 0.5f;
-            bool isNewPress = isActive && (!wasActive || Mathf.Sign(value) != Mathf.Sign(lastValue));
-
-            if (isNewPress)
-            {
-                onStep(value > 0f ? 1 : -1);
-                nextTime = Time.time + inputRepeatDelay;
-            }
-            else if (isActive && Time.time >= nextTime)
-            {
-                onStep(value > 0f ? 1 : -1);
-                nextTime = Time.time + inputRepeatDelay;
-            }
-
-            lastValue = value;
-        }
-
-        /// <summary>
-        /// 左右切换当前选中所在的侧（+1 右，-1 左）；已在最左/最右侧时不循环。
-        /// 若目标侧的行数少于当前行号，则夹取到该侧最后一行。
-        /// </summary>
-        private void MoveSide(int direction)
-        {
-            int targetSide = direction > 0 ? 1 : 0;
-            if (targetSide == _selectedSide) return;
-
-            List<int> target = targetSide == 0 ? _leftFlatIndices : _rightFlatIndices;
-            if (target.Count == 0) return;
-
-            int row = Mathf.Min(_selectedRow, target.Count - 1);
-            SelectSideRow(targetSide, row);
-        }
-
-        /// <summary>
-        /// 在当前侧内部上下循环切换选中行（+1 向下，-1 向上）。
-        /// </summary>
-        private void MoveRow(int direction)
-        {
-            List<int> current = _selectedSide == 0 ? _leftFlatIndices : _rightFlatIndices;
-            if (current.Count == 0) return;
-
-            int row = (_selectedRow + direction + current.Count) % current.Count;
-            SelectSideRow(_selectedSide, row);
-        }
-
-        /// <summary>
-        /// 处理交互输入（E 键 / Interact 输入 -> 确认当前选中的选项）。
-        /// </summary>
-        private void OnInteractInput(InputInteractEvent evt)
-        {
-            OnButtonClick(new BoardActionButtonClickEvent { Index = _selectedIndex });
-        }
-
-        /// <summary>
-        /// 点击处理：根据按钮类型触发对应事件。
-        /// </summary>
-        private void OnButtonClick(BoardActionButtonClickEvent evt)
-        {
-            int index = evt.Index;
+            int index = _selectedIndex;
             if (index < 0 || index >= _options.Count) return;
-            BoardActionOptionData option = _options[index];
-            switch (option.Id)
-            {
-                case BoardActionId.RollDice:
-                    EventBus.Raise(new BoardRollDiceRequestedEvent());
-                    Hide();
-                    break;
-                case BoardActionId.Item:
-                    EventBus.Raise(new OpenInventoryEvent());
-                    Hide();
-                    break;
-                case BoardActionId.Treasure:
-                    Hide(); // 先隐藏操作菜单，再通知，确保 _isVisible=false 时恢复逻辑可正常触发 Show
-                    EventBus.Raise(new BoardTreasureMenuRequestedEvent());
-                    break;
-                case BoardActionId.Camp:
-                    if (campingLocationId == null)
-                    {
-                        DebugTools.LogWarning("[BoardActionMenuView] Missing campingLocationId.");
-                        break;
-                    }
-                    if (BoardGameManager.Instance != null)
-                    {
-                        BoardGameManager.Instance.ChangeState(new CampingState(campingLocationId));
-                    }
-                    break;
-                case BoardActionId.Map:
-                    // TODO: 地图功能尚未实现，先用日志占位点击效果
-                    DebugTools.Log("<color=cyan>[操作菜单] 点击了【地图】按钮（功能待实现）。</color>");
-                    break;
-                case BoardActionId.Equip:
-                    EventBus.Raise(new OpenEquipmentUIEvent());
-                    Hide();
-                    break;
-            }
-        }
-
-        /// <summary>
-        /// 选中指定侧、指定行的按钮，并更新所有按钮的高亮缩放。
-        /// </summary>
-        private void SelectSideRow(int side, int row, bool instant = false)
-        {
-            List<int> list = side == 0 ? _leftFlatIndices : _rightFlatIndices;
-            if (list.Count == 0) return;
-            row = Mathf.Clamp(row, 0, list.Count - 1);
-
-            _selectedSide = side;
-            _selectedRow = row;
-            _selectedIndex = list[row];
-
-            for (int i = 0; i < _buttons.Count; i++)
-            {
-                if (_buttons[i] == null || !_buttons[i].gameObject.activeSelf) continue;
-                bool isSelected = i == _selectedIndex;
-                _buttons[i].SetSelected(isSelected, isSelected ? selectedScale : normalScale, instant ? 0f : selectTweenDuration);
-            }
+            BoardActionDispatcher.Dispatch(_options[index].Id, campingLocationId, Hide);
         }
 
         /// <summary>
@@ -492,28 +332,6 @@ namespace IndieGame.UI
                 }
                 _isVisible = false;
             });
-        }
-
-        /// <summary>
-        /// 订阅输入事件（EventBus）。
-        /// </summary>
-        private void SubscribeInput()
-        {
-            if (_inputSubscribed) return;
-            EventBus.Subscribe<InputMoveEvent>(OnMoveInput);
-            EventBus.Subscribe<InputInteractEvent>(OnInteractInput);
-            _inputSubscribed = true;
-        }
-
-        /// <summary>
-        /// 退订输入事件。
-        /// </summary>
-        private void UnsubscribeInput()
-        {
-            if (!_inputSubscribed) return;
-            EventBus.Unsubscribe<InputMoveEvent>(OnMoveInput);
-            EventBus.Unsubscribe<InputInteractEvent>(OnInteractInput);
-            _inputSubscribed = false;
         }
 
         /// <summary>
