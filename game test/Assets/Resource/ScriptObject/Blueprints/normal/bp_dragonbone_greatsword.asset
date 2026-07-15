@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6416fc00ae674902ab0620d38ff4b14, type: 3}
+  m_Name: bp_dragonbone_greatsword
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Crafting.BlueprintSO
+  id: bp_dragonbone_greatsword
+  defaultName: "\u56FE\u7EB8\uFF1A\u9F99\u9AA8\u5927\u5251"
+  requiredLevel: 9
+  description: "\u8BB0\u8F7D\u7740\u300C\u9F99\u9AA8\u5927\u5251\u300D\u6253\u9020\u5DE5\u827A\u7684\u56FE\u7EB8\u3002"
+  productItem: {fileID: 11400000, guid: 1167773732b9dda48b8c485bc304d34b, type: 2}
+  productAmount: 1
+  iconOverride: {fileID: 0}
+  requirements:
+  - item: {fileID: 11400000, guid: cbaa37cd687eef04ba56578e0764934d, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 737bce94354bb4b43949e3e28148a207, type: 2}
+    amount: 4
+  - item: {fileID: 11400000, guid: 01fe55def83e6214883a0d2b9f128b91, type: 2}
+    amount: 2

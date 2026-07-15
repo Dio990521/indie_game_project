@@ -1,0 +1,39 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b55fd2302e9ac549bedf99954f664f2, type: 3}
+  m_Name: wpn_great_warhammer
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.WeaponSO
+  ID: wpn_great_warhammer
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Weapons
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: wpn_great_warhammer
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 1483669345, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u9700\u8981\u53CC\u624B\u624D\u80FD\u6325\u52A8\u7684\u5DE8\u9524\uFF0C\u4E00\u51FB\u5C71\u5D29\u5730\u88C2\u3002"
+  Category: 1
+  Rarity: 2
+  isStackable: 0
+  maxStack: 1
+  SlotType: 0
+  Modifiers:
+  - Type: 0
+    Value: 12
+  - Type: 3
+    Value: -2
+  references:
+    version: 2
+    RefIds: []

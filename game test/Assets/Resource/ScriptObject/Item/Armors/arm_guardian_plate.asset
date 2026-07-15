@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 54fd5fffca0704243a076d29007b7244, type: 3}
+  m_Name: arm_guardian_plate
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.ArmorSO
+  ID: arm_guardian_plate
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Armors
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: arm_guardian_plate
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 1483669345, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u5723\u6BBF\u5B88\u536B\u7684\u5236\u5F0F\u91CD\u7532\uFF0C\u62A4\u4E3B\u4E4B\u5FC3\u6C38\u4E0D\u7184\u706D\u3002"
+  Category: 1
+  Rarity: 3
+  isStackable: 0
+  maxStack: 1
+  SlotType: 1
+  Modifiers:
+  - Type: 1
+    Value: 12
+  - Type: 5
+    Value: 15
+  - Type: 3
+    Value: -2
+  references:
+    version: 2
+    RefIds: []

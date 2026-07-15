@@ -1972,11 +1972,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.VerticalLayoutGroup
   m_Padding:
-    m_Left: -907
+    m_Left: 10
     m_Right: 0
-    m_Top: 19
+    m_Top: 0
     m_Bottom: 0
-  m_ChildAlignment: 1
+  m_ChildAlignment: 0
   m_Spacing: 10
   m_ChildForceExpandWidth: 1
   m_ChildForceExpandHeight: 0
@@ -3060,7 +3060,6 @@ MonoBehaviour:
   synthesisCategoryButton: {fileID: 1480218820147500883}
   blueprintListModeButton: {fileID: 1929634323501661801}
   craftedListModeButton: {fileID: 4561188604283762458}
-  equipmentSubTabRoot: {fileID: 1663770441403935573}
   weaponBlueprintTabButton: {fileID: 9210878783562647816}
   armorBlueprintTabButton: {fileID: 2940756161769946372}
   weaponCraftedTabButton: {fileID: 2826414547422796925}

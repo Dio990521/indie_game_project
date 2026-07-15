@@ -23,6 +23,38 @@ MonoBehaviour:
     m_Key: ITEM_SB
     m_Metadata:
       m_Items: []
+  - m_Id: 61635052543180800
+    m_Key: mat_iron_ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123840
+    m_Key: mat_hardwood
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123841
+    m_Key: mat_leather
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123842
+    m_Key: mat_linen_cloth
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123843
+    m_Key: mat_monster_fang
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123844
+    m_Key: mat_magic_crystal
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123845
+    m_Key: mat_mithril_ingot
+    m_Metadata:
+      m_Items: []
+  - m_Id: 61635052585123846
+    m_Key: mat_dragon_scale
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

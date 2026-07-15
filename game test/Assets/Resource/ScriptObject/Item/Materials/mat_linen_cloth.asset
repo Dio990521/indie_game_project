@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11f9122f2a8224cc79f1841c037768d3, type: 3}
+  m_Name: mat_linen_cloth
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.ItemSO
+  ID: mat_linen_cloth
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Items
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: mat_linen_cloth
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 720359660, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u5E73\u6574\u7684\u4E9A\u9EBB\u7EC7\u7269\uFF0C\u53EF\u7528\u4E8E\u5236\u4F5C\u888D\u670D\u4E0E\u5185\u886C\u3002"
+  Category: 2
+  Rarity: 0
+  isStackable: 1
+  maxStack: 999
+  references:
+    version: 2
+    RefIds: []

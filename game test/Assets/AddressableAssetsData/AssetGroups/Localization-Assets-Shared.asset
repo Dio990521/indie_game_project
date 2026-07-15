@@ -20,6 +20,11 @@ MonoBehaviour:
     m_ReadOnly: 1
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 5a4d592cc65135849908285922b0e18a
+    m_Address: Assets/Resource/Localizaiton/Armors/Armors Shared Data.asset
+    m_ReadOnly: 1
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: a3001736ad943b543bff7eef5492e1cb
     m_Address: Assets/Resource/Localizaiton/Treasures/Treasures Shared Data.asset
     m_ReadOnly: 1

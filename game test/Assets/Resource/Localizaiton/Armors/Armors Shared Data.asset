@@ -1,0 +1,68 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5b11a58205ec3474ca216360e9fa74a8, type: 3}
+  m_Name: Armors Shared Data
+  m_EditorClassIdentifier: Unity.Localization::UnityEngine.Localization.Tables.SharedTableData
+  m_TableCollectionName: Armors
+  m_TableCollectionNameGuidString: 5a4d592cc65135849908285922b0e18a
+  m_Entries:
+  - m_Id: 520912896
+    m_Key: arm_leather_vest
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884416
+    m_Key: arm_traveler_cloak
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884417
+    m_Key: arm_iron_plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884418
+    m_Key: arm_chainmail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884419
+    m_Key: arm_lucky_vest
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884420
+    m_Key: arm_mage_robe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884421
+    m_Key: arm_scale_armor
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884422
+    m_Key: arm_mithril_mail
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884423
+    m_Key: arm_guardian_plate
+    m_Metadata:
+      m_Items: []
+  - m_Id: 541884424
+    m_Key: arm_dragonscale_armor
+    m_Metadata:
+      m_Items: []
+  m_Metadata:
+    m_Items: []
+  m_KeyGenerator:
+    rid: 3906943398269419593
+  references:
+    version: 2
+    RefIds:
+    - rid: 3906943398269419593
+      type: {class: DistributedUIDGenerator, ns: UnityEngine.Localization.Tables, asm: Unity.Localization}
+      data:
+        m_CustomEpoch: 1784125955022

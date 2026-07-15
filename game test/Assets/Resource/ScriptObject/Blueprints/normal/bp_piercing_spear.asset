@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6416fc00ae674902ab0620d38ff4b14, type: 3}
+  m_Name: bp_piercing_spear
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Crafting.BlueprintSO
+  id: bp_piercing_spear
+  defaultName: "\u56FE\u7EB8\uFF1A\u7A7F\u523A\u957F\u67AA"
+  requiredLevel: 3
+  description: "\u8BB0\u8F7D\u7740\u300C\u7A7F\u523A\u957F\u67AA\u300D\u6253\u9020\u5DE5\u827A\u7684\u56FE\u7EB8\u3002"
+  productItem: {fileID: 11400000, guid: c0052870822322d4090d0e91b78f9c1f, type: 2}
+  productAmount: 1
+  iconOverride: {fileID: 0}
+  requirements:
+  - item: {fileID: 11400000, guid: dfc12c29a12742847b18bf773352b059, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: cf94bc1c0222fd94086e15caa3bbcbfe, type: 2}
+    amount: 3

@@ -27,6 +27,46 @@ MonoBehaviour:
     m_Key: AXE
     m_Metadata:
       m_Items: []
+  - m_Id: 57632080947609600
+    m_Key: wpn_iron_sword
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164032
+    m_Key: wpn_hunting_bow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164033
+    m_Key: wpn_battle_axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164034
+    m_Key: wpn_piercing_spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164035
+    m_Key: wpn_lucky_mace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164036
+    m_Key: wpn_crystal_staff
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164037
+    m_Key: wpn_shadow_dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164038
+    m_Key: wpn_great_warhammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164039
+    m_Key: wpn_mithril_rapier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164040
+    m_Key: wpn_dragonbone_greatsword
+    m_Metadata:
+      m_Items: []
   m_Metadata:
     m_Items: []
   m_KeyGenerator:

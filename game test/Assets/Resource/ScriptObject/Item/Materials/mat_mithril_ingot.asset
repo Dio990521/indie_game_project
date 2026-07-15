@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11f9122f2a8224cc79f1841c037768d3, type: 3}
+  m_Name: mat_mithril_ingot
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.ItemSO
+  ID: mat_mithril_ingot
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Items
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: mat_mithril_ingot
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 720359660, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u8F7B\u82E5\u9E3F\u7FBD\u5374\u575A\u903E\u7CBE\u94A2\u7684\u4F20\u8BF4\u91D1\u5C5E\u3002"
+  Category: 2
+  Rarity: 3
+  isStackable: 1
+  maxStack: 999
+  references:
+    version: 2
+    RefIds: []

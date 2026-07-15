@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e6416fc00ae674902ab0620d38ff4b14, type: 3}
+  m_Name: bp_lucky_vest
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Crafting.BlueprintSO
+  id: bp_lucky_vest
+  defaultName: "\u56FE\u7EB8\uFF1A\u5E78\u8FD0\u80CC\u5FC3"
+  requiredLevel: 3
+  description: "\u8BB0\u8F7D\u7740\u300C\u5E78\u8FD0\u80CC\u5FC3\u300D\u6253\u9020\u5DE5\u827A\u7684\u56FE\u7EB8\u3002"
+  productItem: {fileID: 11400000, guid: 7b60fd462a7be7e4ab272d4164b64395, type: 2}
+  productAmount: 1
+  iconOverride: {fileID: 0}
+  requirements:
+  - item: {fileID: 11400000, guid: 6830d13852e62524cb641802bd0bd9ee, type: 2}
+    amount: 2
+  - item: {fileID: 11400000, guid: 737bce94354bb4b43949e3e28148a207, type: 2}
+    amount: 1

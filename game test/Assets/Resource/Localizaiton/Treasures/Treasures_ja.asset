@@ -27,19 +27,19 @@ MonoBehaviour:
     m_Metadata:
       m_Items: []
   - m_Id: 1820728119558144
-    m_Localized: "\u4E0D\u52D5"
+    m_Localized: "\u4E0D\u52D5\u306E\u9234"
     m_Metadata:
       m_Items: []
   - m_Id: 1826566351650816
-    m_Localized: "\u53CD\u8F6C\u724C"
+    m_Localized: "\u30EA\u30D0\u30FC\u30B9\u30AB\u30FC\u30C9"
     m_Metadata:
       m_Items: []
   - m_Id: 1838568780365824
-    m_Localized: "\u5F71\u9AB0\u5B50"
+    m_Localized: "\u5F71\u306E\u30C0\u30A4\u30B9"
     m_Metadata:
       m_Items: []
   - m_Id: 2532674703753216
-    m_Localized: "\u6597\u7BF7"
+    m_Localized: "\u30DE\u30F3\u30C8"
     m_Metadata:
       m_Items: []
   references:

@@ -27,6 +27,12 @@ MonoBehaviour:
     m_SerializedLabels:
     - Locale-zh-Hant
     FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 8982ea440628c354392c4da7588cea4e
+    m_Address: Armors_zh-Hant
+    m_ReadOnly: 1
+    m_SerializedLabels:
+    - Locale-zh-Hant
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b8fff12212e61412f9ec752185e5799b
     m_Address: Items_zh-Hant
     m_ReadOnly: 1

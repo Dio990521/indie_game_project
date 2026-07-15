@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11f9122f2a8224cc79f1841c037768d3, type: 3}
+  m_Name: mat_dragon_scale
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.ItemSO
+  ID: mat_dragon_scale
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Items
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: mat_dragon_scale
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 720359660, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u4ECE\u5DE8\u9F99\u8EAB\u4E0A\u5265\u843D\u7684\u9CDE\u7247\uFF0C\u5200\u5251\u96BE\u4F24\u3002"
+  Category: 2
+  Rarity: 4
+  isStackable: 1
+  maxStack: 999
+  references:
+    version: 2
+    RefIds: []

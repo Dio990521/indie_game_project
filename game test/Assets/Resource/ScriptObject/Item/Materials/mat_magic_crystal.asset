@@ -1,0 +1,33 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 11f9122f2a8224cc79f1841c037768d3, type: 3}
+  m_Name: mat_magic_crystal
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.ItemSO
+  ID: mat_magic_crystal
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Items
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: mat_magic_crystal
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 720359660, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u8574\u542B\u9B54\u529B\u7684\u5929\u7136\u6C34\u6676\uFF0C\u6563\u53D1\u7740\u5FAE\u5149\u3002"
+  Category: 2
+  Rarity: 2
+  isStackable: 1
+  maxStack: 999
+  references:
+    version: 2
+    RefIds: []

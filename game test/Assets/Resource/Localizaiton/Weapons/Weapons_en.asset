@@ -30,6 +30,46 @@ MonoBehaviour:
     m_Localized: axe
     m_Metadata:
       m_Items: []
+  - m_Id: 57632080947609600
+    m_Localized: Iron Sword
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164032
+    m_Localized: Hunting Bow
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164033
+    m_Localized: Battle Axe
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164034
+    m_Localized: Piercing Spear
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164035
+    m_Localized: Lucky Mace
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164036
+    m_Localized: Crystal Staff
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164037
+    m_Localized: Shadow Dagger
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164038
+    m_Localized: Great Warhammer
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164039
+    m_Localized: Mithril Rapier
+    m_Metadata:
+      m_Items: []
+  - m_Id: 57632080981164040
+    m_Localized: Dragonbone Greatsword
+    m_Metadata:
+      m_Items: []
   references:
     version: 2
     RefIds: []

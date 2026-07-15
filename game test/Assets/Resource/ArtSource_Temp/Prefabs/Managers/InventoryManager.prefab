@@ -48,21 +48,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.InventoryManager
   maxCapacity: 30
   slots:
-  - Item: {fileID: 11400000, guid: 7c64937113f1b46408f6af836fe3e338, type: 2}
-    Count: 3
-    CustomName: 
-    WeaponData:
-      AppliedPrefixWordIds: []
-  - Item: {fileID: 11400000, guid: 6301c8d2a414f4fb6a116c993cb5e6f7, type: 2}
-    Count: 2
-    CustomName: 
-    WeaponData:
-      AppliedPrefixWordIds: []
-  - Item: {fileID: 11400000, guid: 8e2c07c322788c94f896377e1ab17797, type: 2}
+  - Item: {fileID: 11400000, guid: ef1d58365e535493989d2c977c1068c4, type: 2}
     Count: 1
     CustomName: 
-    WeaponData:
-      AppliedPrefixWordIds: []
+  itemDatabase: {fileID: 11400000, guid: 91aa8d134684299458b756dd03a446bd, type: 2}
 --- !u!114 &-433310404769403129
 MonoBehaviour:
   m_ObjectHideFlags: 0

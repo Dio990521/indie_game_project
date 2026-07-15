@@ -1,0 +1,37 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2b55fd2302e9ac549bedf99954f664f2, type: 3}
+  m_Name: wpn_iron_sword
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Inventory.WeaponSO
+  ID: wpn_iron_sword
+  ItemName:
+    m_TableReference:
+      m_TableCollectionName: Weapons
+    m_TableEntryReference:
+      m_KeyId: 0
+      m_Key: wpn_iron_sword
+    m_FallbackState: 0
+    m_WaitForCompletion: 0
+    m_LocalVariables: []
+  Icon: {fileID: 1483669345, guid: 917b62a0c0e7bdc4a8669116f5c98233, type: 3}
+  Description: "\u4E2D\u89C4\u4E2D\u77E9\u7684\u94C1\u5236\u957F\u5251\uFF0C\u5192\u9669\u8005\u7684\u7B2C\u4E00\u628A\u6B66\u5668\u3002"
+  Category: 1
+  Rarity: 0
+  isStackable: 0
+  maxStack: 1
+  SlotType: 0
+  Modifiers:
+  - Type: 0
+    Value: 5
+  references:
+    version: 2
+    RefIds: []
