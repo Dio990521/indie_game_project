@@ -29,6 +29,13 @@ namespace IndieGame.Core.Input
         // 缓存当前的移动输入，方便非事件驱动的逻辑（如每帧检测）读取
         public Vector2 CurrentMoveInput { get; private set; }
 
+        // 缓存指针（鼠标）最新的屏幕坐标：
+        // 战斗放置态每帧需要指针位置做地面射线，事件驱动 + 缓存可避免逻辑层轮询 InputSystem
+        public Vector2 CurrentPointerPosition { get; private set; }
+
+        // 缓存手柄右摇杆的最新输入值（回中时为零向量），供放置态指向逻辑读取
+        public Vector2 CurrentAimStick { get; private set; }
+
         /// <summary>
         /// UI 取消事件（通常由 ESC / 手柄 B / Cancel 输入触发）：
         /// UI 控制器（如打造界面）应通过订阅/注销该事件来实现“安全关闭”。
@@ -40,19 +47,34 @@ namespace IndieGame.Core.Input
         private int _inputLockCount;
         private InputMode _modeBeforeLock = InputMode.Gameplay;
 
+        // --- 战斗扩展输入（程序化 InputAction 组） ---
+        // 说明：战斗玩法（技能/上下场/名册切换/摇杆指向）的按键以代码方式创建，
+        // 不修改 InputSystem_Actions.inputactions 资产与其生成代码：
+        // 1) 生成代码由 Unity 自动重写，手改资产+生成类需要两处同步，风险高；
+        // 2) 程序化 action 编译即生效，绑定集中在此处一目了然；
+        // 3) 后续若需要在编辑器里可视化配置，可整体迁移进资产的 Player Map（回调签名不变）。
+        private InputAction _combatSkillAction;      // 技能：键盘 Q / 手柄 X（West）
+        private InputAction _combatDeployAction;     // 上场/下场/放置确认：键盘 E / 手柄 Y（North）
+        private InputAction _combatSelectNextAction; // 选中下一个：Tab（按住 Shift 反向）/ 手柄 RB
+        private InputAction _combatSelectPrevAction; // 选中上一个：手柄 LB（键盘走 Shift+Tab）
+        private InputAction _combatAimStickAction;   // 指向：手柄右摇杆
+
         private void OnEnable()
         {
             if (_gameInput == null)
             {
                 _gameInput = new InputSystem_Actions();
-                
+
                 // 注册回调接口到 InputSystem：
                 // - Player Map 负责游戏内输入（移动、交互等）
                 // - UI Map 负责通用 UI 输入（特别是 Cancel）
                 _gameInput.Player.SetCallbacks(this);
                 _gameInput.UI.SetCallbacks(this);
             }
-            
+
+            // 创建战斗扩展输入（幂等：仅首次创建）
+            EnsureCombatActions();
+
             // 默认开启输入
             EnableGameplayInput();
             // M6 修复：幂等订阅。
@@ -86,6 +108,105 @@ namespace IndieGame.Core.Input
             if (_gameInput == null) return;
             _gameInput.Player.Disable();
             _gameInput.UI.Disable();
+            SetCombatActionsEnabled(false);
+        }
+
+        /// <summary>
+        /// 创建战斗扩展输入 action（幂等）：
+        /// 绑定与回调集中在此，enable/disable 跟随 Player Map（见 SetInputMode）。
+        /// </summary>
+        private void EnsureCombatActions()
+        {
+            if (_combatSkillAction != null) return;
+
+            // 技能键：Q / 手柄 X
+            _combatSkillAction = new InputAction("CombatSkill", InputActionType.Button);
+            _combatSkillAction.AddBinding("<Keyboard>/q");
+            _combatSkillAction.AddBinding("<Gamepad>/buttonWest");
+            _combatSkillAction.performed += HandleCombatSkill;
+
+            // 上场/下场/放置确认键：E / 手柄 Y
+            _combatDeployAction = new InputAction("CombatDeploy", InputActionType.Button);
+            _combatDeployAction.AddBinding("<Keyboard>/e");
+            _combatDeployAction.AddBinding("<Gamepad>/buttonNorth");
+            _combatDeployAction.performed += HandleCombatDeploy;
+
+            // 名册切换：Tab（Shift+Tab 反向，方向在回调里判定）/ 手柄 RB
+            _combatSelectNextAction = new InputAction("CombatSelectNext", InputActionType.Button);
+            _combatSelectNextAction.AddBinding("<Keyboard>/tab");
+            _combatSelectNextAction.AddBinding("<Gamepad>/rightShoulder");
+            _combatSelectNextAction.performed += HandleCombatSelectNext;
+
+            // 名册反向切换：手柄 LB（键盘由 Shift+Tab 覆盖）
+            _combatSelectPrevAction = new InputAction("CombatSelectPrev", InputActionType.Button);
+            _combatSelectPrevAction.AddBinding("<Gamepad>/leftShoulder");
+            _combatSelectPrevAction.performed += HandleCombatSelectPrev;
+
+            // 指向摇杆：手柄右摇杆（Value 型，回中触发 canceled 清零）
+            _combatAimStickAction = new InputAction("CombatAimStick", InputActionType.Value, expectedControlType: "Vector2");
+            _combatAimStickAction.AddBinding("<Gamepad>/rightStick");
+            _combatAimStickAction.performed += HandleCombatAimStick;
+            _combatAimStickAction.canceled += HandleCombatAimStick;
+        }
+
+        /// <summary>
+        /// 统一开关战斗扩展输入（跟随 Player Map 的启用状态）。
+        /// </summary>
+        private void SetCombatActionsEnabled(bool enabled)
+        {
+            if (_combatSkillAction == null) return;
+            if (enabled)
+            {
+                _combatSkillAction.Enable();
+                _combatDeployAction.Enable();
+                _combatSelectNextAction.Enable();
+                _combatSelectPrevAction.Enable();
+                _combatAimStickAction.Enable();
+            }
+            else
+            {
+                _combatSkillAction.Disable();
+                _combatDeployAction.Disable();
+                _combatSelectNextAction.Disable();
+                _combatSelectPrevAction.Disable();
+                _combatAimStickAction.Disable();
+                CurrentAimStick = Vector2.zero;
+            }
+        }
+
+        // --- 战斗扩展输入回调 ---
+
+        private void HandleCombatSkill(InputAction.CallbackContext context)
+        {
+            if (_currentMode != InputMode.Gameplay) return;
+            EventBus.Raise(new InputSkillEvent());
+        }
+
+        private void HandleCombatDeploy(InputAction.CallbackContext context)
+        {
+            if (_currentMode != InputMode.Gameplay) return;
+            EventBus.Raise(new InputDeployEvent());
+        }
+
+        private void HandleCombatSelectNext(InputAction.CallbackContext context)
+        {
+            if (_currentMode != InputMode.Gameplay) return;
+            // 键盘惯例：按住 Shift 时 Tab 反向切换
+            bool shiftHeld = Keyboard.current != null && Keyboard.current.shiftKey.isPressed;
+            EventBus.Raise(new InputSelectEvent { Direction = shiftHeld ? -1 : 1 });
+        }
+
+        private void HandleCombatSelectPrev(InputAction.CallbackContext context)
+        {
+            if (_currentMode != InputMode.Gameplay) return;
+            EventBus.Raise(new InputSelectEvent { Direction = -1 });
+        }
+
+        private void HandleCombatAimStick(InputAction.CallbackContext context)
+        {
+            if (_currentMode != InputMode.Gameplay) return;
+            CurrentAimStick = context.ReadValue<Vector2>();
+            EventBus.Raise(new InputAimStickEvent { Value = CurrentAimStick });
         }
 
         /// <summary>
@@ -110,11 +231,14 @@ namespace IndieGame.Core.Input
                     // Gameplay：允许玩家输入，同时保留 UI Cancel（ESC）监听能力
                     _gameInput.Player.Enable();
                     _gameInput.UI.Enable();
+                    // 战斗扩展输入跟随 Player Map 启用
+                    SetCombatActionsEnabled(true);
                     break;
                 case InputMode.UIOnly:
                     // UIOnly：禁用玩家输入，但保留 UI 输入（用于菜单导航/取消）
                     _gameInput.Player.Disable();
                     _gameInput.UI.Enable();
+                    SetCombatActionsEnabled(false);
                     CurrentMoveInput = Vector2.zero;
                     EventBus.Raise(new InputMoveEvent { Value = Vector2.zero });
                     break;
@@ -122,6 +246,7 @@ namespace IndieGame.Core.Input
                     // Disabled：完全禁用输入（Player + UI）
                     _gameInput.Player.Disable();
                     _gameInput.UI.Disable();
+                    SetCombatActionsEnabled(false);
                     CurrentMoveInput = Vector2.zero;
                     EventBus.Raise(new InputMoveEvent { Value = Vector2.zero });
                     break;
@@ -197,7 +322,19 @@ namespace IndieGame.Core.Input
         // 目前打造系统只要求 Cancel（ESC）关闭能力，其他 UI 回调按需留空实现。
         public void OnNavigate(InputAction.CallbackContext context) { }
         public void OnSubmit(InputAction.CallbackContext context) { }
-        public void OnPoint(InputAction.CallbackContext context) { }
+
+        /// <summary>
+        /// 指针位置回调（UI Map 的 Point，鼠标移动时持续触发）：
+        /// 缓存屏幕坐标并广播，供战斗放置指示器等逻辑消费。
+        /// EventBus.Raise 内部为零分配（缓存调用快照），逐帧广播安全。
+        /// </summary>
+        public void OnPoint(InputAction.CallbackContext context)
+        {
+            if (_currentMode == InputMode.Disabled) return;
+            CurrentPointerPosition = context.ReadValue<Vector2>();
+            EventBus.Raise(new InputPointEvent { ScreenPosition = CurrentPointerPosition });
+        }
+
         public void OnClick(InputAction.CallbackContext context) { }
         public void OnRightClick(InputAction.CallbackContext context) { }
         public void OnMiddleClick(InputAction.CallbackContext context) { }

@@ -122,6 +122,56 @@ namespace IndieGame.Core
     public struct InputJumpEvent
     {
     }
+
+    // ===================== 战斗输入事件（v2 玩法：全按键操作 + 双设备指向） =====================
+
+    /// <summary>
+    /// 指针位置事件：
+    /// 由 GameInputReader 的 UI/Point 回调广播（鼠标移动时持续触发）。
+    /// 战斗中用于驱动"上场放置指示器"的落点（鼠标只移动指示器，不承担点击确认）。
+    /// </summary>
+    public struct InputPointEvent
+    {
+        // 指针的屏幕坐标
+        public UnityEngine.Vector2 ScreenPosition;
+    }
+
+    /// <summary>
+    /// 技能键事件（键盘 Q / 手柄 X）：
+    /// 对"当前选中的名册角色"释放技能；充能未满或不在场时由战斗逻辑拒绝并提示。
+    /// </summary>
+    public struct InputSkillEvent
+    {
+    }
+
+    /// <summary>
+    /// 上场/下场键事件（键盘 E / 手柄 Y）：
+    /// 语义随上下文变化——选中后台角色=进入放置态；放置态中=确认落点；选中在场角色=回收下场。
+    /// </summary>
+    public struct InputDeployEvent
+    {
+    }
+
+    /// <summary>
+    /// 名册选择切换事件（键盘 Tab（Shift+Tab 反向）/ 手柄 LB、RB）：
+    /// Direction = +1 选中下一个，-1 选中上一个（循环）。
+    /// </summary>
+    public struct InputSelectEvent
+    {
+        // 切换方向：+1 = 下一个，-1 = 上一个
+        public int Direction;
+    }
+
+    /// <summary>
+    /// 手柄右摇杆指向事件：
+    /// 战斗放置态下用于驱动指示器落点（方向 × 推量 × 放置半径）。
+    /// 摇杆回中时 Value 为零向量。
+    /// </summary>
+    public struct InputAimStickEvent
+    {
+        // 摇杆输入值（未归一化，模长 0~1）
+        public UnityEngine.Vector2 Value;
+    }
     public struct SaveStartedEvent
     {
         // 槽位索引

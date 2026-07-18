@@ -230,8 +230,9 @@ namespace IndieGame.Core
                     GameManager.Instance.CurrentPlayer.SetActive(true);
                 }
             }
-            else if (modeResult == GameMode.Exploration || modeResult == GameMode.Camp)
+            else if (modeResult == GameMode.Exploration || modeResult == GameMode.Camp || modeResult == GameMode.Combat)
             {
+                // 战斗场景与探索/露营同属"棋盘常驻 + Additive 叠加"策略，共用叠加场景记录
                 _currentExplorationScene = scene.name;
             }
             else if (modeResult == GameMode.Title)
@@ -239,9 +240,11 @@ namespace IndieGame.Core
                 _currentExplorationScene = null;
                 _boardScene = default;
             }
-            if (modeResult == GameMode.Camp && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
+            if ((modeResult == GameMode.Camp || modeResult == GameMode.Combat)
+                && GameManager.Instance != null && GameManager.Instance.CurrentPlayer != null)
             {
-                // 进入露营场景时隐藏玩家（避免与 Camp UI/场景冲突）
+                // 进入露营/战斗场景时隐藏常驻探索玩家：
+                // 露营避免与 Camp UI/场景冲突；战斗则由独立的战斗体预制体代替玩家出场
                 GameManager.Instance.CurrentPlayer.SetActive(false);
             }
             if (modeResult == GameMode.Camp && UIManager.Instance != null && UIManager.Instance.CampUIInstance != null)
@@ -345,7 +348,7 @@ namespace IndieGame.Core
                 return LoadExplorationScene(sceneName, transitionToken);
             }
 
-            // 目标为探索：走“棋盘常驻 + 叠加探索”逻辑
+            // 目标为探索/战斗（GameMode.Combat 同样走叠加链路）：走"棋盘常驻 + 叠加"逻辑
             return LoadExplorationScene(sceneName, transitionToken);
         }
 

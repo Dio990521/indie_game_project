@@ -301,6 +301,30 @@ namespace IndieGame.Gameplay.Board.Runtime
         }
 
 #if UNITY_EDITOR
+        [Header("Debug（仅编辑器）")]
+        [Tooltip("调试进入战斗时使用的遭遇配置（为空则战斗场景走独立测试模式，胜负后不返回棋盘）")]
+        [SerializeField] private Gameplay.Combat.EncounterSO debugCombatEncounter;
+
+        [Tooltip("调试进入的战斗场景名（需已加入 Build Settings 且在 SceneRegistry 中注册为 Combat）")]
+        [SerializeField] private string debugCombatSceneName = "CombatTest";
+
+        /// <summary>
+        /// 调试入口：从棋盘进入测试战斗（验证 棋盘→战斗→棋盘 的往返链路）。
+        /// 正式的 BoardEntityInteractionEvent 战斗桥接在 Phase 2 实现。
+        /// </summary>
+        [ContextMenu("Debug/进入测试战斗")]
+        private void DebugEnterTestCombat()
+        {
+            if (!_isBoardActive || SceneLoader.Instance == null) return;
+            if (debugCombatEncounter != null)
+            {
+                // 带载荷进入：战斗结束后自动 ReturnToBoard
+                Gameplay.Combat.CombatLaunchContext.SetEncounter(debugCombatEncounter);
+            }
+            DebugTools.Log($"<color=lime>[Debug] 进入测试战斗场景：{debugCombatSceneName}</color>");
+            SceneLoader.Instance.LoadScene(debugCombatSceneName, null);
+        }
+
         // === Debug Actions（仅编辑器，右键 Inspector 组件触发）===
         [ContextMenu("骰子点数 - 1")] private void DebugRoll1() => DebugForceRoll(1);
         [ContextMenu("骰子点数 - 2")] private void DebugRoll2() => DebugForceRoll(2);

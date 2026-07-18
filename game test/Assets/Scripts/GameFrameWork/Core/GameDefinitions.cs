@@ -17,9 +17,12 @@ namespace IndieGame.Core
         // 棋盘模式阶段
         BoardMode,      
         // 对话/剧情阶段
-        Dialogue,       
+        Dialogue,
         // 暂停阶段
-        Paused          
+        Paused,
+        // 战斗阶段（实时战斗场景）
+        // 注意：追加在枚举末尾，避免改变已有枚举的序号（存档兼容）
+        Combat
     }
 
     /// <summary>
@@ -35,6 +38,9 @@ namespace IndieGame.Core
         // 探索场景
         Exploration,
         // 露营场景（Additive 叠加）
-        Camp
+        Camp,
+        // 战斗场景（Additive 叠加，棋盘常驻隐藏）
+        // 注意：追加在枚举末尾，避免改变已有枚举的序号（SceneRegistry 资产兼容）
+        Combat
     }
 }

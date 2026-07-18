@@ -83,6 +83,8 @@ namespace IndieGame.UI
         [SerializeField] private MemoryUIController memoryUIPrefab;
         // 装备 UI（仅由 UIManager 负责实例化）
         [SerializeField] private EquipmentUIController equipmentUIPrefab;
+        // 战斗 HUD（仅由 UIManager 负责实例化）
+        [SerializeField] private Combat.CombatHudController combatHudPrefab;
 
         // --- 运行时实例 ---
         public GameObject CanvasInstance { get; private set; }
@@ -100,6 +102,7 @@ namespace IndieGame.UI
         public SkillTreeController SkillTreeUIInstance { get; private set; }
         public MemoryUIController MemoryUIInstance { get; private set; }
         public EquipmentUIController EquipmentUIInstance { get; private set; }
+        public Combat.CombatHudController CombatHudInstance { get; private set; }
         // 全屏黑屏遮罩实例
         public CanvasGroup FullscreenFadeInstance { get; private set; }
 
@@ -222,6 +225,7 @@ namespace IndieGame.UI
             SkillTreeUIInstance     = EnsureUIInstance(skillTreeUIPrefab,     SkillTreeUIInstance,     UILayerPriority.GameUI);
             MemoryUIInstance        = EnsureUIInstance(memoryUIPrefab,        MemoryUIInstance,        UILayerPriority.GameUI);
             EquipmentUIInstance     = EnsureUIInstance(equipmentUIPrefab,     EquipmentUIInstance,     UILayerPriority.GameUI);
+            CombatHudInstance       = EnsureUIInstance(combatHudPrefab,       CombatHudInstance,       UILayerPriority.GameUI);
 
             // ── SystemUI 层（SortingOrder=20）：系统菜单 ──────────────────────
             SystemMenuInstance = EnsureUIInstance(systemMenuPrefab, SystemMenuInstance, UILayerPriority.SystemUI);

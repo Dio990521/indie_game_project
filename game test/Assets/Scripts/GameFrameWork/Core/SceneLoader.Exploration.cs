@@ -42,7 +42,7 @@ namespace IndieGame.Core
                 return loadBoardOp;
             }
 
-            if ((activeMode == GameMode.Exploration || activeMode == GameMode.Camp) && !string.IsNullOrEmpty(_currentExplorationScene))
+            if ((activeMode == GameMode.Exploration || activeMode == GameMode.Camp || activeMode == GameMode.Combat) && !string.IsNullOrEmpty(_currentExplorationScene))
             {
                 Scene currentExploration = SceneManager.GetSceneByName(_currentExplorationScene);
                 if (currentExploration.IsValid() && currentExploration.isLoaded && _currentExplorationScene != sceneName)
@@ -104,8 +104,11 @@ namespace IndieGame.Core
             }
             if (GameManager.Instance != null)
             {
-                // 进入探索时同步游戏状态
-                GameManager.Instance.ChangeState(GameState.FreeRoam);
+                // 按目标场景在注册表中的模式同步游戏状态：
+                // 战斗场景进入 Combat，其余叠加场景（探索/露营）保持原有 FreeRoam 行为
+                GameMode targetMode = GetModeForScene(sceneName);
+                GameManager.Instance.ChangeState(
+                    targetMode == GameMode.Combat ? GameState.Combat : GameState.FreeRoam);
             }
             return op;
         }

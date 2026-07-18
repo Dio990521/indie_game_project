@@ -94,6 +94,33 @@ namespace IndieGame.Gameplay.Stats
             NotifyAll();
         }
 
+        /// <summary>
+        /// 运行时覆盖数值配置并按指定等级重建属性（战斗系统专用入口）：
+        /// 战斗单位由代码从定义 SO 动态生成，同一个战斗体预制体可能承载不同角色/敌人，
+        /// 因此需要在生成后注入配置与等级。语义与初始化一致：满血入场、经验清零、全量广播。
+        /// 常驻探索玩家请勿调用本方法（其配置由预制体序列化字段持有）。
+        /// </summary>
+        public void OverrideConfig(CharacterStatConfigSO newConfig, int level)
+        {
+            config = newConfig;
+            currentLevel = Mathf.Max(1, level);
+            currentEXP = 0;
+
+            if (config != null)
+            {
+                // 按注入等级重算基础属性并回满血
+                ApplyBaseStatsForLevel(currentLevel);
+                currentHP = MaxHP;
+            }
+            else
+            {
+                DebugTools.LogWarning("[CharacterStats] OverrideConfig 传入了空配置，使用保底数值。");
+                currentHP = Mathf.Max(1, currentHP);
+            }
+
+            NotifyAll();
+        }
+
         private void Awake()
         {
             // 初始化属性（从配置加载或使用默认值）

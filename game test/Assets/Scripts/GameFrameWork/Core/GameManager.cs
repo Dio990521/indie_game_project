@@ -50,19 +50,27 @@ namespace IndieGame.Core
         private void OnGameModeChanged(GameModeChangedEvent evt)
         {
             // 根据事件传来的 Mode 切换状态
+            GameState targetState = ResolveStateForMode(evt.Mode);
             if (_isLoading)
             {
-                _pendingState = evt.Mode == GameMode.Board ? GameState.BoardMode : GameState.FreeRoam;
+                _pendingState = targetState;
                 _hasPendingState = true;
                 return;
             }
-            if (evt.Mode == GameMode.Board)
+            ChangeState(targetState);
+        }
+
+        /// <summary>
+        /// 场景模式 → 游戏状态的统一映射：
+        /// 棋盘 → BoardMode，战斗 → Combat，其余（探索/露营等）→ FreeRoam。
+        /// </summary>
+        private static GameState ResolveStateForMode(GameMode mode)
+        {
+            switch (mode)
             {
-                ChangeState(GameState.BoardMode);
-            }
-            else
-            {
-                ChangeState(GameState.FreeRoam);
+                case GameMode.Board: return GameState.BoardMode;
+                case GameMode.Combat: return GameState.Combat;
+                default: return GameState.FreeRoam;
             }
         }
 
@@ -177,9 +185,7 @@ namespace IndieGame.Core
         {
             if (SceneLoader.Instance == null) return GameState.FreeRoam;
             string sceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-            return SceneLoader.Instance.GetSceneMode(sceneName) == GameMode.Board
-                ? GameState.BoardMode
-                : GameState.FreeRoam;
+            return ResolveStateForMode(SceneLoader.Instance.GetSceneMode(sceneName));
         }
 
         /// <summary>
