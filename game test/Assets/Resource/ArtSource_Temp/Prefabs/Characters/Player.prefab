@@ -117,7 +117,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Stats.CharacterStats
   config: {fileID: 11400000, guid: 00730b86950064310b1d577c7c5cd57b, type: 2}
   currentHP: 0
-  currentLevel: 1
+  currentLevel: 10
   currentEXP: 0
 --- !u!114 &7463442206185927376
 MonoBehaviour:

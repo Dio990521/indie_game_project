@@ -11,13 +11,15 @@ using IndieGame.Gameplay.Stats;
 namespace IndieGame.Gameplay.Combat
 {
     /// <summary>
-    /// 战斗管理器（战斗场景内单例，不进 GameBootstrapper 常驻根）：
-    /// 战斗场景每次 Additive 加载/卸载，本管理器随场景生灭，无需 Sleep/唤醒逻辑。
+    /// 战斗管理器（常驻单例，由 GameBootstrapper 创建，挂在 [GameSystem] 根节点下）：
+    /// 与 BoardGameManager 同构——管理器本身跨场景常驻，但依赖的场景内容（CombatSceneRefs）
+    /// 随 Combat 场景 Additive 加载/卸载而生灭，通过 GameModeChangedEvent 动态解析/清理，
+    /// 不在 Combat 模式时整体休眠（Sleep），避免持有已销毁场景对象的悬空引用。
     ///
     /// 职责：
     /// - 驱动 主+Overlay 双状态机（参照 BoardGameManager 的模式）；
     /// - 统一消费战斗输入事件（技能/上下场/名册切换），按规则转发或拒绝；
-    /// - 生成/回收战斗单位与弹道（按预制体分池复用）；
+    /// - 生成/回收战斗单位与弹道（按预制体分池复用，池随本管理器常驻）；
     /// - 中心化订阅 DeathEvent 做幂等死亡处理与胜负判定。
     /// </summary>
     public class CombatManager : MonoSingleton<CombatManager>
@@ -29,8 +31,19 @@ namespace IndieGame.Gameplay.Combat
         [Tooltip("战斗全局参数配置")]
         [SerializeField] private CombatConfigSO config;
 
-        [Tooltip("场景引用聚合（出生点/放置指示器/战斗相机）")]
-        [SerializeField] private CombatSceneRefs sceneRefs;
+        // 场景引用聚合（出生点/放置指示器/战斗相机）：
+        // 不再走 Inspector 序列化——本管理器常驻跨场景，无法在 Inspector 里预先绑定
+        // 某个具体战斗场景的对象，改为进入 Combat 模式时用 FindAnyObjectByType 动态解析
+        // （与 BoardGameManager 解析 movementController 的方式一致）。
+        private CombatSceneRefs sceneRefs;
+
+        // 是否处于 Combat 模式（由 GameModeChangedEvent 驱动，Update 据此决定是否驱动状态机）
+        private bool _isCombatModeActive;
+
+        // 重写单例属性：与 BoardGameManager/UIManager/GameManager 保持一致——
+        // 实际跨场景保留由 GameBootstrapper 的 [GameSystem] 根节点（DontDestroyRoot）提供，
+        // 本管理器始终作为其子物体实例化，这里的 KeepAcrossScenes 仅用于语义一致性。
+        protected override bool KeepAcrossScenes => true;
 
         // --- 状态机（主 + Overlay，参照 BoardGameManager）---
         private readonly StateMachine<CombatManager> _stateMachine = new StateMachine<CombatManager>();
@@ -93,7 +106,7 @@ namespace IndieGame.Gameplay.Combat
             base.Awake();
             if (Instance != this) return;
 
-            // 创建池根节点（场景内子物体，随场景销毁）
+            // 创建池根节点（本管理器的子物体，随管理器常驻跨场景保留）
             _unitPoolRoot = new GameObject("[UnitPool]").transform;
             _unitPoolRoot.SetParent(transform, false);
             _projectilePoolRoot = new GameObject("[ProjectilePool]").transform;
@@ -102,6 +115,8 @@ namespace IndieGame.Gameplay.Combat
 
         private void OnEnable()
         {
+            // 场景模式切换：驱动场景引用的动态解析/清理（见 HandleGameModeChanged）
+            EventBus.Subscribe<GameModeChangedEvent>(HandleGameModeChanged);
             // 战斗输入（GameInputReader 的战斗扩展 action 广播）
             EventBus.Subscribe<InputSkillEvent>(HandleSkillInput);
             EventBus.Subscribe<InputDeployEvent>(HandleDeployInput);
@@ -114,6 +129,7 @@ namespace IndieGame.Gameplay.Combat
 
         private void OnDisable()
         {
+            EventBus.Unsubscribe<GameModeChangedEvent>(HandleGameModeChanged);
             EventBus.Unsubscribe<InputSkillEvent>(HandleSkillInput);
             EventBus.Unsubscribe<InputDeployEvent>(HandleDeployInput);
             EventBus.Unsubscribe<InputSelectEvent>(HandleSelectInput);
@@ -121,9 +137,49 @@ namespace IndieGame.Gameplay.Combat
             if (inputReader != null) inputReader.UICancelEvent -= HandleUICancel;
         }
 
+        /// <summary>
+        /// 场景模式变化响应：
+        /// 进入 Combat 场景 → 动态解析本场景的 CombatSceneRefs（场景对象已在 Awake 阶段全部就绪，
+        /// 此时 FindAnyObjectByType 必定可靠命中）；离开 Combat 模式 → 整体休眠清理，
+        /// 避免常驻的本管理器持有已随场景销毁的悬空引用。
+        /// </summary>
+        private void HandleGameModeChanged(GameModeChangedEvent evt)
+        {
+            _isCombatModeActive = evt.Mode == GameMode.Combat;
+            if (_isCombatModeActive)
+            {
+                sceneRefs = FindAnyObjectByType<CombatSceneRefs>();
+                if (sceneRefs == null)
+                {
+                    DebugTools.LogWarning("[CombatManager] 进入 Combat 场景但未找到 CombatSceneRefs，战斗将无法初始化。");
+                }
+                return;
+            }
+            Sleep();
+        }
+
+        /// <summary>
+        /// 休眠：离开 Combat 模式时调用（正常返回棋盘、或独立测试场景卸载）。
+        /// 清空状态机、回收全部在场单位、重置战斗状态，并释放场景引用。
+        /// </summary>
+        private void Sleep()
+        {
+            PopOverlayState();
+            _stateMachine.Clear(this);
+            while (_activeUnits.Count > 0)
+            {
+                ReleaseUnit(_activeUnits[_activeUnits.Count - 1]);
+            }
+            Registry.Clear();
+            BattleRunning = false;
+            _battleStarted = false;
+            _encounter = null;
+            sceneRefs = null;
+        }
+
         private void Update()
         {
-            if (!_battleStarted) return;
+            if (!_isCombatModeActive || !_battleStarted) return;
             // Overlay 优先（放置态的指向解析先于主状态机逻辑）
             _overlayStateMachine.Update(this);
             _stateMachine.Update(this);
@@ -679,30 +735,19 @@ namespace IndieGame.Gameplay.Combat
         [ContextMenu("Debug/重新开始战斗（独立测试）")]
         private void DebugRestartBattle()
         {
-            if (_encounter == null)
+            EncounterSO lastEncounter = _encounter;
+            if (lastEncounter == null)
             {
                 DebugTools.LogWarning("[CombatManager] 无遭遇配置，无法重开。");
                 return;
             }
-            CleanupBattle();
-            CombatLaunchContext.SetStandaloneTest(_encounter);
+            // Sleep() 会清空 _encounter/sceneRefs（与离开 Combat 模式共用同一套清理），
+            // 重开前先缓存遭遇配置，Sleep 后重新解析场景引用（仍在同一 Combat 场景内，未真正离开）
+            Sleep();
+            _isCombatModeActive = true;
+            sceneRefs = FindAnyObjectByType<CombatSceneRefs>();
+            CombatLaunchContext.SetStandaloneTest(lastEncounter);
             StartBattle();
-        }
-
-        /// <summary>
-        /// 清理本场战斗（重开用）：回收全部单位、清空状态机与注册表。
-        /// </summary>
-        private void CleanupBattle()
-        {
-            PopOverlayState();
-            _stateMachine.Clear(this);
-            while (_activeUnits.Count > 0)
-            {
-                ReleaseUnit(_activeUnits[_activeUnits.Count - 1]);
-            }
-            Registry.Clear();
-            BattleRunning = false;
-            _battleStarted = false;
         }
 #endif
 

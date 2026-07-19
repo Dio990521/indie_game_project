@@ -19,9 +19,6 @@ namespace IndieGame.UI.Combat
         [Tooltip("名册槽位预制体")]
         [SerializeField] private RosterSlotUI rosterSlotPrefab;
 
-        [Tooltip("选择指针（移动到选中槽位上方的 UI 元素）")]
-        [SerializeField] private RectTransform selectionCursor;
-
         [Header("结算")]
         [Tooltip("结算面板根物体")]
         [SerializeField] private GameObject resultPanel;
@@ -36,7 +33,6 @@ namespace IndieGame.UI.Combat
         public CanvasGroup RootCanvasGroup => rootCanvasGroup;
         public Transform RosterSlotContainer => rosterSlotContainer;
         public RosterSlotUI RosterSlotPrefab => rosterSlotPrefab;
-        public RectTransform SelectionCursor => selectionCursor;
         public GameObject ResultPanel => resultPanel;
         public TMP_Text ResultText => resultText;
         public TMP_Text PlacementHintText => placementHintText;

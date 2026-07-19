@@ -60,3 +60,4 @@ MonoBehaviour:
   skillTreeUIPrefab: {fileID: 6907442009302742303, guid: 40a26945f6ba70248904b4053c0473dc, type: 3}
   memoryUIPrefab: {fileID: 1664930650119696599, guid: bfc09656cde9ec24aa164827ac2d42b0, type: 3}
   equipmentUIPrefab: {fileID: 7655328728646037954, guid: 37943ac3b1a0e9d49a6f3a6d0d8f90e8, type: 3}
+  combatHudPrefab: {fileID: 79666131775570040, guid: ac4f2f37d309c1949905b000c25b8c2d, type: 3}

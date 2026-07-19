@@ -64,4 +64,5 @@ MonoBehaviour:
   gameFlagSystemPrefab: {fileID: 8454017631678284837, guid: 492bcb7a748180e478296eba2c356bd9, type: 3}
   skillTreeSystemPrefab: {fileID: 4160047725090462828, guid: c8f8b00c8ca1d414f9306c7e841ac306, type: 3}
   memorySystemPrefab: {fileID: 6130817782403399794, guid: 697a70a661b29bb4b9a4115372e73fca, type: 3}
+  combatManagerPrefab: {fileID: 3660115688725238053, guid: 0b99ddf312c97a84ebb3fdbc551e1ae3, type: 3}
   playerPrefab: {fileID: 9170140433642860262, guid: 3fdf0eb77ea2e4bf69465f1396181008, type: 3}

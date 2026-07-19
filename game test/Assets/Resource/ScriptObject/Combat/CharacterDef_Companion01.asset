@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0bbc4dcc8466f974f8588008df7c2643, type: 3}
+  m_Name: CharacterDef_Companion01
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Combat.CharacterDefinitionSO
+  ID: char_companion_01
+  DisplayName: "\u540C\u4F34\xB7\u827E\u62C9"
+  Portrait: {fileID: 0}
+  CombatUnitPrefab: {fileID: 3363105907981613464, guid: 916d9ca7f3ca9db47917b6cca2706bb7, type: 3}
+  StatConfig: {fileID: 11400000, guid: 00730b86950064310b1d577c7c5cd57b, type: 2}
+  DefaultWeaponData: {fileID: 11400000, guid: c56a7673d8489ca47b141da502439724, type: 2}
+  IsProtagonist: 0
+  RedeployCooldown: 8
+  EntrySkill: {fileID: 0}
+  ProducibleItems: []

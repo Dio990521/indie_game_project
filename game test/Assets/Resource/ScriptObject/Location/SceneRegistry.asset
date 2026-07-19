@@ -21,3 +21,5 @@ MonoBehaviour:
     Mode: 2
   - SceneName: Camp
     Mode: 3
+  - SceneName: CombatTest
+    Mode: 4

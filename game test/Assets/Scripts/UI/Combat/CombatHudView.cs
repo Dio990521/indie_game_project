@@ -8,7 +8,8 @@ namespace IndieGame.UI.Combat
 {
     /// <summary>
     /// 战斗 HUD 视图（MVB 的 View：渲染与显隐，不做业务判断）：
-    /// 名册槽位构建、选择指针移动、结算横幅与放置提示。
+    /// 名册槽位构建、选中态分发、结算横幅与放置提示。
+    /// 选择高亮跟随槽位自身（RosterSlotUI.SetSelected），不再是 HUD 上单独移动的指针。
     /// 业务事件的分发由 CombatHudController 完成。
     /// </summary>
     public class CombatHudView : MonoBehaviour
@@ -20,8 +21,8 @@ namespace IndieGame.UI.Combat
         private readonly List<RosterSlotUI> _slots = new List<RosterSlotUI>(CombatRoster.MaxRosterSize);
         // 显隐动画引用
         private Sequence _fadeSequence;
-        // 指针移动动画引用
-        private Tween _cursorTween;
+        // 当前选中槽位索引（-1 = 无），切换选中时先关旧的再开新的
+        private int _selectedIndex = -1;
 
         /// <summary> 当前槽位列表（Controller 按索引/成员刷新用） </summary>
         public IReadOnlyList<RosterSlotUI> Slots => _slots;
@@ -42,7 +43,6 @@ namespace IndieGame.UI.Combat
         private void OnDestroy()
         {
             _fadeSequence?.Kill();
-            _cursorTween?.Kill();
         }
 
         /// <summary>
@@ -83,13 +83,15 @@ namespace IndieGame.UI.Combat
                 _slots.Add(slot);
             }
 
-            // 绑定/隐藏
+            // 绑定/隐藏（Bind 内部会把选中态重置为 false，调用方需在 BuildSlots 后调用
+            // SetSelectedIndex 重新点亮当前选中槽位）
             for (int i = 0; i < _slots.Count; i++)
             {
                 bool used = i < needed;
                 _slots[i].gameObject.SetActive(used);
                 if (used) _slots[i].Bind(roster.Members[i]);
             }
+            _selectedIndex = -1;
         }
 
         /// <summary>
@@ -106,21 +108,18 @@ namespace IndieGame.UI.Combat
         }
 
         /// <summary>
-        /// 移动选择指针到指定槽位上方（DOTween 平滑移动）。
+        /// 切换选中槽位：熄灭旧槽位的高亮、点亮新槽位的高亮（高亮跟随槽位自身，无需再做位置动画）。
         /// </summary>
-        public void MoveSelectionCursor(int index)
+        public void SetSelectedIndex(int index)
         {
-            if (binder == null || binder.SelectionCursor == null) return;
+            if (_selectedIndex >= 0 && _selectedIndex < _slots.Count)
+            {
+                _slots[_selectedIndex].SetSelected(false);
+            }
+
+            _selectedIndex = index;
             if (index < 0 || index >= _slots.Count || !_slots[index].gameObject.activeSelf) return;
-
-            binder.SelectionCursor.gameObject.SetActive(true);
-            RectTransform slotRect = _slots[index].transform as RectTransform;
-            if (slotRect == null) return;
-
-            _cursorTween?.Kill();
-            _cursorTween = binder.SelectionCursor
-                .DOMove(slotRect.position, 0.12f)
-                .SetEase(Ease.OutCubic);
+            _slots[index].SetSelected(true);
         }
 
         /// <summary>

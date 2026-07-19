@@ -50,6 +50,8 @@ namespace IndieGame.Core
         [SerializeField] private GameObject gameFlagSystemPrefab;
         [SerializeField] private GameObject skillTreeSystemPrefab;
         [SerializeField] private GameObject memorySystemPrefab;
+        // 战斗管理器：常驻单例，随场景 Additive 加载/卸载动态解析 CombatSceneRefs（见 CombatManager.HandleGameModeChanged）
+        [SerializeField] private GameObject combatManagerPrefab;
         // 玩家预制体（交由 GameManager 实例化）
         [SerializeField] private GameObject playerPrefab;
 
@@ -112,6 +114,9 @@ namespace IndieGame.Core
             // Memory 系统：追踪图纸/武器/物品/语料的历史记录，参与存档。
             // 注：放在 InventoryManager、DialogueManager、CraftingSystem 之后，确保读档时上游数据已就绪。
             EnsureManagerFromPrefab<MemorySystem>(root, memorySystemPrefab, "MemorySystem");
+            // 战斗管理器：常驻但内容随 Combat 场景动态解析，需在 SceneLoader.Init 广播首次
+            // GameModeChangedEvent（下面 gm.InitGame() 内）之前完成订阅，故放在所有 Ensure 调用末尾即可。
+            EnsureManagerFromPrefab<IndieGame.Gameplay.Combat.CombatManager>(root, combatManagerPrefab, "CombatManager");
 
             // 2. 正式启动游戏逻辑
             if (gm != null)

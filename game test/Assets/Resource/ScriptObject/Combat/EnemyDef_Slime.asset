@@ -1,0 +1,21 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 19563cb43aebec5458305f3b78506474, type: 3}
+  m_Name: EnemyDef_Slime
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Combat.EnemyDefinitionSO
+  ID: enemy_slime
+  DisplayName: "\u53F2\u83B1\u59C6"
+  CombatUnitPrefab: {fileID: 3112629593939783537, guid: 3b9d9c3b7ee6f0d4187c3a89bdb58f34, type: 3}
+  StatConfig: {fileID: 11400000, guid: c561b1b7bc7b9b141b1b2a483b5b928a, type: 2}
+  WeaponData: {fileID: 11400000, guid: 0592e658989c3804284b79812e7b1109, type: 2}
+  Level: 1
+  ExpReward: 10

@@ -41,8 +41,14 @@ namespace IndieGame.UI.Combat
         [Tooltip("充能就绪发光（充能满时显示）")]
         [SerializeField] private GameObject chargeReadyGlow;
 
+        [Tooltip("选择指针高亮（选中该槽位时显示，随槽位走，不再是 HUD 上单独移动的指针）")]
+        [SerializeField] private GameObject selectionHighlight;
+
         /// <summary> 本槽位绑定的名册成员 </summary>
         public RosterMember BoundMember { get; private set; }
+
+        /// <summary> 本槽位当前是否被选中 </summary>
+        public bool IsSelected { get; private set; }
 
         // 抖动动画引用（重复触发时先 Kill）
         private Tween _shakeTween;
@@ -83,6 +89,17 @@ namespace IndieGame.UI.Combat
             SetChargePercent(0f);
             SetCooldown(0f, 1f);
             RefreshState();
+            // 重新绑定视为"未选中"，选中态由 CombatHudView.SetSelectedIndex 在绑定后统一重新应用
+            SetSelected(false);
+        }
+
+        /// <summary>
+        /// 设置选中态高亮（由 CombatHudView 统一驱动，替代原先在 HUD 上单独移动的指针）。
+        /// </summary>
+        public void SetSelected(bool selected)
+        {
+            IsSelected = selected;
+            if (selectionHighlight != null) selectionHighlight.SetActive(selected);
         }
 
         /// <summary>

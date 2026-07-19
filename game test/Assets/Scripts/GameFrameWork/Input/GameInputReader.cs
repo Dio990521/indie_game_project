@@ -112,40 +112,63 @@ namespace IndieGame.Core.Input
         }
 
         /// <summary>
-        /// 创建战斗扩展输入 action（幂等）：
+        /// 创建战斗扩展输入 action（对象创建幂等，回调绑定每次 OnEnable 都重新做一遍）：
         /// 绑定与回调集中在此，enable/disable 跟随 Player Map（见 SetInputMode）。
+        ///
+        /// M9 修复：旧实现用"_combatSkillAction != null 就直接 return"作为"回调已绑好"的
+        /// 替代判断，但实测发现——脚本重新编译触发的域重载会清空这些"游离"InputAction
+        /// （未挂在任何 InputActionAsset 下）内部的回调委托列表，而 C# 字段引用本身不会变成
+        /// null（对象仍存活，Enable/绑定路径都正常），导致旧 guard 误判"已初始化"从而
+        /// 永久跳过重新绑定——按键从此再无反应，且没有任何报错，只能靠反射查
+        /// InputAction 内部 m_OnPerformed 才能发现列表长度为 0。
+        /// 修复方式：对象创建仍然幂等（避免重复 new/AddBinding），但回调统一走
+        /// "先退订再订阅"（与本文件 InputLockRequestedEvent 订阅的既有防重复模式一致），
+        /// 确保无论 OnEnable 触发几次、域重载清没清过回调，最终都精确保留一份订阅。
         /// </summary>
         private void EnsureCombatActions()
         {
-            if (_combatSkillAction != null) return;
+            if (_combatSkillAction == null)
+            {
+                // 技能键：Q / 手柄 X
+                _combatSkillAction = new InputAction("CombatSkill", InputActionType.Button);
+                _combatSkillAction.AddBinding("<Keyboard>/q");
+                _combatSkillAction.AddBinding("<Gamepad>/buttonWest");
 
-            // 技能键：Q / 手柄 X
-            _combatSkillAction = new InputAction("CombatSkill", InputActionType.Button);
-            _combatSkillAction.AddBinding("<Keyboard>/q");
-            _combatSkillAction.AddBinding("<Gamepad>/buttonWest");
+                // 上场/下场/放置确认键：E / 手柄 Y
+                _combatDeployAction = new InputAction("CombatDeploy", InputActionType.Button);
+                _combatDeployAction.AddBinding("<Keyboard>/e");
+                _combatDeployAction.AddBinding("<Gamepad>/buttonNorth");
+
+                // 名册切换：Tab（Shift+Tab 反向，方向在回调里判定）/ 手柄 RB
+                _combatSelectNextAction = new InputAction("CombatSelectNext", InputActionType.Button);
+                _combatSelectNextAction.AddBinding("<Keyboard>/tab");
+                _combatSelectNextAction.AddBinding("<Gamepad>/rightShoulder");
+
+                // 名册反向切换：手柄 LB（键盘由 Shift+Tab 覆盖）
+                _combatSelectPrevAction = new InputAction("CombatSelectPrev", InputActionType.Button);
+                _combatSelectPrevAction.AddBinding("<Gamepad>/leftShoulder");
+
+                // 指向摇杆：手柄右摇杆（Value 型，回中触发 canceled 清零）
+                _combatAimStickAction = new InputAction("CombatAimStick", InputActionType.Value, expectedControlType: "Vector2");
+                _combatAimStickAction.AddBinding("<Gamepad>/rightStick");
+            }
+
+            // 回调绑定：无条件先退订再订阅，防止漏绑（域重载清空回调）或重复绑（同一次 OnEnable 内误触发两次）
+            _combatSkillAction.performed -= HandleCombatSkill;
             _combatSkillAction.performed += HandleCombatSkill;
 
-            // 上场/下场/放置确认键：E / 手柄 Y
-            _combatDeployAction = new InputAction("CombatDeploy", InputActionType.Button);
-            _combatDeployAction.AddBinding("<Keyboard>/e");
-            _combatDeployAction.AddBinding("<Gamepad>/buttonNorth");
+            _combatDeployAction.performed -= HandleCombatDeploy;
             _combatDeployAction.performed += HandleCombatDeploy;
 
-            // 名册切换：Tab（Shift+Tab 反向，方向在回调里判定）/ 手柄 RB
-            _combatSelectNextAction = new InputAction("CombatSelectNext", InputActionType.Button);
-            _combatSelectNextAction.AddBinding("<Keyboard>/tab");
-            _combatSelectNextAction.AddBinding("<Gamepad>/rightShoulder");
+            _combatSelectNextAction.performed -= HandleCombatSelectNext;
             _combatSelectNextAction.performed += HandleCombatSelectNext;
 
-            // 名册反向切换：手柄 LB（键盘由 Shift+Tab 覆盖）
-            _combatSelectPrevAction = new InputAction("CombatSelectPrev", InputActionType.Button);
-            _combatSelectPrevAction.AddBinding("<Gamepad>/leftShoulder");
+            _combatSelectPrevAction.performed -= HandleCombatSelectPrev;
             _combatSelectPrevAction.performed += HandleCombatSelectPrev;
 
-            // 指向摇杆：手柄右摇杆（Value 型，回中触发 canceled 清零）
-            _combatAimStickAction = new InputAction("CombatAimStick", InputActionType.Value, expectedControlType: "Vector2");
-            _combatAimStickAction.AddBinding("<Gamepad>/rightStick");
+            _combatAimStickAction.performed -= HandleCombatAimStick;
             _combatAimStickAction.performed += HandleCombatAimStick;
+            _combatAimStickAction.canceled -= HandleCombatAimStick;
             _combatAimStickAction.canceled += HandleCombatAimStick;
         }
 

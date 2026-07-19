@@ -39,6 +39,22 @@ namespace IndieGame.UI.Combat
         }
 
         /// <summary>
+        /// 解决"事件早于订阅"的时序问题：
+        /// UIManager 生成本 HUD 的时机晚于 SceneLoader.Init 广播的首次 GameModeChangedEvent
+        /// （尤其是战斗场景独立测试直接 Play 的路径），仅靠事件订阅会导致 HUD 永久隐藏。
+        /// 与 PlayerHudController.OnEnable 的惯例一致：enable 时主动按当前状态同步一次可见性。
+        /// </summary>
+        protected override void OnEnable()
+        {
+            base.OnEnable();
+            if (view == null) return;
+            if (GameManager.Instance != null && GameManager.Instance.CurrentState == GameState.Combat)
+            {
+                view.Show();
+            }
+        }
+
+        /// <summary>
         /// 进入 Combat 模式显示 HUD，离开时隐藏（与 PlayerHud 的显隐惯例一致）。
         /// </summary>
         private void HandleGameModeChanged(GameModeChangedEvent evt)
@@ -61,7 +77,7 @@ namespace IndieGame.UI.Combat
             _roster = evt.Roster;
             view.SetResultVisible(false, true);
             view.BuildSlots(_roster);
-            view.MoveSelectionCursor(_roster != null ? _roster.SelectedIndex : 0);
+            view.SetSelectedIndex(_roster != null ? _roster.SelectedIndex : 0);
         }
 
         private void HandleCombatEnded(CombatEndedEvent evt)
@@ -74,7 +90,7 @@ namespace IndieGame.UI.Combat
         private void HandleSelectionChanged(RosterSelectionChangedEvent evt)
         {
             if (view == null) return;
-            view.MoveSelectionCursor(evt.SelectedIndex);
+            view.SetSelectedIndex(evt.SelectedIndex);
         }
 
         private void HandleUnitDeployed(UnitDeployedEvent evt)
