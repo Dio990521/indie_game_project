@@ -248,13 +248,28 @@ namespace IndieGame.Gameplay.Combat
         }
 
         /// <summary>
-        /// 标记成员阵亡（本场不可再上场）。
+        /// 标记成员阵亡（本场不可再上场，直至复活道具恢复）。
         /// </summary>
         public void MarkDead(RosterMember member)
         {
             if (member == null) return;
             member.State = RosterMemberState.Dead;
             member.FieldUnit = null;
+        }
+
+        /// <summary>
+        /// 标记成员复活（复活道具专用）：
+        /// 回到后台、满血（清除下场血量记忆）、按角色冷却重新计时后方可再上场。
+        /// </summary>
+        public void MarkRevived(RosterMember member)
+        {
+            if (member == null || member.State != RosterMemberState.Dead) return;
+            member.State = RosterMemberState.Backline;
+            member.FieldUnit = null;
+            member.SavedFieldHP = -1;
+            float cooldown = member.Definition != null ? member.Definition.RedeployCooldown : 0f;
+            member.RedeployReadyTime = Time.time + Mathf.Max(0f, cooldown);
+            member.LastBroadcastWholeSecond = -1;
         }
 
         /// <summary>

@@ -44,6 +44,15 @@ namespace IndieGame.UI.Combat
         [Tooltip("选择指针高亮（选中该槽位时显示，随槽位走，不再是 HUD 上单独移动的指针）")]
         [SerializeField] private GameObject selectionHighlight;
 
+        [Tooltip("道具生产进度条（fillAmount；成员在后台生产时显示）")]
+        [SerializeField] private Image productionFill;
+
+        [Tooltip("生产进度条正常配色")]
+        [SerializeField] private Color productionColor = new Color(0.4f, 0.75f, 1f, 1f);
+
+        [Tooltip("生产挂起（等待空槽）配色")]
+        [SerializeField] private Color productionWaitingColor = new Color(1f, 0.55f, 0.15f, 1f);
+
         /// <summary> 本槽位绑定的名册成员 </summary>
         public RosterMember BoundMember { get; private set; }
 
@@ -88,9 +97,21 @@ namespace IndieGame.UI.Combat
             SetHpPercent(1f);
             SetChargePercent(0f);
             SetCooldown(0f, 1f);
+            SetProduction(0f, false);
             RefreshState();
             // 重新绑定视为"未选中"，选中态由 CombatHudView.SetSelectedIndex 在绑定后统一重新应用
             SetSelected(false);
+        }
+
+        /// <summary>
+        /// 刷新道具生产进度（成员在后台生产时由 Controller 分发）：
+        /// waiting = true 表示产出因道具栏满而挂起（进度保持满值，换醒目配色提示）。
+        /// </summary>
+        public void SetProduction(float percent, bool waiting)
+        {
+            if (productionFill == null) return;
+            productionFill.fillAmount = Mathf.Clamp01(percent);
+            productionFill.color = waiting ? productionWaitingColor : productionColor;
         }
 
         /// <summary>

@@ -19,6 +19,8 @@ namespace IndieGame.Core
         public EncounterSO Encounter;
         // 名册（含主角与后台成员）
         public CombatRoster Roster;
+        // 道具栏（战斗开始为空，HUD 据此构建道具槽）
+        public CombatItemBar ItemBar;
     }
 
     /// <summary>
@@ -147,5 +149,73 @@ namespace IndieGame.Core
     {
         public RosterMember Member;
         public SkillCastRejectReason Reason;
+    }
+
+    // ===================== 战斗道具（Phase 2） =====================
+
+    /// <summary>
+    /// 道具栏内容变化事件（入栏/消耗/清空时广播，HUD 全量刷新）。
+    /// </summary>
+    public struct CombatItemBarChangedEvent
+    {
+        // 道具栏引用（HUD 直接读取种类槽列表）
+        public CombatItemBar Bar;
+    }
+
+    /// <summary>
+    /// 生产进度变化事件：
+    /// 按整数百分比节流广播，供名册槽位的生产进度条刷新。
+    /// Waiting = true 表示产出因道具栏满而挂起（进度保持满值，"等待空槽"）。
+    /// </summary>
+    public struct ItemProductionChangedEvent
+    {
+        public RosterMember Member;
+        // 当前进度（0~1）
+        public float Progress;
+        // 是否处于"等待空槽"挂起
+        public bool Waiting;
+    }
+
+    /// <summary>
+    /// 进入道具瞄准态事件（HUD 高亮对应道具槽并显示操作提示）。
+    /// </summary>
+    public struct ItemAimStartedEvent
+    {
+        public int SlotIndex;
+        public CombatItemSO Item;
+    }
+
+    /// <summary>
+    /// 道具瞄准态结束事件（确认或取消都会触发；确认另有 CombatItemUsedEvent）。
+    /// </summary>
+    public struct ItemAimEndedEvent
+    {
+        // true = 已确认使用，false = 取消
+        public bool Confirmed;
+    }
+
+    /// <summary>
+    /// 道具使用完成事件（已消耗并执行效果）。
+    /// </summary>
+    public struct CombatItemUsedEvent
+    {
+        public CombatItemSO Item;
+        public Vector3 Point;
+    }
+
+    /// <summary>
+    /// 道具使用被拒绝事件（空槽/条件不满足/落点非法，HUD 抖动提示）。
+    /// </summary>
+    public struct ItemUseRejectedEvent
+    {
+        public int SlotIndex;
+    }
+
+    /// <summary>
+    /// 名册成员复活事件（复活道具生效后广播，HUD 刷新槽位状态）。
+    /// </summary>
+    public struct MemberRevivedEvent
+    {
+        public RosterMember Member;
     }
 }

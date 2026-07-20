@@ -14,6 +14,7 @@ GameObject:
   - component: {fileID: 8285734169394463034}
   - component: {fileID: 8683211757604067396}
   - component: {fileID: 1562258101408451049}
+  - component: {fileID: 8616920568238455580}
   m_Layer: 0
   m_Name: BoardNPC
   m_TagString: Untagged
@@ -151,3 +152,18 @@ MonoBehaviour:
   currentHP: 0
   currentLevel: 99
   currentEXP: 0
+--- !u!114 &8616920568238455580
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1377311390924374927}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f4cdfe3c0fa3474c930a2cbf93703be, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Board.Runtime.BoardCombatEncounter
+  encounter: {fileID: 11400000, guid: 6c5c1799fa84f0a438f18f2287f0d97a, type: 2}
+  combatSceneName: CombatTest
+  removeOnVictory: 1

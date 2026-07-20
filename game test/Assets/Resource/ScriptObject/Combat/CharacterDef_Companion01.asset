@@ -21,4 +21,6 @@ MonoBehaviour:
   IsProtagonist: 0
   RedeployCooldown: 8
   EntrySkill: {fileID: 0}
-  ProducibleItems: []
+  ProducibleItems:
+  - {fileID: 11400000, guid: bad92341769c45f4785e19f80768eb88, type: 2}
+  - {fileID: 11400000, guid: a1c0af4d840a5244f9cdef6ff5044c75, type: 2}

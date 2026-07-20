@@ -172,6 +172,17 @@ namespace IndieGame.Core
         // 摇杆输入值（未归一化，模长 0~1）
         public UnityEngine.Vector2 Value;
     }
+
+    /// <summary>
+    /// 道具槽按键事件（键盘 1-4 / 手柄十字键 上右下左）：
+    /// 对道具栏第 SlotIndex 槽执行使用——需瞄准的道具进入瞄准态（再按同键确认），
+    /// 即时道具直接生效；空槽/条件不满足时由战斗逻辑拒绝并提示。
+    /// </summary>
+    public struct InputItemEvent
+    {
+        // 道具栏槽位索引（0-3）
+        public int SlotIndex;
+    }
     public struct SaveStartedEvent
     {
         // 槽位索引

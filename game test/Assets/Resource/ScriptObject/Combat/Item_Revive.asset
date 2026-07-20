@@ -1,0 +1,22 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 364783887ca03d74a8a23fb04da93576, type: 3}
+  m_Name: Item_Revive
+  m_EditorClassIdentifier: Assembly-CSharp::IndieGame.Gameplay.Combat.ReviveItemSO
+  ID: item_revive
+  DisplayName: "\u590D\u6D3B\u7FBD\u6BDB"
+  Icon: {fileID: 0}
+  Description: "\u590D\u6D3B\u4E00\u540D\u9635\u4EA1\u540C\u4F34\uFF08\u56DE\u5230\u540E\u53F0\uFF0C\u51B7\u5374\u540E\u53EF\u518D\u4E0A\u573A\uFF09"
+  ProductionTime: 20
+  CarryLimit: 1
+  RequiresAiming: 0
+  CastRange: 8

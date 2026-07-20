@@ -19,6 +19,13 @@ namespace IndieGame.UI.Combat
         [Tooltip("名册槽位预制体")]
         [SerializeField] private RosterSlotUI rosterSlotPrefab;
 
+        [Header("道具栏")]
+        [Tooltip("道具槽的父容器（横向布局）")]
+        [SerializeField] private Transform itemSlotContainer;
+
+        [Tooltip("道具槽预制体")]
+        [SerializeField] private CombatItemSlotUI itemSlotPrefab;
+
         [Header("结算")]
         [Tooltip("结算面板根物体")]
         [SerializeField] private GameObject resultPanel;
@@ -33,6 +40,8 @@ namespace IndieGame.UI.Combat
         public CanvasGroup RootCanvasGroup => rootCanvasGroup;
         public Transform RosterSlotContainer => rosterSlotContainer;
         public RosterSlotUI RosterSlotPrefab => rosterSlotPrefab;
+        public Transform ItemSlotContainer => itemSlotContainer;
+        public CombatItemSlotUI ItemSlotPrefab => itemSlotPrefab;
         public GameObject ResultPanel => resultPanel;
         public TMP_Text ResultText => resultText;
         public TMP_Text PlacementHintText => placementHintText;

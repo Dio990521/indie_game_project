@@ -58,6 +58,9 @@ namespace IndieGame.Core.Input
         private InputAction _combatSelectNextAction; // 选中下一个：Tab（按住 Shift 反向）/ 手柄 RB
         private InputAction _combatSelectPrevAction; // 选中上一个：手柄 LB（键盘走 Shift+Tab）
         private InputAction _combatAimStickAction;   // 指向：手柄右摇杆
+        private InputAction[] _combatItemActions;    // 道具槽 1-4：键盘数字键 / 手柄十字键（上右下左）
+        // 道具槽回调（闭包捕获槽位索引；存字段保证"先退订再订阅"能命中同一委托实例）
+        private Action<InputAction.CallbackContext>[] _combatItemHandlers;
 
         private void OnEnable()
         {
@@ -153,6 +156,41 @@ namespace IndieGame.Core.Input
                 _combatAimStickAction.AddBinding("<Gamepad>/rightStick");
             }
 
+            // 道具槽 action 的创建守卫独立于上面的一组：
+            // 域重载会原样保留可序列化的私有字段（InputAction 是 [Serializable]），
+            // 热更前创建的旧 action 组存活会跳过上面的创建块——若新增字段共用同一守卫，
+            // 新字段将保持 null 引发 NRE（M9 修复的同型问题，按字段分组各自判空）。
+            if (_combatItemActions == null)
+            {
+                // 道具槽 1-4：键盘数字键 / 手柄十字键（上右下左依次对应槽 1-4）
+                string[] itemKeyboardBindings = { "<Keyboard>/1", "<Keyboard>/2", "<Keyboard>/3", "<Keyboard>/4" };
+                string[] itemGamepadBindings = { "<Gamepad>/dpad/up", "<Gamepad>/dpad/right", "<Gamepad>/dpad/down", "<Gamepad>/dpad/left" };
+                _combatItemActions = new InputAction[itemKeyboardBindings.Length];
+                for (int i = 0; i < _combatItemActions.Length; i++)
+                {
+                    InputAction action = new InputAction("CombatItem" + (i + 1), InputActionType.Button);
+                    action.AddBinding(itemKeyboardBindings[i]);
+                    action.AddBinding(itemGamepadBindings[i]);
+                    _combatItemActions[i] = action;
+                }
+            }
+
+            // 回调委托不可序列化，域重载后必然为 null——与 action 数组分开重建
+            if (_combatItemHandlers == null)
+            {
+                _combatItemHandlers = new Action<InputAction.CallbackContext>[_combatItemActions.Length];
+                for (int i = 0; i < _combatItemHandlers.Length; i++)
+                {
+                    // 闭包捕获槽位索引（循环变量需局部拷贝）
+                    int slotIndex = i;
+                    _combatItemHandlers[i] = context =>
+                    {
+                        if (_currentMode != InputMode.Gameplay) return;
+                        EventBus.Raise(new InputItemEvent { SlotIndex = slotIndex });
+                    };
+                }
+            }
+
             // 回调绑定：无条件先退订再订阅，防止漏绑（域重载清空回调）或重复绑（同一次 OnEnable 内误触发两次）
             _combatSkillAction.performed -= HandleCombatSkill;
             _combatSkillAction.performed += HandleCombatSkill;
@@ -170,6 +208,12 @@ namespace IndieGame.Core.Input
             _combatAimStickAction.performed += HandleCombatAimStick;
             _combatAimStickAction.canceled -= HandleCombatAimStick;
             _combatAimStickAction.canceled += HandleCombatAimStick;
+
+            for (int i = 0; i < _combatItemActions.Length; i++)
+            {
+                _combatItemActions[i].performed -= _combatItemHandlers[i];
+                _combatItemActions[i].performed += _combatItemHandlers[i];
+            }
         }
 
         /// <summary>
@@ -185,6 +229,7 @@ namespace IndieGame.Core.Input
                 _combatSelectNextAction.Enable();
                 _combatSelectPrevAction.Enable();
                 _combatAimStickAction.Enable();
+                for (int i = 0; i < _combatItemActions.Length; i++) _combatItemActions[i].Enable();
             }
             else
             {
@@ -193,6 +238,7 @@ namespace IndieGame.Core.Input
                 _combatSelectNextAction.Disable();
                 _combatSelectPrevAction.Disable();
                 _combatAimStickAction.Disable();
+                for (int i = 0; i < _combatItemActions.Length; i++) _combatItemActions[i].Disable();
                 CurrentAimStick = Vector2.zero;
             }
         }

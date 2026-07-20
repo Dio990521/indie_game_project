@@ -36,6 +36,13 @@ namespace IndieGame.UI.Combat
             Subscribe<DeployRejectedEvent>(HandleDeployRejected);
             Subscribe<DeployPlacementStartedEvent>(HandlePlacementStarted);
             Subscribe<DeployPlacementEndedEvent>(HandlePlacementEnded);
+            // 道具系统（Phase 2）
+            Subscribe<CombatItemBarChangedEvent>(HandleItemBarChanged);
+            Subscribe<ItemProductionChangedEvent>(HandleProductionChanged);
+            Subscribe<ItemAimStartedEvent>(HandleItemAimStarted);
+            Subscribe<ItemAimEndedEvent>(HandleItemAimEnded);
+            Subscribe<ItemUseRejectedEvent>(HandleItemUseRejected);
+            Subscribe<MemberRevivedEvent>(HandleMemberRevived);
         }
 
         /// <summary>
@@ -78,6 +85,9 @@ namespace IndieGame.UI.Combat
             view.SetResultVisible(false, true);
             view.BuildSlots(_roster);
             view.SetSelectedIndex(_roster != null ? _roster.SelectedIndex : 0);
+            // 道具栏初始为空（战斗开始无初始道具）
+            view.RefreshItemBar(evt.ItemBar);
+            view.SetItemAiming(-1, false);
         }
 
         private void HandleCombatEnded(CombatEndedEvent evt)
@@ -158,6 +168,48 @@ namespace IndieGame.UI.Combat
         private void HandlePlacementEnded(DeployPlacementEndedEvent evt)
         {
             if (view != null) view.SetPlacementHintVisible(false);
+        }
+
+        // ===================== 道具系统（Phase 2） =====================
+
+        private void HandleItemBarChanged(CombatItemBarChangedEvent evt)
+        {
+            if (view != null) view.RefreshItemBar(evt.Bar);
+        }
+
+        /// <summary>
+        /// 生产进度变化 → 定位生产者的名册槽位刷新进度条。
+        /// </summary>
+        private void HandleProductionChanged(ItemProductionChangedEvent evt)
+        {
+            if (view == null || evt.Member == null) return;
+            RosterSlotUI slot = view.FindSlot(evt.Member);
+            if (slot != null) slot.SetProduction(evt.Progress, evt.Waiting);
+        }
+
+        private void HandleItemAimStarted(ItemAimStartedEvent evt)
+        {
+            if (view == null) return;
+            view.SetItemAiming(evt.SlotIndex, true);
+            view.SetPlacementHintVisible(true);
+        }
+
+        private void HandleItemAimEnded(ItemAimEndedEvent evt)
+        {
+            if (view == null) return;
+            view.SetItemAiming(-1, false);
+            view.SetPlacementHintVisible(false);
+        }
+
+        private void HandleItemUseRejected(ItemUseRejectedEvent evt)
+        {
+            if (view != null) view.ShakeItemSlot(evt.SlotIndex);
+        }
+
+        private void HandleMemberRevived(MemberRevivedEvent evt)
+        {
+            // 复活后刷新槽位状态（灰化解除、冷却圈由后续 Tick 事件驱动）
+            RefreshAllSlotStates();
         }
 
         // ===================== 内部工具 =====================

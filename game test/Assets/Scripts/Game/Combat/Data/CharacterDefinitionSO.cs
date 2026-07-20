@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine;
-using IndieGame.Gameplay.Inventory;
 using IndieGame.Gameplay.Stats;
 
 namespace IndieGame.Gameplay.Combat
@@ -44,8 +43,8 @@ namespace IndieGame.Gameplay.Combat
         [Tooltip("入场技（可空）：上场瞬间自动以战斗体为施法者释放一次")]
         public SkillSO EntrySkill;
 
-        [Header("Phase 2 预留：后台生产特长")]
-        [Tooltip("该角色擅长生产的道具候选（战前从中最多配置 2 个配方）——Phase 2 道具系统使用")]
-        public List<ItemSO> ProducibleItems = new List<ItemSO>();
+        [Header("后台生产特长")]
+        [Tooltip("该角色擅长生产的战斗道具候选（战斗中随机产出其一；超过 2 个只取前 2 个，对应\"战前最多配置 2 个配方\"的设计）")]
+        public List<CombatItemSO> ProducibleItems = new List<CombatItemSO>();
     }
 }

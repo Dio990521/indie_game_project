@@ -283,7 +283,7 @@ namespace IndieGame.Gameplay.Board.Runtime
 
         /// <summary>
         /// 处理实体间交互事件（如：玩家停在 NPC 所在的格子上）。
-        /// 目前仅作为日志输出，未来可在此处触发战斗流程或对话 UI。
+        /// Phase 2 战斗桥接：目标实体携带 BoardCombatEncounter 组件时进入战斗场景。
         /// </summary>
         private void HandleEntityInteraction(BoardEntityInteractionEvent evt)
         {
@@ -296,7 +296,33 @@ namespace IndieGame.Gameplay.Board.Runtime
             // 输出调试信息：显示遇到的单位名称和所在节点 ID
             DebugTools.Log($"<color=yellow>⚔ 遇到单位: {evt.Target.name} (Node {evt.Node.nodeID})</color>");
 
-            // 交互完成回调：允许后续逻辑继续（如主流程继续移动或切换回合）
+            // 战斗桥接：目标携带遭遇配置 → 进入战斗场景。
+            // 注意：此路径"不"调用 OnCompleted——原棋盘移动协程会随棋盘根隐藏而终止，
+            // 战斗结束 ReturnToBoard 后 BoardGameManager 重新 Init 并从保存节点进入玩家回合，
+            // 移动流程无需（也无法）续接，回调续接语义由重 Init 取代。
+            BoardCombatEncounter combatEncounter = evt.Target.GetComponent<BoardCombatEncounter>();
+            if (combatEncounter != null && combatEncounter.Encounter != null && SceneLoader.Instance != null)
+            {
+                GameObject targetGo = evt.Target.gameObject;
+                bool removeOnVictory = combatEncounter.RemoveOnVictory;
+                Gameplay.Combat.CombatLaunchContext.SetEncounter(combatEncounter.Encounter, victory =>
+                {
+                    // 战斗结束回调（在 ReturnToBoard 之前触发）：胜利则把该实体从棋盘销毁。
+                    // 必须 Destroy 而非 SetActive(false)：棋盘 NPC 多为场景根物体，
+                    // 返回棋盘时 SetBoardSceneRootsActive(true) 会全量重新激活所有根物体，
+                    // 仅隐藏会被复活；销毁则不再出现在根物体列表中，且 BoardEntity.OnDisable
+                    // 会自动从 BoardEntityManager 注销（EnemyTurnState 对无 NPC 已有容错）。
+                    if (victory && removeOnVictory && targetGo != null)
+                    {
+                        Destroy(targetGo);
+                    }
+                });
+                DebugTools.Log($"<color=yellow>⚔ 触发棋盘遭遇战：{combatEncounter.Encounter.name}，进入 {combatEncounter.CombatSceneName}</color>");
+                SceneLoader.Instance.LoadScene(combatEncounter.CombatSceneName, null);
+                return;
+            }
+
+            // 无战斗遭遇：交互完成回调，允许后续逻辑继续（如主流程继续移动或切换回合）
             evt.OnCompleted?.Invoke();
         }
 

@@ -1,3 +1,5 @@
+using UnityEngine;
+
 namespace IndieGame.Gameplay.Combat.States
 {
     /// <summary>
@@ -15,6 +17,8 @@ namespace IndieGame.Gameplay.Combat.States
             context.TickWaveSpawning();
             // 名册冷却广播（整秒节流）
             context.Roster.TickCooldownBroadcast();
+            // 后台成员的道具生产推进
+            context.ItemProduction.Tick(Time.deltaTime);
             // 胜负兜底轮询
             context.CheckBattleOutcome();
         }

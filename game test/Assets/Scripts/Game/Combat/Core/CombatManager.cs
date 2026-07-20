@@ -31,6 +31,10 @@ namespace IndieGame.Gameplay.Combat
         [Tooltip("战斗全局参数配置")]
         [SerializeField] private CombatConfigSO config;
 
+        [Header("Debug")]
+        [Tooltip("调试用测试道具（ContextMenu「道具栏塞入全部测试道具」使用）")]
+        [SerializeField] private CombatItemSO[] debugItems;
+
         // 场景引用聚合（出生点/放置指示器/战斗相机）：
         // 不再走 Inspector 序列化——本管理器常驻跨场景，无法在 Inspector 里预先绑定
         // 某个具体战斗场景的对象，改为进入 Combat 模式时用 FindAnyObjectByType 动态解析
@@ -61,6 +65,12 @@ namespace IndieGame.Gameplay.Combat
 
         /// <summary> 战斗名册（选择指针/上下场规则） </summary>
         public CombatRoster Roster { get; } = new CombatRoster();
+
+        /// <summary> 战斗道具栏（4 种类槽，战斗结束清空） </summary>
+        public CombatItemBar ItemBar { get; } = new CombatItemBar();
+
+        /// <summary> 道具生产系统（后台成员逐帧推进，CombatActiveState 驱动） </summary>
+        public ItemProductionSystem ItemProduction { get; } = new ItemProductionSystem();
 
         /// <summary> 战斗是否进行中（结算后为 false，所有单位组件据此停摆） </summary>
         public bool BattleRunning { get; private set; }
@@ -97,9 +107,10 @@ namespace IndieGame.Gameplay.Combat
         private readonly Dictionary<GameObject, GameObjectPool> _poolByInstance = new Dictionary<GameObject, GameObjectPool>(32);
         // 当前活动（已生成未回池）的战斗单位，重开战斗时统一回收
         private readonly List<CombatUnit> _activeUnits = new List<CombatUnit>(12);
-        // 池根节点（单位与弹道分开挂，便于调试查看）
+        // 池根节点（单位/弹道/道具效果分开挂，便于调试查看）
         private Transform _unitPoolRoot;
         private Transform _projectilePoolRoot;
+        private Transform _effectPoolRoot;
 
         protected override void Awake()
         {
@@ -111,6 +122,8 @@ namespace IndieGame.Gameplay.Combat
             _unitPoolRoot.SetParent(transform, false);
             _projectilePoolRoot = new GameObject("[ProjectilePool]").transform;
             _projectilePoolRoot.SetParent(transform, false);
+            _effectPoolRoot = new GameObject("[EffectPool]").transform;
+            _effectPoolRoot.SetParent(transform, false);
         }
 
         private void OnEnable()
@@ -121,9 +134,10 @@ namespace IndieGame.Gameplay.Combat
             EventBus.Subscribe<InputSkillEvent>(HandleSkillInput);
             EventBus.Subscribe<InputDeployEvent>(HandleDeployInput);
             EventBus.Subscribe<InputSelectEvent>(HandleSelectInput);
+            EventBus.Subscribe<InputItemEvent>(HandleItemInput);
             // 死亡事件中心化订阅（幂等处理 + 胜负判定）
             EventBus.Subscribe<DeathEvent>(HandleDeath);
-            // ESC/手柄B 取消（放置态用）
+            // ESC/手柄B 取消（放置/道具瞄准态用）
             if (inputReader != null) inputReader.UICancelEvent += HandleUICancel;
         }
 
@@ -133,6 +147,7 @@ namespace IndieGame.Gameplay.Combat
             EventBus.Unsubscribe<InputSkillEvent>(HandleSkillInput);
             EventBus.Unsubscribe<InputDeployEvent>(HandleDeployInput);
             EventBus.Unsubscribe<InputSelectEvent>(HandleSelectInput);
+            EventBus.Unsubscribe<InputItemEvent>(HandleItemInput);
             EventBus.Unsubscribe<DeathEvent>(HandleDeath);
             if (inputReader != null) inputReader.UICancelEvent -= HandleUICancel;
         }
@@ -171,6 +186,9 @@ namespace IndieGame.Gameplay.Combat
                 ReleaseUnit(_activeUnits[_activeUnits.Count - 1]);
             }
             Registry.Clear();
+            // 道具不跨战斗保留：生产线与道具栏一并清空（HUD 已隐藏，无需广播）
+            ItemProduction.Clear();
+            ItemBar.Clear(broadcast: false);
             BattleRunning = false;
             _battleStarted = false;
             _encounter = null;
@@ -275,9 +293,13 @@ namespace IndieGame.Gameplay.Combat
                 ? Time.time + _encounter.Waves[0].DelayAfterPrevious
                 : Time.time;
 
-            // 6) 开战
+            // 6) 道具系统复位：道具栏清空（战斗开始无初始道具）、按名册重建生产线
+            ItemBar.Clear(broadcast: false);
+            ItemProduction.Initialize(Roster, ItemBar);
+
+            // 7) 开战
             BattleRunning = true;
-            EventBus.Raise(new CombatStartedEvent { Encounter = _encounter, Roster = Roster });
+            EventBus.Raise(new CombatStartedEvent { Encounter = _encounter, Roster = Roster, ItemBar = ItemBar });
             Roster.Select(0);
             DebugTools.Log("<color=orange>[Combat] 战斗开始！</color>");
             return true;
@@ -517,6 +539,59 @@ namespace IndieGame.Gameplay.Combat
             }
         }
 
+        // ===================== 道具效果池 =====================
+
+        /// <summary>
+        /// 从池中生成一个道具效果实例（治疗领域/土墙等，由各 CombatItemSO.Execute 调用）。
+        /// </summary>
+        public GameObject SpawnPooledEffect(GameObject prefab, Vector3 position, Quaternion rotation)
+        {
+            if (prefab == null) return null;
+
+            GameObjectPool pool = GetPool(prefab, _effectPoolRoot);
+            GameObject instance = pool.Get();
+            _poolByInstance[instance] = pool;
+            instance.transform.SetPositionAndRotation(position, rotation);
+            return instance;
+        }
+
+        /// <summary>
+        /// 道具效果回池（HealingField/TimedPooledEffect 到时后回调）。
+        /// </summary>
+        public void ReleasePooledEffect(GameObject instance)
+        {
+            if (instance == null) return;
+            if (_poolByInstance.TryGetValue(instance, out GameObjectPool pool))
+            {
+                pool.Release(instance);
+            }
+            else
+            {
+                Destroy(instance);
+            }
+        }
+
+        // ===================== 道具使用 =====================
+
+        /// <summary>
+        /// 消耗并执行道具（ItemAimingState 确认/即时道具按键时调用）：
+        /// 消耗成功才执行效果并广播 CombatItemUsedEvent。
+        /// </summary>
+        public void UseItem(int slotIndex, CombatItemSO expectedItem, Vector3 point)
+        {
+            if (expectedItem == null) return;
+            if (!ItemBar.TryConsume(slotIndex, expectedItem))
+            {
+                // 槽位位移兜底：按类型重新定位后再试一次
+                int actualSlot = ItemBar.FindSlotIndex(expectedItem);
+                if (actualSlot < 0 || !ItemBar.TryConsume(actualSlot, expectedItem)) return;
+            }
+
+            expectedItem.Execute(this, point);
+            EventBus.Raise(new CombatItemUsedEvent { Item = expectedItem, Point = point });
+            DebugTools.Log($"<color=cyan>[Combat] 使用道具：{expectedItem.name}</color>");
+        }
+
         // ===================== 上下场 =====================
 
         /// <summary>
@@ -604,9 +679,11 @@ namespace IndieGame.Gameplay.Combat
 
             if (OverlayState is DeployPlacementState placement)
             {
-                placement.ConfirmPlacement(this);
+                placement.Confirm(this);
                 return;
             }
+            // 道具瞄准态中上场键不响应，避免误操作
+            if (OverlayState != null) return;
 
             RosterMember member = Roster.SelectedMember;
             if (member == null) return;
@@ -640,13 +717,55 @@ namespace IndieGame.Gameplay.Combat
         }
 
         /// <summary>
-        /// ESC/手柄B：取消放置态。
+        /// 道具槽键（1-4/手柄十字键，语义随上下文）：
+        /// 道具瞄准态中按同一槽键 = 确认使用；非瞄准态 = 需瞄准的道具进入瞄准态、
+        /// 即时道具直接生效（落点为主角位置）；空槽/条件不满足则拒绝提示。
+        /// </summary>
+        private void HandleItemInput(InputItemEvent evt)
+        {
+            if (!BattleRunning) return;
+
+            if (OverlayState is ItemAimingState aiming)
+            {
+                // 同槽键二次确认（与上场放置的同键确认操作模型一致）；异槽键忽略
+                if (aiming.SlotIndex == evt.SlotIndex)
+                {
+                    aiming.Confirm(this);
+                }
+                return;
+            }
+            // 放置态中道具键不响应
+            if (OverlayState != null) return;
+
+            CombatItemSO item = ItemBar.Peek(evt.SlotIndex);
+            if (item == null || !item.CanUse(this))
+            {
+                EventBus.Raise(new ItemUseRejectedEvent { SlotIndex = evt.SlotIndex });
+                return;
+            }
+
+            if (item.RequiresAiming)
+            {
+                PushOverlayState(new ItemAimingState(evt.SlotIndex, item));
+                return;
+            }
+
+            // 即时道具：落点取主角当前位置（复活等与落点无关的道具忽略该参数）
+            RosterMember protagonist = Roster.Protagonist;
+            Vector3 point = protagonist != null && protagonist.FieldUnit != null
+                ? protagonist.FieldUnit.transform.position
+                : Vector3.zero;
+            UseItem(evt.SlotIndex, item, point);
+        }
+
+        /// <summary>
+        /// ESC/手柄B：取消当前选点瞄准态（放置/道具通用）。
         /// </summary>
         private void HandleUICancel()
         {
-            if (OverlayState is DeployPlacementState placement)
+            if (OverlayState is AimingOverlayStateBase aiming)
             {
-                placement.CancelPlacement(this);
+                aiming.Cancel(this);
             }
         }
 
@@ -729,6 +848,22 @@ namespace IndieGame.Gameplay.Combat
             if (member != null && member.FieldUnit != null && member.FieldUnit.Stats != null)
             {
                 member.FieldUnit.Stats.TakeDamage(int.MaxValue / 2);
+            }
+        }
+
+        [ContextMenu("Debug/完成全部生产进度")]
+        private void DebugCompleteProduction()
+        {
+            if (BattleRunning) ItemProduction.DebugCompleteAll();
+        }
+
+        [ContextMenu("Debug/道具栏塞入全部测试道具")]
+        private void DebugFillItemBar()
+        {
+            if (!BattleRunning || debugItems == null) return;
+            for (int i = 0; i < debugItems.Length; i++)
+            {
+                if (debugItems[i] != null) ItemBar.TryAdd(debugItems[i]);
             }
         }
 

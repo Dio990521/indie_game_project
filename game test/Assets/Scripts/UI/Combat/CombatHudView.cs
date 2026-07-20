@@ -19,10 +19,14 @@ namespace IndieGame.UI.Combat
 
         // 已生成的槽位实例（最多 5 个，战斗间复用不销毁）
         private readonly List<RosterSlotUI> _slots = new List<RosterSlotUI>(CombatRoster.MaxRosterSize);
+        // 道具槽实例（固定 4 个，一次性构建后复用）
+        private readonly List<CombatItemSlotUI> _itemSlots = new List<CombatItemSlotUI>(CombatItemBar.MaxSlots);
         // 显隐动画引用
         private Sequence _fadeSequence;
         // 当前选中槽位索引（-1 = 无），切换选中时先关旧的再开新的
         private int _selectedIndex = -1;
+        // 当前瞄准中的道具槽索引（-1 = 无）
+        private int _aimingItemIndex = -1;
 
         /// <summary> 当前槽位列表（Controller 按索引/成员刷新用） </summary>
         public IReadOnlyList<RosterSlotUI> Slots => _slots;
@@ -105,6 +109,65 @@ namespace IndieGame.UI.Combat
                 if (_slots[i].BoundMember == member) return _slots[i];
             }
             return null;
+        }
+
+        /// <summary>
+        /// 构建/刷新道具栏（固定 4 个种类槽；按道具栏当前内容显示，空槽置灰）。
+        /// </summary>
+        public void RefreshItemBar(CombatItemBar bar)
+        {
+            if (binder == null || binder.ItemSlotPrefab == null || binder.ItemSlotContainer == null) return;
+
+            // 一次性补齐固定数量的槽位实例
+            while (_itemSlots.Count < CombatItemBar.MaxSlots)
+            {
+                CombatItemSlotUI slot = Instantiate(binder.ItemSlotPrefab, binder.ItemSlotContainer);
+                slot.SetKeyHint((_itemSlots.Count + 1).ToString());
+                _itemSlots.Add(slot);
+            }
+
+            for (int i = 0; i < _itemSlots.Count; i++)
+            {
+                if (bar != null && i < bar.Stacks.Count)
+                {
+                    _itemSlots[i].SetStack(bar.Stacks[i].Item, bar.Stacks[i].Count);
+                }
+                else
+                {
+                    _itemSlots[i].SetEmpty();
+                }
+            }
+
+            // 内容变化后重新应用瞄准高亮（槽位可能位移）
+            if (_aimingItemIndex >= 0) SetItemAiming(_aimingItemIndex, true);
+        }
+
+        /// <summary>
+        /// 设置道具槽瞄准态高亮（同一时刻至多一个）。
+        /// </summary>
+        public void SetItemAiming(int index, bool aiming)
+        {
+            if (_aimingItemIndex >= 0 && _aimingItemIndex < _itemSlots.Count)
+            {
+                _itemSlots[_aimingItemIndex].SetAiming(false);
+            }
+
+            _aimingItemIndex = aiming ? index : -1;
+            if (aiming && index >= 0 && index < _itemSlots.Count)
+            {
+                _itemSlots[index].SetAiming(true);
+            }
+        }
+
+        /// <summary>
+        /// 播放道具槽拒绝抖动。
+        /// </summary>
+        public void ShakeItemSlot(int index)
+        {
+            if (index >= 0 && index < _itemSlots.Count)
+            {
+                _itemSlots[index].PlayRejectShake();
+            }
         }
 
         /// <summary>
